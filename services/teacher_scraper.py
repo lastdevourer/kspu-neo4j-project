@@ -35,7 +35,7 @@ def slugify(text: str) -> str:
     out = []
     for ch in text:
         if ch in replacements:
-            out.append(ch if False else replacements[ch])
+            out.append(replacements[ch])
         elif ch.isalnum():
             out.append(ch)
         else:
@@ -56,97 +56,114 @@ def clean_text(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
-def looks_like_name(text: str) -> bool:
-    parts = text.split()
-    if len(parts) < 2 or len(parts) > 5:
-        return False
-    return bool(re.search(r"[А-ЯІЇЄҐ][а-яіїєґ'\-]+", text))
+def extract_inline_staff(soup: BeautifulSoup) -> list[dict]:
+    results = []
 
+    current = None
+    for tag in soup.find_all(["h3", "p", "a"]):
+        text = clean_text(tag.get_text(" ", strip=True))
+        if not text:
+            continue
 
-def extract_profile_links(html: str) -> list[dict]:
-    soup = BeautifulSoup(html, "html.parser")
-    rows = []
+        if tag.name == "h3":
+            if current and current.get("full_name"):
+                results.append(current)
+
+            name = text
+            name = re.sub(r"\s*\(.*?\)\s*$", "", name).strip()
+
+            if len(name.split()) >= 2:
+                current = {
+                    "full_name": name,
+                    "position": "",
+                    "academic_degree": "",
+                    "academic_title": "",
+                    "orcid": "",
+                    "google_scholar": "",
+                    "scopus": "",
+                    "publication_url": "",
+                    "source_url": "",
+                }
+            else:
+                current = None
+            continue
+
+        if current is None:
+            continue
+
+        if tag.name == "a":
+            href = tag.get("href", "").strip()
+            href_lower = href.lower()
+            label_lower = text.lower()
+
+            if "orcid.org" in href_lower or "orcid" in label_lower:
+                current["orcid"] = href
+            elif "scholar.google" in href_lower or "g-scholar" in label_lower or "google scholar" in label_lower:
+                current["google_scholar"] = href
+            elif "scopus" in href_lower:
+                current["scopus"] = href
+            elif "publication" in label_lower or "publication.kspu.edu" in href_lower:
+                current["publication_url"] = href
+
+        else:
+            low = text.lower()
+
+            if "закінчив" in low or "закінчила" in low or "спеціальність" in low or "e-mail" in low:
+                continue
+
+            if not current["position"]:
+                current["position"] = text
+                continue
+
+            if not current["academic_degree"] and (
+                "кандидат" in low or "доктор" in low or "магістр" in low
+            ):
+                current["academic_degree"] = text
+
+                if "доцент" in low or "професор" in low:
+                    parts = [x.strip() for x in text.split(",")]
+                    if len(parts) >= 2:
+                        current["academic_degree"] = ", ".join(
+                            [p for p in parts if "доцент" not in p.lower() and "професор" not in p.lower()]
+                        ).strip(", ")
+                        current["academic_title"] = ", ".join(
+                            [p for p in parts if "доцент" in p.lower() or "професор" in p.lower()]
+                        ).strip(", ")
+                continue
+
+            if not current["academic_title"] and ("доцент" in low or "професор" in low):
+                current["academic_title"] = text
+
+    if current and current.get("full_name"):
+        results.append(current)
+
+    cleaned = []
     seen = set()
-
-    for a in soup.find_all("a", href=True):
-        href = a["href"].strip()
-        text = clean_text(a.get_text(" ", strip=True))
-        full_url = urljoin("https://www.kspu.edu/", href)
-
-        if not text or not looks_like_name(text):
-            continue
-
-        if "/Staff/" not in full_url:
-            continue
-
-        key = (text.lower(), full_url.lower())
+    for row in results:
+        key = row["full_name"].lower()
         if key in seen:
             continue
         seen.add(key)
+        cleaned.append(row)
 
-        rows.append({
-            "full_name": text,
-            "profile_url": full_url,
-        })
-
-    return rows
+    return cleaned
 
 
-def parse_profile(html: str) -> dict:
-    soup = BeautifulSoup(html, "html.parser")
-    full_text = clean_text(soup.get_text(" ", strip=True))
-
-    position = ""
-    academic_degree = ""
-    academic_title = ""
-    orcid = ""
-    google_scholar = ""
-    scopus = ""
-
-    pos_match = re.search(
-        r"Посада[:\-]?\s*(.+?)(?=Науковий ступінь|Вчене звання|Робоча адреса|E-mail|Освіта|Наукові інтереси|Публікації)",
-        full_text,
-        re.IGNORECASE
-    )
-    if pos_match:
-        position = clean_text(pos_match.group(1))
-
-    degree_match = re.search(
-        r"Науковий ступінь[:\-]?\s*(.+?)(?=Вчене звання|Робоча адреса|E-mail|Освіта|Наукові інтереси|Публікації)",
-        full_text,
-        re.IGNORECASE
-    )
-    if degree_match:
-        academic_degree = clean_text(degree_match.group(1))
-
-    title_match = re.search(
-        r"Вчене звання[:\-]?\s*(.+?)(?=Робоча адреса|E-mail|Освіта|Наукові інтереси|Публікації)",
-        full_text,
-        re.IGNORECASE
-    )
-    if title_match:
-        academic_title = clean_text(title_match.group(1))
-
+def extract_profile_links(soup: BeautifulSoup) -> dict:
+    profile_links = {}
     for a in soup.find_all("a", href=True):
-        href = a["href"].strip()
-        label = clean_text(a.get_text(" ", strip=True)).lower()
-        href_lower = href.lower()
+        text = clean_text(a.get_text(" ", strip=True))
+        href = urljoin("https://www.kspu.edu/", a["href"].strip())
 
-        if "orcid.org" in href_lower or "orcid" in label:
-            orcid = href
-        elif "scholar.google" in href_lower or "google scholar" in label:
-            google_scholar = href
-        elif "scopus" in href_lower:
-            scopus = href
+        if len(text.split()) < 2 or len(text.split()) > 5:
+            continue
 
-    return {
-        "position": position,
-        "academic_degree": academic_degree,
-        "academic_title": academic_title,
-        "orcid": orcid,
-        "google_scholar": google_scholar,
-        "scopus": scopus,
-    }
+        if not re.search(r"[А-ЯІЇЄҐ][а-яіїєґ'\-]+", text):
+            continue
+
+        profile_links[text.lower()] = href
+
+    return profile_links
 
 
 def scrape_department_teachers(department_id: str, faculty_id: str) -> list[dict]:
@@ -154,40 +171,31 @@ def scrape_department_teachers(department_id: str, faculty_id: str) -> list[dict
         return []
 
     html = fetch_html(STAFF_URLS[department_id])
-    people = extract_profile_links(html)
+    soup = BeautifulSoup(html, "html.parser")
+
+    inline_rows = extract_inline_staff(soup)
+    profile_map = extract_profile_links(soup)
 
     results = []
-    for person in people:
-        details = {
-            "position": "",
-            "academic_degree": "",
-            "academic_title": "",
-            "orcid": "",
-            "google_scholar": "",
-            "scopus": "",
-        }
+    for row in inline_rows:
+        full_name = row["full_name"]
+        profile_url = profile_map.get(full_name.lower(), STAFF_URLS[department_id])
 
-        try:
-            profile_html = fetch_html(person["profile_url"])
-            parsed = parse_profile(profile_html)
-            details.update(parsed)
-        except Exception:
-            pass
-
-        teacher_id = f"T_{department_id}_{slugify(person['full_name'])}"
+        teacher_id = f"T_{department_id}_{slugify(full_name)}"
 
         results.append({
             "teacher_id": teacher_id,
-            "full_name": person["full_name"],
-            "position": details["position"],
-            "academic_degree": details["academic_degree"],
-            "academic_title": details["academic_title"],
+            "full_name": full_name,
+            "position": row["position"],
+            "academic_degree": row["academic_degree"],
+            "academic_title": row["academic_title"],
             "department_id": department_id,
             "faculty_id": faculty_id,
-            "orcid": details["orcid"],
-            "google_scholar": details["google_scholar"],
-            "scopus": details["scopus"],
-            "source_url": person["profile_url"],
+            "orcid": row["orcid"],
+            "google_scholar": row["google_scholar"],
+            "scopus": row["scopus"],
+            "source_url": profile_url,
+            "publication_url": row["publication_url"],
         })
 
     return results
