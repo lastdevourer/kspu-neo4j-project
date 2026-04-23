@@ -3,8 +3,8 @@ import streamlit as st
 
 from data.seed_data import SEEDED_DEPARTMENTS, SEEDED_FACULTIES
 from services.neo4j_service import Neo4jService
-from services.publication_scraper import scrape_publications_from_profile
-from services.teacher_scraper import STAFF_URLS, scrape_department_teachers
+from services.publication_scraper import scrape_publications_from_teacher
+from services.teacher_scraper import scrape_all_f07_teachers
 from ui.formatting import (
     apply_global_styles,
     build_metrics,
@@ -52,7 +52,7 @@ service = Neo4jService(
     password=st.secrets["NEO4J_PASSWORD"],
 )
 
-c1, c2, c3 = st.columns([1.2, 1.1, 1])
+c1, c2, c3, c4 = st.columns([1.2, 1.1, 1.1, 1])
 
 with c1:
     if st.button("Початково заповнити структуру", use_container_width=True):
@@ -80,6 +80,16 @@ with c3:
         except Exception as e:
             st.error(f"Помилка підключення: {e}")
 
+with c4:
+    if st.button("Завантажити викладачів F07", use_container_width=True):
+        try:
+            teachers = scrape_all_f07_teachers()
+            imported = service.import_teachers(teachers)
+            st.success(f"Оброблено записів: {len(teachers)}. Імпортовано/оновлено: {imported}")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Помилка завантаження викладачів: {e}")
+
 counts = service.get_counts()
 build_metrics(counts)
 
@@ -99,8 +109,7 @@ with tab1:
         st.markdown("#### Факультети")
         faculty_rows = service.get_faculties()
         if faculty_rows:
-            df = rename_faculty_df(pd.DataFrame(faculty_rows))
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(rename_faculty_df(pd.DataFrame(faculty_rows)), use_container_width=True, hide_index=True)
         else:
             st.info("Факультети ще не додано.")
 
@@ -129,8 +138,7 @@ with tab1:
         st.markdown("#### Кафедри")
         department_rows = service.get_departments()
         if department_rows:
-            df = rename_department_df(pd.DataFrame(department_rows))
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            st.dataframe(rename_department_df(pd.DataFrame(department_rows)), use_container_width=True, hide_index=True)
         else:
             st.info("Кафедри ще не додано.")
 
@@ -171,59 +179,9 @@ with tab1:
 with tab2:
     st.markdown("### База викладачів")
 
-    supported_department_ids = {"D001", "D002", "D003"}
-
-    department_options = [
-        row for row in service.get_department_options()
-        if row["department_id"] in supported_department_ids
-    ]
-
-    department_map = {
-        f"{row['department_id']} — {row['name']}": row
-        for row in department_options
-    }
-
-    auto_col1, auto_col2 = st.columns([1.35, 1])
-
-    with auto_col1:
-        selected_department = st.selectbox(
-            "Оберіть кафедру для автоматичного імпорту викладачів",
-            options=list(department_map.keys()),
-            index=None,
-            placeholder="Оберіть кафедру"
-        )
-
-    with auto_col2:
-        st.write("")
-        st.write("")
-        if st.button("Автоматично завантажити викладачів кафедри", use_container_width=True):
-            if not selected_department:
-                st.warning("Спочатку обери кафедру.")
-            else:
-                dep = department_map[selected_department]
-                try:
-                    teachers = scrape_department_teachers(
-                        department_id=dep["department_id"],
-                        faculty_id=dep["faculty_id"],
-                    )
-                    if not teachers:
-                        st.warning("Для цієї кафедри даних не знайдено.")
-                    else:
-                        service.import_teachers(teachers)
-                        st.success(f"Імпортовано викладачів: {len(teachers)}")
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Помилка автоматичного імпорту: {e}")
-
-    if selected_department:
-        dep = department_map[selected_department]
-        if dep["department_id"] in STAFF_URLS:
-            st.caption(f"Джерело: {STAFF_URLS[dep['department_id']]}")
-
     teacher_rows = service.get_teachers()
     if teacher_rows:
-        df = rename_teacher_df(pd.DataFrame(teacher_rows))
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(rename_teacher_df(pd.DataFrame(teacher_rows)), use_container_width=True, hide_index=True)
     else:
         st.info("Викладачів ще не додано.")
 
@@ -258,6 +216,7 @@ with tab2:
             with col2:
                 scopus = st.text_input("Scopus")
                 source_url = st.text_input("Посилання на профіль")
+            publication_url = st.text_input("Посилання на публікації")
 
             save_teacher = st.form_submit_button("Зберегти")
 
@@ -279,6 +238,7 @@ with tab2:
                             google_scholar=google_scholar.strip(),
                             scopus=scopus.strip(),
                             source_url=source_url.strip(),
+                            publication_url=publication_url.strip(),
                         )
                         st.success("Викладача додано.")
                         st.rerun()
@@ -289,11 +249,14 @@ with tab3:
     st.markdown("### База публікацій")
 
     teacher_rows_full = service.get_teachers()
-    teacher_rows = [row for row in teacher_rows_full if row.get("source_url")]
+    teacher_rows_with_publications = [
+        row for row in teacher_rows_full
+        if row.get("publication_url") or row.get("source_url")
+    ]
 
     teacher_profile_map = {
         f"{row['teacher_id']} — {row['full_name']}": row
-        for row in teacher_rows
+        for row in teacher_rows_with_publications
     }
 
     auto_p1, auto_p2 = st.columns([1.35, 1])
@@ -315,9 +278,7 @@ with tab3:
             else:
                 teacher_row = teacher_profile_map[selected_teacher_for_publications]
                 try:
-                    found = scrape_publications_from_profile(
-                        profile_url=teacher_row["source_url"]
-                    )
+                    found = scrape_publications_from_teacher(teacher_row)
                     st.session_state["found_publications"] = found
                     st.session_state["found_publications_teacher_id"] = teacher_row["teacher_id"]
                     st.success(f"Знайдено записів: {len(found)}")
@@ -329,20 +290,22 @@ with tab3:
 
     if found_publications:
         st.markdown("#### Попередній перегляд знайдених публікацій")
-        preview_df = pd.DataFrame(found_publications)
-        preview_df = preview_df.rename(columns={
+        preview_df = pd.DataFrame(found_publications).rename(columns={
             "title": "Назва",
             "year": "Рік",
             "doi": "DOI",
+            "pub_type": "Тип",
             "source": "Джерело",
         })
-        st.dataframe(preview_df, use_container_width=True, hide_index=True)
+        shown_cols = [c for c in ["Назва", "Рік", "DOI", "Тип", "Джерело"] if c in preview_df.columns]
+        st.dataframe(preview_df[shown_cols], use_container_width=True, hide_index=True)
 
         if st.button("Імпортувати знайдені публікації", use_container_width=True):
             try:
+                imported_count = 0
                 for item in found_publications:
                     pub_id = service.get_next_id("P", "Publication", "publication_id", 5)
-                    service.upsert_publication(
+                    created = service.upsert_publication(
                         publication_id=pub_id,
                         title=item.get("title", "").strip(),
                         year=item.get("year"),
@@ -354,7 +317,10 @@ with tab3:
                         teacher_ids=[found_teacher_id] if found_teacher_id else [],
                         topics=item.get("topics", []),
                     )
-                st.success("Публікації імпортовано без дублювання.")
+                    if created:
+                        imported_count += 1
+
+                st.success(f"Імпортовано нових або оновлених публікацій: {imported_count}")
                 st.session_state["found_publications"] = []
                 st.session_state["found_publications_teacher_id"] = None
                 st.rerun()
@@ -363,8 +329,7 @@ with tab3:
 
     publication_rows = service.get_publications()
     if publication_rows:
-        df = rename_publication_df(pd.DataFrame(publication_rows))
-        st.dataframe(df, use_container_width=True, hide_index=True)
+        st.dataframe(rename_publication_df(pd.DataFrame(publication_rows)), use_container_width=True, hide_index=True)
     else:
         st.info("Публікацій ще не додано.")
 
@@ -413,7 +378,7 @@ with tab3:
                     topics = [x.strip() for x in topics_raw.split(",") if x.strip()]
 
                     try:
-                        service.upsert_publication(
+                        created = service.upsert_publication(
                             publication_id=publication_id.strip(),
                             title=title.strip(),
                             year=year_value,
@@ -425,7 +390,10 @@ with tab3:
                             teacher_ids=author_ids,
                             topics=topics,
                         )
-                        st.success("Публікацію додано, дублікати не створено.")
+                        if created:
+                            st.success("Публікацію додано або оновлено, дублікати не створено.")
+                        else:
+                            st.info("Запис уже існував, дані оновлено без дублювання.")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Помилка: {e}")
@@ -452,8 +420,7 @@ with tab4:
         if st.button("Показати", key="show_top_teachers"):
             rows = service.get_top_teachers_by_publications(int(limit_teachers))
             if rows:
-                df = rename_top_teachers_df(pd.DataFrame(rows))
-                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.dataframe(rename_top_teachers_df(pd.DataFrame(rows)), use_container_width=True, hide_index=True)
             else:
                 st.info("Недостатньо даних.")
 
@@ -469,8 +436,7 @@ with tab4:
         if st.button("Показати", key="show_top_coauthors"):
             rows = service.get_top_coauthors(int(limit_links))
             if rows:
-                df = rename_top_coauthors_df(pd.DataFrame(rows))
-                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.dataframe(rename_top_coauthors_df(pd.DataFrame(rows)), use_container_width=True, hide_index=True)
             else:
                 st.info("Недостатньо даних.")
 
@@ -478,8 +444,7 @@ with tab4:
         if st.button("Показати статистику кафедр", key="show_department_stats"):
             rows = service.get_department_stats()
             if rows:
-                df = rename_department_stats_df(pd.DataFrame(rows))
-                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.dataframe(rename_department_stats_df(pd.DataFrame(rows)), use_container_width=True, hide_index=True)
             else:
                 st.info("Недостатньо даних.")
 
@@ -487,7 +452,6 @@ with tab4:
         if st.button("Розрахувати індекс активності", key="show_activity_index"):
             rows = service.get_teacher_activity_index()
             if rows:
-                df = rename_activity_index_df(pd.DataFrame(rows))
-                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.dataframe(rename_activity_index_df(pd.DataFrame(rows)), use_container_width=True, hide_index=True)
             else:
                 st.info("Недостатньо даних.")
