@@ -4,36 +4,16 @@ from typing import Any
 from neo4j import GraphDatabase
 
 
-def slugify(text: str) -> str:
-    text = text.lower().strip()
-    replacements = {
-        "а": "a", "б": "b", "в": "v", "г": "h", "ґ": "g",
-        "д": "d", "е": "e", "є": "ie", "ж": "zh", "з": "z",
-        "и": "y", "і": "i", "ї": "i", "й": "i", "к": "k",
-        "л": "l", "м": "m", "н": "n", "о": "o", "п": "p",
-        "р": "r", "с": "s", "т": "t", "у": "u", "ф": "f",
-        "х": "kh", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "shch",
-        "ь": "", "ю": "iu", "я": "ia",
-        "'": "", "’": "", "`": "", "ʼ": "",
-    }
-    out = []
-    for ch in text:
-        if ch in replacements:
-            out.append(replacements[ch])
-        elif ch.isalnum():
-            out.append(ch)
-        else:
-            out.append("-")
-    slug = "".join(out)
-    return re.sub(r"-+", "-", slug).strip("-")
-
-
 def normalize_text(text: str) -> str:
     if not text:
         return ""
     text = text.lower().strip()
     text = re.sub(r"\s+", " ", text)
     return text
+
+
+def build_department_key(name: str, faculty_id: str) -> str:
+    return f"{faculty_id}::{normalize_text(name)}"
 
 
 def build_teacher_key(full_name: str, department_id: str) -> str:
@@ -67,6 +47,7 @@ class Neo4jService:
         queries = [
             "CREATE CONSTRAINT faculty_id_unique IF NOT EXISTS FOR (f:Faculty) REQUIRE f.faculty_id IS UNIQUE",
             "CREATE CONSTRAINT department_id_unique IF NOT EXISTS FOR (d:Department) REQUIRE d.department_id IS UNIQUE",
+            "CREATE CONSTRAINT department_key_unique IF NOT EXISTS FOR (d:Department) REQUIRE d.department_key IS UNIQUE",
             "CREATE CONSTRAINT teacher_id_unique IF NOT EXISTS FOR (t:Teacher) REQUIRE t.teacher_id IS UNIQUE",
             "CREATE CONSTRAINT teacher_key_unique IF NOT EXISTS FOR (t:Teacher) REQUIRE t.teacher_key IS UNIQUE",
             "CREATE CONSTRAINT publication_id_unique IF NOT EXISTS FOR (p:Publication) REQUIRE p.publication_id IS UNIQUE",
@@ -145,7 +126,6 @@ class Neo4jService:
             {
                 "faculty_id": row["faculty_id"],
                 "name": row["name"],
-                "slug": slugify(row["name"]),
             }
             for row in faculties
         ]
@@ -154,14 +134,14 @@ class Neo4jService:
                 "department_id": row["department_id"],
                 "faculty_id": row["faculty_id"],
                 "name": row["name"],
-                "slug": slugify(row["name"]),
+                "department_key": build_department_key(row["name"], row["faculty_id"]),
             }
             for row in departments
         ]
         relation_rows = [
             {
                 "faculty_id": row["faculty_id"],
-                "department_id": row["department_id"],
+                "department_key": build_department_key(row["name"], row["faculty_id"]),
             }
             for row in departments
         ]
@@ -169,22 +149,24 @@ class Neo4jService:
         q1 = """
         UNWIND $rows AS row
         MERGE (f:Faculty {faculty_id: row.faculty_id})
-        SET f.name = row.name,
-            f.slug = row.slug
+        SET f.name = row.name
         """
+
         q2 = """
         UNWIND $rows AS row
-        MERGE (d:Department {department_id: row.department_id})
+        MERGE (d:Department {department_key: row.department_key})
+        ON CREATE SET d.department_id = row.department_id
         SET d.name = row.name,
-            d.faculty_id = row.faculty_id,
-            d.slug = row.slug
+            d.faculty_id = row.faculty_id
         """
+
         q3 = """
         UNWIND $rows AS row
         MATCH (f:Faculty {faculty_id: row.faculty_id})
-        MATCH (d:Department {department_id: row.department_id})
+        MATCH (d:Department {department_key: row.department_key})
         MERGE (f)-[:HAS_DEPARTMENT]->(d)
         """
+
         self.execute_many(q1, faculty_rows)
         self.execute_many(q2, department_rows)
         self.execute_many(q3, relation_rows)
@@ -262,7 +244,8 @@ class Neo4jService:
                t.faculty_id AS faculty_id,
                t.orcid AS orcid,
                t.google_scholar AS google_scholar,
-               t.scopus AS scopus
+               t.scopus AS scopus,
+               t.source_url AS source_url
         ORDER BY t.full_name
         """
         return self.run_query(q)
@@ -318,24 +301,28 @@ class Neo4jService:
         })
 
     def upsert_department(self, department_id: str, faculty_id: str, name: str) -> None:
+        department_key = build_department_key(name, faculty_id)
+
         q1 = """
-        MERGE (d:Department {department_id: $department_id})
+        MERGE (d:Department {department_key: $department_key})
+        ON CREATE SET d.department_id = $department_id
         SET d.name = $name,
             d.faculty_id = $faculty_id
         """
         q2 = """
         MATCH (f:Faculty {faculty_id: $faculty_id})
-        MATCH (d:Department {department_id: $department_id})
+        MATCH (d:Department {department_key: $department_key})
         MERGE (f)-[:HAS_DEPARTMENT]->(d)
         """
         self.execute_write(q1, {
             "department_id": department_id,
+            "department_key": department_key,
             "faculty_id": faculty_id,
             "name": name,
         })
         self.execute_write(q2, {
             "faculty_id": faculty_id,
-            "department_id": department_id,
+            "department_key": department_key,
         })
 
     def upsert_teacher(
@@ -430,22 +417,23 @@ class Neo4jService:
             "notes": notes,
         })
 
-        author_rows = [
-            {
-                "teacher_id": teacher_id,
-                "publication_key": publication_key,
-                "author_order": idx,
-            }
-            for idx, teacher_id in enumerate(teacher_ids, start=1)
-        ]
-        q_authored = """
-        UNWIND $rows AS row
-        MATCH (t:Teacher {teacher_id: row.teacher_id})
-        MATCH (p:Publication {publication_key: row.publication_key})
-        MERGE (t)-[r:AUTHORED]->(p)
-        SET r.author_order = row.author_order
-        """
-        self.execute_many(q_authored, author_rows)
+        if teacher_ids:
+            author_rows = [
+                {
+                    "teacher_id": teacher_id,
+                    "publication_key": publication_key,
+                    "author_order": idx,
+                }
+                for idx, teacher_id in enumerate(teacher_ids, start=1)
+            ]
+            q_authored = """
+            UNWIND $rows AS row
+            MATCH (t:Teacher {teacher_id: row.teacher_id})
+            MATCH (p:Publication {publication_key: row.publication_key})
+            MERGE (t)-[r:AUTHORED]->(p)
+            SET r.author_order = row.author_order
+            """
+            self.execute_many(q_authored, author_rows)
 
         if topics:
             topic_rows = [
