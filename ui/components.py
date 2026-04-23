@@ -11,7 +11,7 @@ from services.neo4j_service import Neo4jService
 
 def setup_page(title: str) -> None:
     st.set_page_config(
-        page_title=f"{title} | ?????????? ?????? ???? / ???",
+        page_title=f"{title} | Академічна мережа КСПУ / ХДУ",
         layout="wide",
         page_icon="K",
         initial_sidebar_state="expanded",
@@ -195,7 +195,7 @@ def render_key_value_card(title: str, items: list[tuple[str, str]]) -> None:
         f"""
         <div class="kv-row">
             <div class="kv-label">{escape(label)}</div>
-            <div class="kv-value">{escape(value or "-")}</div>
+            <div class="kv-value">{escape(value or "—")}</div>
         </div>
         """
         for label, value in items
@@ -221,45 +221,45 @@ def _build_service(uri: str, user: str, password: str, database: str) -> Neo4jSe
 def require_service() -> Neo4jService:
     config = get_neo4j_config()
     if not config:
-        st.error("?? ???????? ???????????? ??????????? ?? Neo4j Aura.")
+        st.error("Не знайдено налаштування підключення до Neo4j Aura.")
         st.code(get_connection_help_text())
         st.stop()
 
     try:
         return _build_service(config.uri, config.user, config.password, config.database)
     except Exception as exc:
-        st.error(f"?? ??????? ???????????? ?? Neo4j Aura: {exc}")
+        st.error(f"Не вдалося підключитися до Neo4j Aura: {exc}")
         st.stop()
 
 
 def render_sidebar(service: Neo4jService) -> None:
     with st.sidebar:
-        st.markdown("## ?????????")
-        st.caption("???????? ????????: Streamlit Cloud + `Secrets`, ???? ????? - Neo4j Aura.")
+        st.markdown("## Керування")
+        st.caption("Основний сценарій: Streamlit Cloud + `Secrets`, база даних — Neo4j Aura.")
 
-        if st.button("?????????? ???????????", use_container_width=True):
+        if st.button("Перевірити підключення", use_container_width=True):
             try:
                 service.verify_connection()
-                st.success("??????????? ?? Neo4j Aura ???????.")
+                st.success("Підключення до Neo4j Aura активне.")
             except Exception as exc:
-                st.error(f"??????? ???????????: {exc}")
+                st.error(f"Помилка підключення: {exc}")
 
-        if st.button("???????? ????? ?? ???????", use_container_width=True):
+        if st.button("Створити схему та індекси", use_container_width=True):
             try:
                 service.prepare_database()
-                st.success("Constraints ?? indexes ????????.")
+                st.success("Constraints та indexes створено.")
             except Exception as exc:
-                st.error(f"?? ??????? ??????????? ?????: {exc}")
+                st.error(f"Не вдалося підготувати схему: {exc}")
 
-        if st.button("????????? ?????????? ?? ???????", use_container_width=True):
+        if st.button("Заповнити факультети та кафедри", use_container_width=True):
             try:
                 service.seed_reference_data(FACULTIES, DEPARTMENTS)
-                st.success("???????? ??????????? ? ?????? ????????.")
+                st.success("Довідник факультетів і кафедр оновлено.")
             except Exception as exc:
-                st.error(f"?? ??????? ????????? ????????: {exc}")
+                st.error(f"Не вдалося заповнити довідник: {exc}")
 
         st.markdown("---")
         st.caption(
-            "?????? ?????: `(:Faculty)-[:HAS_DEPARTMENT]->(:Department)` -> "
+            "Модель даних: `(:Faculty)-[:HAS_DEPARTMENT]->(:Department)` -> "
             "`(:Department)-[:HAS_TEACHER]->(:Teacher)` -> `(:Teacher)-[:AUTHORED]->(:Publication)`"
         )

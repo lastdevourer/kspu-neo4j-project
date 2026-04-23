@@ -19,15 +19,15 @@ def department_overview_dataframe(rows: list[dict]) -> pd.DataFrame:
         return df
     renamed = df.rename(
         columns={
-            "code": "??? ???????",
-            "name": "???????",
-            "faculty_code": "??? ??????????",
-            "faculty_name": "?????????",
-            "teachers": "?????????",
-            "publications": "??????????",
+            "code": "Код кафедри",
+            "name": "Кафедра",
+            "faculty_code": "Код факультету",
+            "faculty_name": "Факультет",
+            "teachers": "Викладачі",
+            "publications": "Публікації",
         }
     )
-    return renamed[["??? ???????", "???????", "?????????", "?????????", "??????????"]]
+    return renamed[["Код кафедри", "Кафедра", "Факультет", "Викладачі", "Публікації"]]
 
 
 def teachers_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -37,16 +37,16 @@ def teachers_dataframe(rows: list[dict]) -> pd.DataFrame:
     renamed = df.rename(
         columns={
             "id": "ID",
-            "full_name": "???",
-            "position": "??????",
-            "academic_degree": "???????? ???????",
-            "academic_title": "????? ??????",
-            "department_name": "???????",
-            "faculty_name": "?????????",
-            "publications": "??????????",
+            "full_name": "ПІБ",
+            "position": "Посада",
+            "academic_degree": "Науковий ступінь",
+            "academic_title": "Вчене звання",
+            "department_name": "Кафедра",
+            "faculty_name": "Факультет",
+            "publications": "Публікації",
         }
     )
-    return renamed[["ID", "???", "??????", "???????? ???????", "????? ??????", "???????", "?????????", "??????????"]]
+    return renamed[["ID", "ПІБ", "Посада", "Науковий ступінь", "Вчене звання", "Кафедра", "Факультет", "Публікації"]]
 
 
 def teacher_publications_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -57,15 +57,15 @@ def teacher_publications_dataframe(rows: list[dict]) -> pd.DataFrame:
     renamed = df.rename(
         columns={
             "id": "ID",
-            "title": "??????????",
-            "year": "???",
+            "title": "Публікація",
+            "year": "Рік",
             "doi": "DOI",
-            "pub_type": "???",
-            "source": "???????",
-            "authors": "??????",
+            "pub_type": "Тип",
+            "source": "Джерело",
+            "authors": "Автори",
         }
     )
-    return renamed[["ID", "??????????", "???", "DOI", "???", "???????", "??????"]]
+    return renamed[["ID", "Публікація", "Рік", "DOI", "Тип", "Джерело", "Автори"]]
 
 
 def coauthors_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -75,12 +75,12 @@ def coauthors_dataframe(rows: list[dict]) -> pd.DataFrame:
     df["publication_examples"] = df["publication_examples"].apply(_join_authors)
     renamed = df.rename(
         columns={
-            "full_name": "?????????",
-            "shared_publications": "??????? ??????????",
-            "publication_examples": "???????? ??????????",
+            "full_name": "Співавтор",
+            "shared_publications": "Спільні публікації",
+            "publication_examples": "Приклади публікацій",
         }
     )
-    return renamed[["?????????", "??????? ??????????", "???????? ??????????"]]
+    return renamed[["Співавтор", "Спільні публікації", "Приклади публікацій"]]
 
 
 def publications_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -91,16 +91,16 @@ def publications_dataframe(rows: list[dict]) -> pd.DataFrame:
     renamed = df.rename(
         columns={
             "id": "ID",
-            "title": "?????",
-            "year": "???",
+            "title": "Назва",
+            "year": "Рік",
             "doi": "DOI",
-            "pub_type": "???",
-            "source": "???????",
-            "authors": "??????",
-            "authors_count": "????????? ???????",
+            "pub_type": "Тип",
+            "source": "Джерело",
+            "authors": "Автори",
+            "authors_count": "Кількість авторів",
         }
     )
-    return renamed[["ID", "?????", "???", "DOI", "???", "???????", "????????? ???????", "??????"]]
+    return renamed[["ID", "Назва", "Рік", "DOI", "Тип", "Джерело", "Кількість авторів", "Автори"]]
 
 
 def graph_edges_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -109,13 +109,13 @@ def graph_edges_dataframe(rows: list[dict]) -> pd.DataFrame:
         return df
     renamed = df.rename(
         columns={
-            "teacher_name": "????????",
-            "department_name": "???????",
-            "publication_title": "??????????",
-            "year": "???",
+            "teacher_name": "Викладач",
+            "department_name": "Кафедра",
+            "publication_title": "Публікація",
+            "year": "Рік",
         }
     )
-    return renamed[["????????", "???????", "??????????", "???"]]
+    return renamed[["Викладач", "Кафедра", "Публікація", "Рік"]]
 
 
 def top_teachers_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -124,12 +124,12 @@ def top_teachers_dataframe(rows: list[dict]) -> pd.DataFrame:
         return df
     renamed = df.rename(
         columns={
-            "teacher": "????????",
-            "department": "???????",
-            "publications": "????????? ??????????",
+            "teacher": "Викладач",
+            "department": "Кафедра",
+            "publications": "Кількість публікацій",
         }
     )
-    return renamed[["????????", "???????", "????????? ??????????"]]
+    return renamed[["Викладач", "Кафедра", "Кількість публікацій"]]
 
 
 def top_coauthor_pairs_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -139,13 +139,13 @@ def top_coauthor_pairs_dataframe(rows: list[dict]) -> pd.DataFrame:
     df["sample_publications"] = df["sample_publications"].apply(_join_authors)
     renamed = df.rename(
         columns={
-            "teacher_a": "???????? 1",
-            "teacher_b": "???????? 2",
-            "shared_publications": "??????? ??????????",
-            "sample_publications": "????????",
+            "teacher_a": "Викладач 1",
+            "teacher_b": "Викладач 2",
+            "shared_publications": "Спільні публікації",
+            "sample_publications": "Приклади",
         }
     )
-    return renamed[["???????? 1", "???????? 2", "??????? ??????????", "????????"]]
+    return renamed[["Викладач 1", "Викладач 2", "Спільні публікації", "Приклади"]]
 
 
 def centrality_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -154,18 +154,18 @@ def centrality_dataframe(rows: list[dict]) -> pd.DataFrame:
         return df
     renamed = df.rename(
         columns={
-            "teacher": "????????",
-            "connections": "????????? ??'?????",
-            "weighted_connections": "??????? ??'????",
+            "teacher": "Викладач",
+            "connections": "Кількість зв'язків",
+            "weighted_connections": "Зважені зв'язки",
             "degree_centrality": "Degree centrality",
             "betweenness_centrality": "Betweenness centrality",
         }
     )
     return renamed[
         [
-            "????????",
-            "????????? ??'?????",
-            "??????? ??'????",
+            "Викладач",
+            "Кількість зв'язків",
+            "Зважені зв'язки",
             "Degree centrality",
             "Betweenness centrality",
         ]

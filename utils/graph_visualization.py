@@ -31,7 +31,7 @@ def build_graph_html(edges: list[dict]) -> str | None:
             net.add_node(
                 teacher_node,
                 label=edge["teacher_name"],
-                title=f"????????: {edge['teacher_name']}<br>???????: {edge['department_name']}",
+                title=f"Викладач: {edge['teacher_name']}<br>Кафедра: {edge['department_name']}",
                 color="#0f766e",
                 shape="dot",
                 size=18,
@@ -39,11 +39,11 @@ def build_graph_html(edges: list[dict]) -> str | None:
 
         if publication_node not in publication_nodes:
             publication_nodes.add(publication_node)
-            year_value = edge["year"] if edge["year"] is not None else "?/?"
+            year_value = edge["year"] if edge["year"] is not None else "н/д"
             net.add_node(
                 publication_node,
                 label=edge["publication_title"][:48],
-                title=f"??????????: {edge['publication_title']}<br>???: {year_value}",
+                title=f"Публікація: {edge['publication_title']}<br>Рік: {year_value}",
                 color="#c2410c",
                 shape="square",
                 size=16,
