@@ -1,520 +1,344 @@
-import re
+from __future__ import annotations
+
 from typing import Any
 
 from neo4j import GraphDatabase
 
 
-def normalize_text(text: str) -> str:
-    if not text:
-        return ""
-    text = text.lower().strip()
-    text = re.sub(r"\s+", " ", text)
-    return text
+SCHEMA_STATEMENTS = [
+    "CREATE CONSTRAINT faculty_code_unique IF NOT EXISTS FOR (f:Faculty) REQUIRE f.code IS UNIQUE",
+    "CREATE CONSTRAINT department_code_unique IF NOT EXISTS FOR (d:Department) REQUIRE d.code IS UNIQUE",
+    "CREATE CONSTRAINT teacher_id_unique IF NOT EXISTS FOR (t:Teacher) REQUIRE t.id IS UNIQUE",
+    "CREATE CONSTRAINT publication_id_unique IF NOT EXISTS FOR (p:Publication) REQUIRE p.id IS UNIQUE",
+    "CREATE RANGE INDEX faculty_name_idx IF NOT EXISTS FOR (f:Faculty) ON (f.name)",
+    "CREATE RANGE INDEX department_name_idx IF NOT EXISTS FOR (d:Department) ON (d.name)",
+    "CREATE RANGE INDEX teacher_full_name_idx IF NOT EXISTS FOR (t:Teacher) ON (t.full_name)",
+    "CREATE RANGE INDEX publication_year_idx IF NOT EXISTS FOR (p:Publication) ON (p.year)",
+]
 
 
-def build_department_key(name: str, faculty_id: str) -> str:
-    return f"{faculty_id}::{normalize_text(name)}"
-
-
-def build_teacher_key(full_name: str, department_id: str) -> str:
-    return f"{department_id}::{normalize_text(full_name)}"
-
-
-def build_publication_key(title: str, year: int | None, doi: str) -> str:
-    if doi and doi.strip():
-        return f"doi::{normalize_text(doi)}"
-    return f"title::{normalize_text(title)}::{year if year is not None else 'none'}"
+LEGACY_MIGRATION_STATEMENTS = [
+    "MATCH (f:Faculty) WHERE f.code IS NULL AND f.faculty_id IS NOT NULL SET f.code = f.faculty_id",
+    "MATCH (d:Department) WHERE d.code IS NULL AND d.department_id IS NOT NULL SET d.code = d.department_id",
+    "MATCH (t:Teacher) WHERE t.id IS NULL AND t.teacher_id IS NOT NULL SET t.id = t.teacher_id",
+    "MATCH (p:Publication) WHERE p.id IS NULL AND p.publication_id IS NOT NULL SET p.id = p.publication_id",
+    "MATCH (t:Teacher) WHERE t.full_name IS NULL AND t.name IS NOT NULL SET t.full_name = t.name",
+    """
+    MATCH (f:Faculty)-[:HAS_DEPARTMENT]->(d:Department)
+    WHERE d.faculty_code IS NULL
+    SET d.faculty_code = coalesce(d.faculty_id, f.code, f.faculty_id)
+    """,
+]
 
 
 class Neo4jService:
-    def __init__(self, uri: str, user: str, password: str):
+    def __init__(self, uri: str, user: str, password: str, database: str = "neo4j"):
         self.driver = GraphDatabase.driver(uri, auth=(user, password))
+        self.database = database
 
-    def run_query(self, query: str, params: dict[str, Any] | None = None) -> list[dict]:
-        with self.driver.session() as session:
+    def _session_kwargs(self) -> dict[str, str]:
+        return {"database": self.database} if self.database else {}
+
+    def verify_connection(self) -> None:
+        self.driver.verify_connectivity()
+
+    def run_query(self, query: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        with self.driver.session(**self._session_kwargs()) as session:
             result = session.run(query, params or {})
-            return [dict(r) for r in result]
+            return [record.data() for record in result]
 
-    def execute_write(self, query: str, params: dict[str, Any] | None = None) -> None:
-        with self.driver.session() as session:
+    def execute(self, query: str, params: dict[str, Any] | None = None) -> None:
+        with self.driver.session(**self._session_kwargs()) as session:
             session.run(query, params or {})
 
-    def execute_many(self, query: str, rows: list[dict]) -> None:
-        with self.driver.session() as session:
-            session.run(query, {"rows": rows})
+    def prepare_database(self) -> None:
+        for statement in LEGACY_MIGRATION_STATEMENTS:
+            self.execute(statement)
+        for statement in SCHEMA_STATEMENTS:
+            self.execute(statement)
 
-    def create_constraints(self) -> None:
-        queries = [
-            "CREATE CONSTRAINT faculty_id_unique IF NOT EXISTS FOR (f:Faculty) REQUIRE f.faculty_id IS UNIQUE",
-            "CREATE CONSTRAINT department_id_unique IF NOT EXISTS FOR (d:Department) REQUIRE d.department_id IS UNIQUE",
-            "CREATE CONSTRAINT department_key_unique IF NOT EXISTS FOR (d:Department) REQUIRE d.department_key IS UNIQUE",
-            "CREATE CONSTRAINT teacher_id_unique IF NOT EXISTS FOR (t:Teacher) REQUIRE t.teacher_id IS UNIQUE",
-            "CREATE CONSTRAINT teacher_key_unique IF NOT EXISTS FOR (t:Teacher) REQUIRE t.teacher_key IS UNIQUE",
-            "CREATE CONSTRAINT publication_id_unique IF NOT EXISTS FOR (p:Publication) REQUIRE p.publication_id IS UNIQUE",
-            "CREATE CONSTRAINT publication_key_unique IF NOT EXISTS FOR (p:Publication) REQUIRE p.publication_key IS UNIQUE",
-            "CREATE CONSTRAINT topic_name_unique IF NOT EXISTS FOR (tp:Topic) REQUIRE tp.name IS UNIQUE",
-        ]
-        with self.driver.session() as session:
-            for q in queries:
-                session.run(q)
-
-    def count_all_nodes(self) -> int:
-        rows = self.run_query("MATCH (n) RETURN count(n) AS cnt")
-        return rows[0]["cnt"] if rows else 0
-
-    def get_counts(self) -> dict:
-        q = """
-        CALL {
-          MATCH (f:Faculty)
-          RETURN count(f) AS faculties
-        }
-        CALL {
-          MATCH (d:Department)
-          RETURN count(d) AS departments
-        }
-        CALL {
-          MATCH (t:Teacher)
-          RETURN count(t) AS teachers
-        }
-        CALL {
-          MATCH (p:Publication)
-          RETURN count(p) AS publications
-        }
-        CALL {
-          MATCH ()-[r:AUTHORED]->()
-          RETURN count(r) AS authored
-        }
-        CALL {
-          MATCH ()-[r:CO_AUTHOR_WITH]->()
-          RETURN count(r) AS coauthor
-        }
-        CALL {
-          MATCH ()-[r:HAS_TOPIC]->()
-          RETURN count(r) AS topics
-        }
-        RETURN faculties, departments, teachers, publications, authored, coauthor, topics
-        """
-        rows = self.run_query(q)
-        return rows[0] if rows else {
-            "faculties": 0,
-            "departments": 0,
-            "teachers": 0,
-            "publications": 0,
-            "authored": 0,
-            "coauthor": 0,
-            "topics": 0,
-        }
-
-    def get_next_id(self, prefix: str, label: str, field: str, width: int) -> str:
-        q = f"""
-        MATCH (n:{label})
-        WHERE n.{field} STARTS WITH $prefix
-        RETURN n.{field} AS current_id
-        """
-        rows = self.run_query(q, {"prefix": prefix})
-        max_num = 0
-        for row in rows:
-            value = row.get("current_id")
-            if value:
-                m = re.search(r"(\d+)$", value)
-                if m:
-                    max_num = max(max_num, int(m.group(1)))
-        return f"{prefix}{max_num + 1:0{width}d}"
-
-    def seed_structure(self, faculties: list[dict], departments: list[dict]) -> None:
-        faculty_rows = [
-            {
-                "faculty_id": row["faculty_id"],
-                "name": row["name"],
-            }
-            for row in faculties
-        ]
-        department_rows = [
-            {
-                "department_id": row["department_id"],
-                "faculty_id": row["faculty_id"],
-                "name": row["name"],
-                "department_key": build_department_key(row["name"], row["faculty_id"]),
-            }
-            for row in departments
-        ]
-        relation_rows = [
-            {
-                "faculty_id": row["faculty_id"],
-                "department_key": build_department_key(row["name"], row["faculty_id"]),
-            }
-            for row in departments
-        ]
-
-        q1 = """
-        UNWIND $rows AS row
-        MERGE (f:Faculty {faculty_id: row.faculty_id})
-        SET f.name = row.name
-        """
-
-        q2 = """
-        UNWIND $rows AS row
-        MERGE (d:Department {department_key: row.department_key})
-        ON CREATE SET d.department_id = row.department_id
-        SET d.name = row.name,
-            d.faculty_id = row.faculty_id
-        """
-
-        q3 = """
-        UNWIND $rows AS row
-        MATCH (f:Faculty {faculty_id: row.faculty_id})
-        MATCH (d:Department {department_key: row.department_key})
-        MERGE (f)-[:HAS_DEPARTMENT]->(d)
-        """
-
-        self.execute_many(q1, faculty_rows)
-        self.execute_many(q2, department_rows)
-        self.execute_many(q3, relation_rows)
-
-    def import_teachers(self, teachers: list[dict]) -> None:
-        if not teachers:
-            return
-
-        prepared = []
-        for row in teachers:
-            teacher_key = build_teacher_key(row["full_name"], row["department_id"])
-            prepared.append({
-                **row,
-                "teacher_key": teacher_key,
-            })
-
-        q1 = """
-        UNWIND $rows AS row
-        MERGE (t:Teacher {teacher_key: row.teacher_key})
-        ON CREATE SET t.teacher_id = row.teacher_id
-        SET t.full_name = row.full_name,
-            t.position = CASE WHEN row.position = '' THEN null ELSE row.position END,
-            t.academic_degree = CASE WHEN row.academic_degree = '' THEN null ELSE row.academic_degree END,
-            t.academic_title = CASE WHEN row.academic_title = '' THEN null ELSE row.academic_title END,
-            t.department_id = row.department_id,
-            t.faculty_id = row.faculty_id,
-            t.orcid = CASE WHEN row.orcid = '' THEN null ELSE row.orcid END,
-            t.google_scholar = CASE WHEN row.google_scholar = '' THEN null ELSE row.google_scholar END,
-            t.scopus = CASE WHEN row.scopus = '' THEN null ELSE row.scopus END,
-            t.source_url = CASE WHEN row.source_url = '' THEN null ELSE row.source_url END
-        """
-
-        q2 = """
-        UNWIND $rows AS row
-        MATCH (d:Department {department_id: row.department_id})
-        MATCH (t:Teacher {teacher_key: row.teacher_key})
-        MERGE (d)-[:HAS_TEACHER]->(t)
-        """
-
-        self.execute_many(q1, prepared)
-        self.execute_many(q2, prepared)
-
-    def get_faculties(self) -> list[dict]:
-        q = """
-        MATCH (f:Faculty)
-        RETURN f.faculty_id AS faculty_id,
-               f.name AS name
-        ORDER BY f.faculty_id
-        """
-        return self.run_query(q)
-
-    def get_departments(self) -> list[dict]:
-        q = """
-        MATCH (d:Department)
-        OPTIONAL MATCH (f:Faculty)-[:HAS_DEPARTMENT]->(d)
-        RETURN d.department_id AS department_id,
-               d.name AS name,
-               d.faculty_id AS faculty_id,
-               f.name AS faculty_name
-        ORDER BY d.department_id
-        """
-        return self.run_query(q)
-
-    def get_teachers(self) -> list[dict]:
-        q = """
-        MATCH (t:Teacher)
-        OPTIONAL MATCH (d:Department)-[:HAS_TEACHER]->(t)
-        RETURN t.teacher_id AS teacher_id,
-               t.full_name AS full_name,
-               t.position AS position,
-               t.academic_degree AS academic_degree,
-               t.academic_title AS academic_title,
-               t.department_id AS department_id,
-               d.name AS department_name,
-               t.faculty_id AS faculty_id,
-               t.orcid AS orcid,
-               t.google_scholar AS google_scholar,
-               t.scopus AS scopus,
-               t.source_url AS source_url
-        ORDER BY t.full_name
-        """
-        return self.run_query(q)
-
-    def get_publications(self) -> list[dict]:
-        q = """
-        MATCH (p:Publication)
-        RETURN p.publication_id AS publication_id,
-               p.title AS title,
-               p.year AS year,
-               p.doi AS doi,
-               p.pub_type AS pub_type,
-               p.source AS source
-        ORDER BY p.year DESC, p.title
-        """
-        return self.run_query(q)
-
-    def get_faculty_options(self) -> list[dict]:
-        q = """
-        MATCH (f:Faculty)
-        RETURN f.faculty_id AS faculty_id, f.name AS name
-        ORDER BY f.name
-        """
-        return self.run_query(q)
-
-    def get_department_options(self) -> list[dict]:
-        q = """
-        MATCH (d:Department)
-        RETURN d.department_id AS department_id,
-               d.name AS name,
-               d.faculty_id AS faculty_id
-        ORDER BY d.name
-        """
-        return self.run_query(q)
-
-    def get_teacher_options(self) -> list[dict]:
-        q = """
-        MATCH (t:Teacher)
-        RETURN t.teacher_id AS teacher_id,
-               t.full_name AS full_name
-        ORDER BY t.full_name
-        """
-        return self.run_query(q)
-
-    def upsert_faculty(self, faculty_id: str, name: str) -> None:
-        q = """
-        MERGE (f:Faculty {faculty_id: $faculty_id})
-        SET f.name = $name
-        """
-        self.execute_write(q, {
-            "faculty_id": faculty_id,
-            "name": name,
-        })
-
-    def upsert_department(self, department_id: str, faculty_id: str, name: str) -> None:
-        department_key = build_department_key(name, faculty_id)
-
-        q1 = """
-        MERGE (d:Department {department_key: $department_key})
-        ON CREATE SET d.department_id = $department_id
-        SET d.name = $name,
-            d.faculty_id = $faculty_id
-        """
-        q2 = """
-        MATCH (f:Faculty {faculty_id: $faculty_id})
-        MATCH (d:Department {department_key: $department_key})
-        MERGE (f)-[:HAS_DEPARTMENT]->(d)
-        """
-        self.execute_write(q1, {
-            "department_id": department_id,
-            "department_key": department_key,
-            "faculty_id": faculty_id,
-            "name": name,
-        })
-        self.execute_write(q2, {
-            "faculty_id": faculty_id,
-            "department_key": department_key,
-        })
-
-    def upsert_teacher(
-        self,
-        teacher_id: str,
-        full_name: str,
-        position: str,
-        academic_degree: str,
-        academic_title: str,
-        department_id: str,
-        faculty_id: str,
-        orcid: str,
-        google_scholar: str,
-        scopus: str,
-        source_url: str,
-    ) -> None:
-        teacher_key = build_teacher_key(full_name, department_id)
-
-        q1 = """
-        MERGE (t:Teacher {teacher_key: $teacher_key})
-        ON CREATE SET t.teacher_id = $teacher_id
-        SET t.full_name = $full_name,
-            t.position = CASE WHEN $position = '' THEN null ELSE $position END,
-            t.academic_degree = CASE WHEN $academic_degree = '' THEN null ELSE $academic_degree END,
-            t.academic_title = CASE WHEN $academic_title = '' THEN null ELSE $academic_title END,
-            t.department_id = $department_id,
-            t.faculty_id = $faculty_id,
-            t.orcid = CASE WHEN $orcid = '' THEN null ELSE $orcid END,
-            t.google_scholar = CASE WHEN $google_scholar = '' THEN null ELSE $google_scholar END,
-            t.scopus = CASE WHEN $scopus = '' THEN null ELSE $scopus END,
-            t.source_url = CASE WHEN $source_url = '' THEN null ELSE $source_url END
-        """
-        q2 = """
-        MATCH (d:Department {department_id: $department_id})
-        MATCH (t:Teacher {teacher_key: $teacher_key})
-        MERGE (d)-[:HAS_TEACHER]->(t)
-        """
-        self.execute_write(q1, {
-            "teacher_id": teacher_id,
-            "teacher_key": teacher_key,
-            "full_name": full_name,
-            "position": position,
-            "academic_degree": academic_degree,
-            "academic_title": academic_title,
-            "department_id": department_id,
-            "faculty_id": faculty_id,
-            "orcid": orcid,
-            "google_scholar": google_scholar,
-            "scopus": scopus,
-            "source_url": source_url,
-        })
-        self.execute_write(q2, {
-            "department_id": department_id,
-            "teacher_key": teacher_key,
-        })
-
-    def upsert_publication(
-        self,
-        publication_id: str,
-        title: str,
-        year: int | None,
-        doi: str,
-        pub_type: str,
-        source: str,
-        source_url: str,
-        notes: str,
-        teacher_ids: list[str],
-        topics: list[str],
-    ) -> None:
-        publication_key = build_publication_key(title, year, doi)
-
-        q_pub = """
-        MERGE (p:Publication {publication_key: $publication_key})
-        ON CREATE SET p.publication_id = $publication_id
-        SET p.title = $title,
-            p.year = $year,
-            p.doi = CASE WHEN $doi = '' THEN null ELSE $doi END,
-            p.pub_type = CASE WHEN $pub_type = '' THEN null ELSE $pub_type END,
-            p.source = CASE WHEN $source = '' THEN null ELSE $source END,
-            p.source_url = CASE WHEN $source_url = '' THEN null ELSE $source_url END,
-            p.notes = CASE WHEN $notes = '' THEN null ELSE $notes END
-        """
-        self.execute_write(q_pub, {
-            "publication_key": publication_key,
-            "publication_id": publication_id,
-            "title": title,
-            "year": year,
-            "doi": doi,
-            "pub_type": pub_type,
-            "source": source,
-            "source_url": source_url,
-            "notes": notes,
-        })
-
-        if teacher_ids:
-            author_rows = [
-                {
-                    "teacher_id": teacher_id,
-                    "publication_key": publication_key,
-                    "author_order": idx,
-                }
-                for idx, teacher_id in enumerate(teacher_ids, start=1)
-            ]
-            q_authored = """
-            UNWIND $rows AS row
-            MATCH (t:Teacher {teacher_id: row.teacher_id})
-            MATCH (p:Publication {publication_key: row.publication_key})
-            MERGE (t)-[r:AUTHORED]->(p)
-            SET r.author_order = row.author_order
+    def seed_reference_data(self, faculties: list[dict[str, str]], departments: list[dict[str, str]]) -> None:
+        self.prepare_database()
+        self.execute(
             """
-            self.execute_many(q_authored, author_rows)
-
-        if topics:
-            topic_rows = [
-                {"publication_key": publication_key, "topic_name": topic}
-                for topic in topics
-            ]
-            q_topics = """
             UNWIND $rows AS row
-            MATCH (p:Publication {publication_key: row.publication_key})
-            MERGE (tp:Topic {name: row.topic_name})
-            MERGE (p)-[:HAS_TOPIC]->(tp)
+            MERGE (f:Faculty {code: row.code})
+            SET f.name = row.name,
+                f.faculty_id = row.code
+            """,
+            {"rows": faculties},
+        )
+        self.execute(
             """
-            self.execute_many(q_topics, topic_rows)
+            UNWIND $rows AS row
+            MATCH (f:Faculty {code: row.faculty_code})
+            MERGE (d:Department {code: row.code})
+            SET d.name = row.name,
+                d.department_id = row.code,
+                d.faculty_code = row.faculty_code,
+                d.faculty_id = row.faculty_code
+            MERGE (f)-[:HAS_DEPARTMENT]->(d)
+            """,
+            {"rows": departments},
+        )
 
-        self.rebuild_coauthor_with()
+    def get_overview_counts(self) -> dict[str, int]:
+        rows = self.run_query(
+            """
+            CALL {
+                MATCH (f:Faculty)
+                RETURN count(DISTINCT f) AS faculties
+            }
+            CALL {
+                MATCH (d:Department)
+                RETURN count(DISTINCT d) AS departments
+            }
+            CALL {
+                MATCH (t:Teacher)
+                RETURN count(DISTINCT t) AS teachers
+            }
+            CALL {
+                MATCH (p:Publication)
+                RETURN count(DISTINCT p) AS publications
+            }
+            CALL {
+                MATCH (:Teacher)-[r:AUTHORED]->(:Publication)
+                RETURN count(r) AS authorship_links
+            }
+            CALL {
+                MATCH (a:Teacher)-[:AUTHORED]->(:Publication)<-[:AUTHORED]-(b:Teacher)
+                WHERE coalesce(a.id, a.teacher_id) < coalesce(b.id, b.teacher_id)
+                RETURN count(DISTINCT coalesce(a.id, a.teacher_id) + "|" + coalesce(b.id, b.teacher_id)) AS coauthor_pairs
+            }
+            RETURN faculties, departments, teachers, publications, authorship_links, coauthor_pairs
+            """
+        )
+        if not rows:
+            return {
+                "faculties": 0,
+                "departments": 0,
+                "teachers": 0,
+                "publications": 0,
+                "authorship_links": 0,
+                "coauthor_pairs": 0,
+            }
+        return rows[0]
 
-    def rebuild_coauthor_with(self) -> None:
-        q_delete = """
-        MATCH (:Teacher)-[r:CO_AUTHOR_WITH]->(:Teacher)
-        DELETE r
-        """
-        q_create = """
-        MATCH (a:Teacher)-[:AUTHORED]->(p:Publication)<-[:AUTHORED]-(b:Teacher)
-        WHERE id(a) < id(b)
-        WITH a, b, count(DISTINCT p) AS shared_pubs, collect(DISTINCT p.publication_id) AS pub_ids
-        MERGE (a)-[r:CO_AUTHOR_WITH]->(b)
-        SET r.weight = shared_pubs,
-            r.publication_ids = pub_ids
-        """
-        self.execute_write(q_delete)
-        self.execute_write(q_create)
+    def get_departments(self) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (d:Department)
+            OPTIONAL MATCH (f:Faculty)-[:HAS_DEPARTMENT]->(d)
+            RETURN
+                coalesce(d.code, d.department_id) AS code,
+                d.name AS name,
+                coalesce(f.code, f.faculty_id, d.faculty_code, d.faculty_id) AS faculty_code,
+                f.name AS faculty_name
+            ORDER BY d.name
+            """
+        )
 
-    def get_top_teachers_by_publications(self, limit: int = 10) -> list[dict]:
-        q = """
-        MATCH (t:Teacher)
-        OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
-        RETURN t.full_name AS teacher,
-               count(DISTINCT p) AS publications
-        ORDER BY publications DESC, teacher
-        LIMIT $limit
-        """
-        return self.run_query(q, {"limit": limit})
+    def get_department_overview(self) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (d:Department)
+            OPTIONAL MATCH (f:Faculty)-[:HAS_DEPARTMENT]->(d)
+            OPTIONAL MATCH (d)-[:HAS_TEACHER]->(t:Teacher)
+            OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
+            RETURN
+                coalesce(d.code, d.department_id) AS code,
+                d.name AS name,
+                coalesce(f.code, f.faculty_id) AS faculty_code,
+                f.name AS faculty_name,
+                count(DISTINCT t) AS teachers,
+                count(DISTINCT p) AS publications
+            ORDER BY publications DESC, teachers DESC, name
+            """
+        )
 
-    def get_top_coauthors(self, limit: int = 10) -> list[dict]:
-        q = """
-        MATCH (a:Teacher)-[r:CO_AUTHOR_WITH]->(b:Teacher)
-        RETURN a.full_name AS teacher_a,
-               b.full_name AS teacher_b,
-               r.weight AS shared_publications
-        ORDER BY shared_publications DESC, teacher_a, teacher_b
-        LIMIT $limit
-        """
-        return self.run_query(q, {"limit": limit})
+    def get_teachers(self, search: str = "", department_code: str = "") -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (t:Teacher)
+            OPTIONAL MATCH (d:Department)-[:HAS_TEACHER]->(t)
+            OPTIONAL MATCH (f:Faculty)-[:HAS_DEPARTMENT]->(d)
+            WHERE ($search = "" OR toLower(coalesce(t.full_name, t.name, "")) CONTAINS toLower($search))
+              AND ($department_code = "" OR coalesce(d.code, d.department_id) = $department_code)
+            OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
+            RETURN
+                coalesce(t.id, t.teacher_id) AS id,
+                coalesce(t.full_name, t.name) AS full_name,
+                coalesce(t.position, "") AS position,
+                coalesce(t.academic_degree, "") AS academic_degree,
+                coalesce(t.academic_title, "") AS academic_title,
+                coalesce(t.orcid, "") AS orcid,
+                coalesce(t.google_scholar, "") AS google_scholar,
+                coalesce(t.scopus, "") AS scopus,
+                coalesce(d.code, d.department_id, t.department_code, t.department_id) AS department_code,
+                coalesce(d.name, t.department_name, "") AS department_name,
+                coalesce(f.code, f.faculty_id, t.faculty_code, t.faculty_id) AS faculty_code,
+                coalesce(f.name, "") AS faculty_name,
+                count(DISTINCT p) AS publications
+            ORDER BY full_name
+            """,
+            {"search": search.strip(), "department_code": department_code.strip()},
+        )
 
-    def get_department_stats(self) -> list[dict]:
-        q = """
-        MATCH (d:Department)
-        OPTIONAL MATCH (d)-[:HAS_TEACHER]->(t:Teacher)
-        OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
-        RETURN d.department_id AS department_id,
-               d.name AS department_name,
-               count(DISTINCT t) AS teachers,
-               count(DISTINCT p) AS publications
-        ORDER BY d.department_id
-        """
-        return self.run_query(q)
+    def get_teacher_profile(self, teacher_id: str) -> dict[str, Any] | None:
+        rows = self.run_query(
+            """
+            MATCH (t:Teacher)
+            WHERE coalesce(t.id, t.teacher_id) = $teacher_id
+            OPTIONAL MATCH (d:Department)-[:HAS_TEACHER]->(t)
+            OPTIONAL MATCH (f:Faculty)-[:HAS_DEPARTMENT]->(d)
+            RETURN
+                coalesce(t.id, t.teacher_id) AS id,
+                coalesce(t.full_name, t.name) AS full_name,
+                coalesce(t.position, "") AS position,
+                coalesce(t.academic_degree, "") AS academic_degree,
+                coalesce(t.academic_title, "") AS academic_title,
+                coalesce(t.orcid, "") AS orcid,
+                coalesce(t.google_scholar, "") AS google_scholar,
+                coalesce(t.scopus, "") AS scopus,
+                coalesce(d.code, d.department_id, t.department_code, t.department_id) AS department_code,
+                coalesce(d.name, t.department_name, "") AS department_name,
+                coalesce(f.code, f.faculty_id, t.faculty_code, t.faculty_id) AS faculty_code,
+                coalesce(f.name, "") AS faculty_name
+            LIMIT 1
+            """,
+            {"teacher_id": teacher_id},
+        )
+        return rows[0] if rows else None
 
-    def get_teacher_activity_index(self) -> list[dict]:
-        q = """
-        MATCH (t:Teacher)
-        OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
-        WITH t, count(DISTINCT p) AS pubs
-        OPTIONAL MATCH (t)-[r:CO_AUTHOR_WITH]-(:Teacher)
-        WITH t, pubs,
-             count(DISTINCT r) AS coauthor_links,
-             coalesce(sum(r.weight), 0) AS coauthor_strength
-        RETURN t.full_name AS teacher,
-               pubs,
-               coauthor_links,
-               coauthor_strength,
-               round((pubs * 3.0 + coauthor_links * 2.0 + coauthor_strength * 1.0) * 100) / 100 AS activity_index
-        ORDER BY activity_index DESC, teacher
-        """
-        return self.run_query(q)
+    def get_teacher_publications(self, teacher_id: str) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (t:Teacher)-[:AUTHORED]->(p:Publication)
+            WHERE coalesce(t.id, t.teacher_id) = $teacher_id
+            OPTIONAL MATCH (co:Teacher)-[:AUTHORED]->(p)
+            RETURN
+                coalesce(p.id, p.publication_id) AS id,
+                p.title AS title,
+                p.year AS year,
+                coalesce(p.doi, "") AS doi,
+                coalesce(p.pub_type, "") AS pub_type,
+                coalesce(p.source, "") AS source,
+                collect(DISTINCT coalesce(co.full_name, co.name)) AS authors
+            ORDER BY coalesce(p.year, 0) DESC, title
+            """,
+            {"teacher_id": teacher_id},
+        )
+
+    def get_teacher_coauthors(self, teacher_id: str) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (t:Teacher)-[:AUTHORED]->(p:Publication)<-[:AUTHORED]-(co:Teacher)
+            WHERE coalesce(t.id, t.teacher_id) = $teacher_id
+              AND coalesce(co.id, co.teacher_id) <> $teacher_id
+            RETURN
+                coalesce(co.id, co.teacher_id) AS id,
+                coalesce(co.full_name, co.name) AS full_name,
+                count(DISTINCT p) AS shared_publications,
+                collect(DISTINCT p.title)[0..5] AS publication_examples
+            ORDER BY shared_publications DESC, full_name
+            """,
+            {"teacher_id": teacher_id},
+        )
+
+    def get_publication_years(self) -> list[int]:
+        rows = self.run_query(
+            """
+            MATCH (p:Publication)
+            WHERE p.year IS NOT NULL
+            RETURN DISTINCT p.year AS year
+            ORDER BY year DESC
+            """
+        )
+        return [int(row["year"]) for row in rows if row.get("year") is not None]
+
+    def get_publications(self, year: int | None = None) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (p:Publication)
+            WHERE ($year IS NULL OR p.year = $year)
+            OPTIONAL MATCH (t:Teacher)-[:AUTHORED]->(p)
+            WITH p, collect(DISTINCT coalesce(t.full_name, t.name)) AS authors
+            RETURN
+                coalesce(p.id, p.publication_id) AS id,
+                p.title AS title,
+                p.year AS year,
+                coalesce(p.doi, "") AS doi,
+                coalesce(p.pub_type, "") AS pub_type,
+                coalesce(p.source, "") AS source,
+                authors,
+                size(authors) AS authors_count
+            ORDER BY coalesce(p.year, 0) DESC, title
+            """,
+            {"year": year},
+        )
+
+    def get_graph_edges(self, department_code: str = "", limit: int = 160) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (d:Department)-[:HAS_TEACHER]->(t:Teacher)-[:AUTHORED]->(p:Publication)
+            WHERE ($department_code = "" OR coalesce(d.code, d.department_id) = $department_code)
+            RETURN
+                coalesce(t.id, t.teacher_id) AS teacher_id,
+                coalesce(t.full_name, t.name) AS teacher_name,
+                d.name AS department_name,
+                coalesce(p.id, p.publication_id) AS publication_id,
+                p.title AS publication_title,
+                p.year AS year
+            ORDER BY coalesce(p.year, 0) DESC, teacher_name
+            LIMIT $limit
+            """,
+            {"department_code": department_code.strip(), "limit": int(limit)},
+        )
+
+    def get_top_teachers_by_publications(self, limit: int = 10) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (t:Teacher)
+            OPTIONAL MATCH (d:Department)-[:HAS_TEACHER]->(t)
+            OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
+            RETURN
+                coalesce(t.full_name, t.name) AS teacher,
+                coalesce(d.name, "") AS department,
+                count(DISTINCT p) AS publications
+            ORDER BY publications DESC, teacher
+            LIMIT $limit
+            """,
+            {"limit": int(limit)},
+        )
+
+    def get_top_coauthor_pairs(self, limit: int = 10) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (a:Teacher)-[:AUTHORED]->(p:Publication)<-[:AUTHORED]-(b:Teacher)
+            WHERE coalesce(a.id, a.teacher_id) < coalesce(b.id, b.teacher_id)
+            WITH a, b, count(DISTINCT p) AS shared_publications, collect(DISTINCT p.title)[0..5] AS sample_publications
+            RETURN
+                coalesce(a.full_name, a.name) AS teacher_a,
+                coalesce(b.full_name, b.name) AS teacher_b,
+                shared_publications,
+                sample_publications
+            ORDER BY shared_publications DESC, teacher_a, teacher_b
+            LIMIT $limit
+            """,
+            {"limit": int(limit)},
+        )
+
+    def get_coauthor_edges(self) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (a:Teacher)-[:AUTHORED]->(p:Publication)<-[:AUTHORED]-(b:Teacher)
+            WHERE coalesce(a.id, a.teacher_id) < coalesce(b.id, b.teacher_id)
+            RETURN
+                coalesce(a.id, a.teacher_id) AS source_id,
+                coalesce(a.full_name, a.name) AS source_name,
+                coalesce(b.id, b.teacher_id) AS target_id,
+                coalesce(b.full_name, b.name) AS target_name,
+                count(DISTINCT p) AS weight
+            ORDER BY weight DESC, source_name, target_name
+            """
+        )

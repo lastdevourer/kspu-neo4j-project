@@ -1,6 +1,7 @@
 streamlit
 neo4j
 pandas
-requests
-beautifulsoup4
-lxml
+python-dotenv
+networkx
+pyvis
+
