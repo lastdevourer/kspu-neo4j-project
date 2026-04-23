@@ -5,9 +5,15 @@ import pandas as pd
 st.set_page_config(page_title="KSPU Academic Graph", layout="wide")
 st.title("KSPU Academic Graph")
 
-if "NEO4J_URI" not in st.secrets or "NEO4J_USER" not in st.secrets or "NEO4J_PASSWORD" not in st.secrets:
-    st.error("Добавь NEO4J_URI, NEO4J_USER и NEO4J_PASSWORD в Streamlit Secrets.")
-    st.stop()
+# -----------------------------
+# SECRETS CHECK
+# -----------------------------
+required_secrets = ["NEO4J_URI", "NEO4J_USER", "NEO4J_PASSWORD"]
+
+for key in required_secrets:
+    if key not in st.secrets:
+        st.error(f"Добавь {key} в Streamlit Secrets.")
+        st.stop()
 
 URI = st.secrets["NEO4J_URI"]
 USER = st.secrets["NEO4J_USER"]
@@ -16,9 +22,13 @@ PASSWORD = st.secrets["NEO4J_PASSWORD"]
 driver = GraphDatabase.driver(URI, auth=(USER, PASSWORD))
 
 
+# -----------------------------
+# HELPERS
+# -----------------------------
 def run_query(query: str, params: dict | None = None):
     with driver.session() as session:
-        return list(session.run(query, params or {}))
+        result = session.run(query, params or {})
+        return list(result)
 
 
 def execute_write(query: str, rows: list[dict]):
@@ -27,19 +37,10 @@ def execute_write(query: str, rows: list[dict]):
         session.run("RETURN 1")
 
 
-def get_counts():
-    q = """
-    RETURN
-      size([(f:Faculty) | f]) AS faculties,
-      size([(d:Department) | d]) AS departments,
-      size([(t:Teacher) | t]) AS teachers,
-      size([(p:Publication) | p]) AS publications,
-      size([()-[r:AUTHORED]->() | r]) AS authored,
-      size([()-[r:CO_AUTHOR_WITH]->() | r]) AS coauthor,
-      size([()-[r:HAS_TOPIC]->() | r]) AS topics
-    """
-    rec = run_query(q)[0]
-    return dict(rec)
+def upload_csv(file):
+    df = pd.read_csv(file)
+    df = df.fillna("")
+    return df
 
 
 def create_constraints():
@@ -54,22 +55,100 @@ def create_constraints():
             session.run(q)
 
 
-def upload_csv(file):
-    df = pd.read_csv(file)
-    df = df.fillna("")
-    return df
+def get_counts():
+    q = """
+    CALL {
+      MATCH (f:Faculty)
+      RETURN count(f) AS faculties
+    }
+    CALL {
+      MATCH (d:Department)
+      RETURN count(d) AS departments
+    }
+    CALL {
+      MATCH (t:Teacher)
+      RETURN count(t) AS teachers
+    }
+    CALL {
+      MATCH (p:Publication)
+      RETURN count(p) AS publications
+    }
+    CALL {
+      MATCH ()-[r:AUTHORED]->()
+      RETURN count(r) AS authored
+    }
+    CALL {
+      MATCH ()-[r:CO_AUTHOR_WITH]->()
+      RETURN count(r) AS coauthor
+    }
+    CALL {
+      MATCH ()-[r:HAS_TOPIC]->()
+      RETURN count(r) AS topics
+    }
+    RETURN faculties, departments, teachers, publications, authored, coauthor, topics
+    """
+    rec = run_query(q)[0]
+    return dict(rec)
 
 
+def get_top_teachers_by_publications(limit=10):
+    q = """
+    MATCH (t:Teacher)-[:AUTHORED]->(p:Publication)
+    RETURN t.full_name AS teacher, count(DISTINCT p) AS publications
+    ORDER BY publications DESC, teacher
+    LIMIT $limit
+    """
+    return [dict(r) for r in run_query(q, {"limit": limit})]
+
+
+def get_top_coauthors(limit=10):
+    q = """
+    MATCH (a:Teacher)-[r:CO_AUTHOR_WITH]->(b:Teacher)
+    RETURN a.full_name AS teacher_a,
+           b.full_name AS teacher_b,
+           r.weight AS shared_publications
+    ORDER BY shared_publications DESC, teacher_a, teacher_b
+    LIMIT $limit
+    """
+    return [dict(r) for r in run_query(q, {"limit": limit})]
+
+
+def get_department_stats():
+    q = """
+    MATCH (d:Department)
+    OPTIONAL MATCH (d)-[:HAS_TEACHER]->(t:Teacher)
+    OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
+    RETURN d.department_id AS department_id,
+           d.name AS department_name,
+           count(DISTINCT t) AS teachers,
+           count(DISTINCT p) AS publications
+    ORDER BY d.department_id
+    """
+    return [dict(r) for r in run_query(q)]
+
+
+# -----------------------------
+# HEADER ACTIONS
+# -----------------------------
 st.subheader("1. Подключение")
-if st.button("Проверить подключение"):
-    result = run_query("MATCH (n) RETURN count(n) AS cnt")
-    st.success(f"Подключено! Узлов: {result[0]['cnt']}")
 
-if st.button("Создать ограничения уникальности"):
-    create_constraints()
-    st.success("Constraints созданы.")
+col_a, col_b = st.columns(2)
 
+with col_a:
+    if st.button("Проверить подключение"):
+        result = run_query("MATCH (n) RETURN count(n) AS cnt")
+        st.success(f"Подключено! Узлов: {result[0]['cnt']}")
+
+with col_b:
+    if st.button("Создать ограничения уникальности"):
+        create_constraints()
+        st.success("Constraints созданы.")
+
+# -----------------------------
+# COUNTS
+# -----------------------------
 st.subheader("2. Состояние базы")
+
 try:
     counts = get_counts()
     c1, c2, c3, c4 = st.columns(4)
@@ -85,6 +164,9 @@ try:
 except Exception as e:
     st.warning(f"Не удалось получить счётчики: {e}")
 
+# -----------------------------
+# CSV IMPORT
+# -----------------------------
 st.subheader("3. Загрузка CSV")
 
 tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
@@ -238,26 +320,58 @@ with tab7:
         execute_write(query, rows)
         st.success(f"Импортировано Topics: {len(rows)}")
 
+# -----------------------------
+# SERVICE ACTIONS
+# -----------------------------
 st.subheader("4. Служебные действия")
 
-if st.button("Построить PublicationYear"):
-    q = """
-    MATCH (p:Publication)
-    WHERE p.year IS NOT NULL
-    MERGE (py:PublicationYear {year: toInteger(p.year)})
-    MERGE (p)-[:PUBLISHED_IN_YEAR]->(py)
-    """
-    run_query(q)
-    st.success("PublicationYear построены.")
+col1, col2 = st.columns(2)
 
-if st.button("Пересчитать CO_AUTHOR_WITH"):
-    q = """
-    MATCH (a:Teacher)-[:AUTHORED]->(p:Publication)<-[:AUTHORED]-(b:Teacher)
-    WHERE id(a) < id(b)
-    WITH a, b, count(DISTINCT p) AS shared_pubs, collect(DISTINCT p.publication_id) AS pub_ids
-    MERGE (a)-[r:CO_AUTHOR_WITH]->(b)
-    SET r.weight = shared_pubs,
-        r.publication_ids = pub_ids
-    """
-    run_query(q)
-    st.success("CO_AUTHOR_WITH пересчитаны.")
+with col1:
+    if st.button("Построить PublicationYear"):
+        q = """
+        MATCH (p:Publication)
+        WHERE p.year IS NOT NULL
+        MERGE (py:PublicationYear {year: toInteger(p.year)})
+        MERGE (p)-[:PUBLISHED_IN_YEAR]->(py)
+        """
+        run_query(q)
+        st.success("PublicationYear построены.")
+
+with col2:
+    if st.button("Пересчитать CO_AUTHOR_WITH"):
+        q = """
+        MATCH (a:Teacher)-[:AUTHORED]->(p:Publication)<-[:AUTHORED]-(b:Teacher)
+        WHERE id(a) < id(b)
+        WITH a, b, count(DISTINCT p) AS shared_pubs, collect(DISTINCT p.publication_id) AS pub_ids
+        MERGE (a)-[r:CO_AUTHOR_WITH]->(b)
+        SET r.weight = shared_pubs,
+            r.publication_ids = pub_ids
+        """
+        run_query(q)
+        st.success("CO_AUTHOR_WITH пересчитаны.")
+
+# -----------------------------
+# ANALYTICS
+# -----------------------------
+st.subheader("5. Аналитика")
+
+a1, a2, a3 = st.tabs(["Top teachers", "Top coauthors", "Departments"])
+
+with a1:
+    if st.button("Показать самых продуктивных преподавателей"):
+        data = get_top_teachers_by_publications()
+        if data:
+            st.dataframe(pd.DataFrame(data), use_container_width=True)
+
+with a2:
+    if st.button("Показать самые сильные связи соавторства"):
+        data = get_top_coauthors()
+        if data:
+            st.dataframe(pd.DataFrame(data), use_container_width=True)
+
+with a3:
+    if st.button("Показать статистику по кафедрам"):
+        data = get_department_stats()
+        if data:
+            st.dataframe(pd.DataFrame(data), use_container_width=True)
