@@ -45,9 +45,6 @@ class Neo4jService:
         with self.driver.session() as session:
             session.run(query, {"rows": rows})
 
-    # -----------------------------------------------------
-    # SETUP
-    # -----------------------------------------------------
     def create_constraints(self) -> None:
         queries = [
             "CREATE CONSTRAINT faculty_id_unique IF NOT EXISTS FOR (f:Faculty) REQUIRE f.faculty_id IS UNIQUE",
@@ -118,14 +115,11 @@ class Neo4jService:
         for row in rows:
             value = row.get("current_id")
             if value:
-                m = re.search(r"(\\d+)$", value)
+                m = re.search(r"(\d+)$", value)
                 if m:
                     max_num = max(max_num, int(m.group(1)))
         return f"{prefix}{max_num + 1:0{width}d}"
 
-    # -----------------------------------------------------
-    # SEED
-    # -----------------------------------------------------
     def seed_structure(self, faculties: list[dict], departments: list[dict]) -> None:
         faculty_rows = [
             {
@@ -175,9 +169,6 @@ class Neo4jService:
         self.execute_many(q2, department_rows)
         self.execute_many(q3, relation_rows)
 
-    # -----------------------------------------------------
-    # READ LISTS
-    # -----------------------------------------------------
     def get_faculties(self) -> list[dict]:
         q = """
         MATCH (f:Faculty)
@@ -260,9 +251,6 @@ class Neo4jService:
         """
         return self.run_query(q)
 
-    # -----------------------------------------------------
-    # UPSERTS
-    # -----------------------------------------------------
     def upsert_faculty(self, faculty_id: str, name: str) -> None:
         q = """
         MERGE (f:Faculty {faculty_id: $faculty_id})
@@ -414,9 +402,6 @@ class Neo4jService:
 
         self.rebuild_coauthor_with()
 
-    # -----------------------------------------------------
-    # ANALYTICS
-    # -----------------------------------------------------
     def rebuild_coauthor_with(self) -> None:
         q_delete = """
         MATCH (:Teacher)-[r:CO_AUTHOR_WITH]->(:Teacher)
