@@ -1,4 +1,6 @@
 streamlit
 neo4j
-requests
 pandas
+requests
+beautifulsoup4
+lxml
