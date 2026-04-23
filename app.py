@@ -170,7 +170,13 @@ with tab1:
 with tab2:
     st.markdown("### База викладачів")
 
-    department_options = service.get_department_options()
+    supported_department_ids = {"D001", "D002", "D003"}
+
+    department_options = [
+        row for row in service.get_department_options()
+        if row["department_id"] in supported_department_ids
+    ]
+
     department_map = {
         f"{row['department_id']} — {row['name']}": row
         for row in department_options
@@ -200,7 +206,7 @@ with tab2:
                         faculty_id=dep["faculty_id"],
                     )
                     if not teachers:
-                        st.warning("Для цієї кафедри автоматичне завантаження поки недоступне або даних не знайдено.")
+                        st.warning("Для цієї кафедри даних не знайдено.")
                     else:
                         service.import_teachers(teachers)
                         st.success(f"Імпортовано викладачів: {len(teachers)}")
@@ -212,8 +218,6 @@ with tab2:
         dep = department_map[selected_department]
         if dep["department_id"] in STAFF_URLS:
             st.caption(f"Джерело: {STAFF_URLS[dep['department_id']]}")
-        else:
-            st.caption("Для цієї кафедри staff-сторінка ще не підключена.")
 
     teacher_rows = service.get_teachers()
     if teacher_rows:
@@ -221,6 +225,12 @@ with tab2:
         st.dataframe(df, use_container_width=True, hide_index=True)
     else:
         st.info("Викладачів ще не додано.")
+
+    all_department_options = service.get_department_options()
+    all_department_map = {
+        f"{row['department_id']} — {row['name']}": row
+        for row in all_department_options
+    }
 
     with st.expander("Додати викладача вручну"):
         next_teacher_id = service.get_next_id("T", "Teacher", "teacher_id", 4)
@@ -234,7 +244,7 @@ with tab2:
 
             department_choice = st.selectbox(
                 "Кафедра",
-                options=list(department_map.keys()),
+                options=list(all_department_map.keys()),
                 index=None,
                 placeholder="Оберіть кафедру",
                 key="manual_teacher_department"
@@ -254,7 +264,7 @@ with tab2:
                 if not teacher_id.strip() or not full_name.strip() or not department_choice:
                     st.warning("Заповни код, ПІБ і кафедру.")
                 else:
-                    dep = department_map[department_choice]
+                    dep = all_department_map[department_choice]
                     try:
                         service.upsert_teacher(
                             teacher_id=teacher_id.strip(),
@@ -341,7 +351,7 @@ with tab3:
                             teacher_ids=author_ids,
                             topics=topics,
                         )
-                        st.success("Публікацію додано, зв’язки оновлено без дублювання.")
+                        st.success("Публікацію додано, дублікати не створено.")
                         st.rerun()
                     except Exception as e:
                         st.error(f"Помилка: {e}")
