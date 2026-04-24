@@ -275,10 +275,12 @@ class Neo4jService:
             MATCH (t:Teacher)
             OPTIONAL MATCH (d:Department)-[:HAS_TEACHER]->(t)
             OPTIONAL MATCH (f:Faculty)-[:HAS_DEPARTMENT]->(d)
+            OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
             WITH
                 t,
                 d,
                 f,
+                count(DISTINCT p) AS publications,
                 CASE WHEN coalesce(t.orcid, "") <> "" THEN 1 ELSE 0 END +
                 CASE WHEN coalesce(t.google_scholar, "") <> "" THEN 1 ELSE 0 END +
                 CASE WHEN coalesce(t.scopus, "") <> "" THEN 1 ELSE 0 END +
@@ -293,6 +295,7 @@ class Neo4jService:
                 coalesce(t.scopus, "") AS scopus,
                 coalesce(t.web_of_science, "") AS web_of_science,
                 coalesce(t.profile_url, "") AS profile_url,
+                publications,
                 profile_score
             ORDER BY profile_score DESC, full_name
             LIMIT $limit
@@ -306,10 +309,12 @@ class Neo4jService:
             MATCH (t:Teacher)
             OPTIONAL MATCH (d:Department)-[:HAS_TEACHER]->(t)
             OPTIONAL MATCH (f:Faculty)-[:HAS_DEPARTMENT]->(d)
+            OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
             WITH
                 t,
                 d,
                 f,
+                count(DISTINCT p) AS publications,
                 CASE WHEN coalesce(t.orcid, "") <> "" THEN 1 ELSE 0 END +
                 CASE WHEN coalesce(t.google_scholar, "") <> "" THEN 1 ELSE 0 END +
                 CASE WHEN coalesce(t.scopus, "") <> "" THEN 1 ELSE 0 END +
@@ -326,6 +331,7 @@ class Neo4jService:
                 coalesce(t.scopus, "") AS scopus,
                 coalesce(t.web_of_science, "") AS web_of_science,
                 coalesce(t.profile_url, "") AS profile_url,
+                publications,
                 profile_score
             ORDER BY profile_score DESC, full_name
             LIMIT $limit
