@@ -84,6 +84,31 @@ class Neo4jService:
             {"rows": departments},
         )
 
+    def seed_teachers(self, teachers: list[dict[str, str]]) -> None:
+        self.prepare_database()
+        self.execute(
+            """
+            UNWIND $rows AS row
+            MATCH (d:Department {code: row.department_code})
+            MERGE (t:Teacher {id: row.id})
+            SET
+                t.teacher_id = row.id,
+                t.full_name = row.full_name,
+                t.name = row.full_name,
+                t.position = coalesce(row.position, ""),
+                t.academic_degree = coalesce(row.academic_degree, ""),
+                t.academic_title = coalesce(row.academic_title, ""),
+                t.orcid = coalesce(row.orcid, ""),
+                t.google_scholar = coalesce(row.google_scholar, ""),
+                t.scopus = coalesce(row.scopus, ""),
+                t.web_of_science = coalesce(row.web_of_science, ""),
+                t.profile_url = coalesce(row.profile_url, ""),
+                t.department_code = row.department_code
+            MERGE (d)-[:HAS_TEACHER]->(t)
+            """,
+            {"rows": teachers},
+        )
+
     def get_overview_counts(self) -> dict[str, int]:
         rows = self.run_query(
             """
@@ -158,6 +183,23 @@ class Neo4jService:
             """
         )
 
+    def get_faculty_overview(self) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (f:Faculty)
+            OPTIONAL MATCH (f)-[:HAS_DEPARTMENT]->(d:Department)
+            OPTIONAL MATCH (d)-[:HAS_TEACHER]->(t:Teacher)
+            OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
+            RETURN
+                coalesce(f.code, f.faculty_id) AS code,
+                f.name AS name,
+                count(DISTINCT d) AS departments,
+                count(DISTINCT t) AS teachers,
+                count(DISTINCT p) AS publications
+            ORDER BY teachers DESC, publications DESC, name
+            """
+        )
+
     def get_teachers(self, search: str = "", department_code: str = "") -> list[dict[str, Any]]:
         return self.run_query(
             """
@@ -176,6 +218,8 @@ class Neo4jService:
                 coalesce(t.orcid, "") AS orcid,
                 coalesce(t.google_scholar, "") AS google_scholar,
                 coalesce(t.scopus, "") AS scopus,
+                coalesce(t.web_of_science, "") AS web_of_science,
+                coalesce(t.profile_url, "") AS profile_url,
                 coalesce(d.code, d.department_id, t.department_code, t.department_id) AS department_code,
                 coalesce(d.name, t.department_name, "") AS department_name,
                 coalesce(f.code, f.faculty_id, t.faculty_code, t.faculty_id) AS faculty_code,
@@ -202,6 +246,8 @@ class Neo4jService:
                 coalesce(t.orcid, "") AS orcid,
                 coalesce(t.google_scholar, "") AS google_scholar,
                 coalesce(t.scopus, "") AS scopus,
+                coalesce(t.web_of_science, "") AS web_of_science,
+                coalesce(t.profile_url, "") AS profile_url,
                 coalesce(d.code, d.department_id, t.department_code, t.department_id) AS department_code,
                 coalesce(d.name, t.department_name, "") AS department_name,
                 coalesce(f.code, f.faculty_id, t.faculty_code, t.faculty_id) AS faculty_code,
