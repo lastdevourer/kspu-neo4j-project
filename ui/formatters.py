@@ -30,6 +30,22 @@ def department_overview_dataframe(rows: list[dict]) -> pd.DataFrame:
     return renamed[["Код кафедри", "Кафедра", "Факультет", "Викладачі", "Публікації"]]
 
 
+def faculty_overview_dataframe(rows: list[dict]) -> pd.DataFrame:
+    df = _frame(rows)
+    if df.empty:
+        return df
+    renamed = df.rename(
+        columns={
+            "code": "Код факультету",
+            "name": "Факультет",
+            "departments": "Кафедри",
+            "teachers": "Викладачі",
+            "publications": "Публікації",
+        }
+    )
+    return renamed[["Код факультету", "Факультет", "Кафедри", "Викладачі", "Публікації"]]
+
+
 def teachers_dataframe(rows: list[dict]) -> pd.DataFrame:
     df = _frame(rows)
     if df.empty:
@@ -170,4 +186,3 @@ def centrality_dataframe(rows: list[dict]) -> pd.DataFrame:
             "Betweenness centrality",
         ]
     ]
-
