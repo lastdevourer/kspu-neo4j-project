@@ -380,7 +380,7 @@ class Neo4jService:
                 coalesce(t.orcid, "") AS orcid,
                 coalesce(t.google_scholar, "") AS google_scholar,
                 count(DISTINCT p) AS publications
-            ORDER BY publications ASC, full_name
+            ORDER BY full_name
             """,
             {"department_code": department_code.strip()},
         )
