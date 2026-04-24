@@ -60,16 +60,22 @@ def apply_theme() -> None:
             color: var(--text-main);
         }
 
+        header,
         [data-testid="stHeader"] {
-            background: rgba(7, 17, 31, 0.35);
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+
+        [data-testid="stToolbar"] {
+            background: rgba(7, 17, 31, 0.35) !important;
             backdrop-filter: blur(12px);
         }
 
         .block-container {
             max-width: 1320px;
-            padding-top: 3.2rem;
+            padding-top: 5.5rem;
             padding-bottom: 2.4rem;
-             }
+        }
 
         h1, h2, h3 {
             font-family: "Space Grotesk", "Manrope", sans-serif;
@@ -80,14 +86,16 @@ def apply_theme() -> None:
         .hero-card {
             position: relative;
             overflow: hidden;
-            border: 1px solid var(--line-strong);
+            border: 1px solid rgba(96, 165, 250, 0.22);
             background:
-                linear-gradient(135deg, rgba(18, 38, 63, 0.94), rgba(8, 24, 43, 0.96)),
-                radial-gradient(circle at top right, rgba(56, 189, 248, 0.22), transparent 32%);
-            border-radius: 30px;
-            padding: 1.55rem 1.8rem;
-            box-shadow: var(--shadow);
-            margin-bottom: 1.1rem;
+                linear-gradient(135deg, rgba(18, 38, 63, 0.78), rgba(8, 24, 43, 0.68)),
+                radial-gradient(circle at top right, rgba(56, 189, 248, 0.18), transparent 34%);
+            border-radius: 24px;
+            padding: 1.35rem 1.65rem;
+            box-shadow: 0 18px 46px rgba(2, 8, 23, 0.26);
+            margin-top: 0.8rem;
+            margin-bottom: 1.55rem;
+            backdrop-filter: blur(10px);
         }
 
         .hero-kicker {
@@ -112,6 +120,7 @@ def apply_theme() -> None:
             margin-bottom: 0.22rem;
             color: var(--text-main);
             font-family: "Space Grotesk", "Manrope", sans-serif;
+            text-shadow: 0 8px 24px rgba(2, 8, 23, 0.28);
         }
 
         .hero-subtitle {
@@ -296,6 +305,23 @@ def apply_theme() -> None:
             font-weight: 700;
             color: var(--text-main);
             line-height: 1.2;
+        }
+
+        @media (max-width: 960px) {
+            .block-container {
+                padding-top: 4.2rem;
+                padding-bottom: 1.4rem;
+            }
+
+            .hero-card {
+                padding: 1.1rem 1rem;
+                border-radius: 20px;
+                margin-top: 0.6rem;
+            }
+
+            .hero-title {
+                font-size: 1.65rem;
+            }
         }
         </style>
         """
