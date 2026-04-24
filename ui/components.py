@@ -67,9 +67,9 @@ def apply_theme() -> None:
 
         .block-container {
             max-width: 1320px;
-            padding-top: 1.4rem;
+            padding-top: 3.2rem;
             padding-bottom: 2.4rem;
-        }
+             }
 
         h1, h2, h3 {
             font-family: "Space Grotesk", "Manrope", sans-serif;
