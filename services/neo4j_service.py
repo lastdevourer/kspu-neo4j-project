@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from neo4j import GraphDatabase
@@ -29,6 +30,59 @@ LEGACY_MIGRATION_STATEMENTS = [
     SET d.faculty_code = coalesce(d.faculty_id, f.code, f.faculty_id)
     """,
 ]
+
+
+def title_case_name(value: str | None) -> str:
+    if not value:
+        return ""
+
+    value = str(value).strip()
+    if not value:
+        return ""
+
+    parts = re.split(r"(\s+|-)", value.lower())
+    fixed: list[str] = []
+
+    for part in parts:
+        if part.isspace() or part == "-":
+            fixed.append(part)
+        elif part:
+            fixed.append(part[:1].upper() + part[1:])
+
+    return "".join(fixed)
+
+
+def normalize_authors(authors: Any) -> list[str]:
+    if not isinstance(authors, list):
+        return []
+
+    result: list[str] = []
+    for author in authors:
+        fixed = title_case_name(str(author))
+        if fixed and fixed not in result:
+            result.append(fixed)
+
+    return result
+
+
+def normalize_teacher_row(row: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(row)
+
+    for key in [
+        "full_name",
+        "teacher",
+        "teacher_a",
+        "teacher_b",
+        "source_name",
+        "target_name",
+    ]:
+        if key in normalized:
+            normalized[key] = title_case_name(normalized.get(key))
+
+    if "authors" in normalized:
+        normalized["authors"] = normalize_authors(normalized.get("authors"))
+
+    return normalized
 
 
 class Neo4jService:
@@ -86,6 +140,13 @@ class Neo4jService:
 
     def seed_teachers(self, teachers: list[dict[str, str]]) -> None:
         self.prepare_database()
+
+        normalized_teachers = []
+        for row in teachers:
+            normalized_row = dict(row)
+            normalized_row["full_name"] = title_case_name(row.get("full_name", ""))
+            normalized_teachers.append(normalized_row)
+
         self.execute(
             """
             UNWIND $rows AS row
@@ -106,12 +167,50 @@ class Neo4jService:
                 t.department_code = row.department_code
             MERGE (d)-[:HAS_TEACHER]->(t)
             """,
-            {"rows": teachers},
+            {"rows": normalized_teachers},
+        )
+
+    def normalize_teacher_names_in_database(self) -> None:
+        rows = self.run_query(
+            """
+            MATCH (t:Teacher)
+            RETURN coalesce(t.id, t.teacher_id) AS id,
+                   coalesce(t.full_name, t.name) AS full_name
+            """
+        )
+
+        normalized_rows = []
+        for row in rows:
+            normalized_rows.append(
+                {
+                    "id": row["id"],
+                    "full_name": title_case_name(row["full_name"]),
+                }
+            )
+
+        if not normalized_rows:
+            return
+
+        self.execute(
+            """
+            UNWIND $rows AS row
+            MATCH (t:Teacher)
+            WHERE coalesce(t.id, t.teacher_id) = row.id
+            SET t.full_name = row.full_name,
+                t.name = row.full_name
+            """,
+            {"rows": normalized_rows},
         )
 
     def import_teacher_publications(self, teacher_id: str, publications: list[dict[str, Any]]) -> int:
         if not publications:
             return 0
+
+        normalized_publications = []
+        for row in publications:
+            normalized_row = dict(row)
+            normalized_row["authors"] = normalize_authors(row.get("authors"))
+            normalized_publications.append(normalized_row)
 
         self.prepare_database()
         self.execute(
@@ -135,18 +234,17 @@ class Neo4jService:
             """,
             {
                 "teacher_id": teacher_id,
-                "rows": publications,
+                "rows": normalized_publications,
             },
         )
-        return len(publications)
+        return len(normalized_publications)
 
     def get_teacher_import_options(self, department_code: str = "") -> list[dict[str, Any]]:
-        return self.run_query(
+        rows = self.run_query(
             """
-            MATCH (t:Teacher)
-            OPTIONAL MATCH (d:Department)-[:HAS_TEACHER]->(t)
-            OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
+            MATCH (d:Department)-[:HAS_TEACHER]->(t:Teacher)
             WHERE ($department_code = "" OR coalesce(d.code, d.department_id) = $department_code)
+            OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
             RETURN
                 coalesce(t.id, t.teacher_id) AS id,
                 coalesce(t.full_name, t.name) AS full_name,
@@ -158,6 +256,7 @@ class Neo4jService:
             """,
             {"department_code": department_code.strip()},
         )
+        return [normalize_teacher_row(row) for row in rows]
 
     def get_overview_counts(self) -> dict[str, int]:
         rows = self.run_query(
@@ -251,10 +350,9 @@ class Neo4jService:
         )
 
     def get_teachers(self, search: str = "", department_code: str = "") -> list[dict[str, Any]]:
-        return self.run_query(
+        rows = self.run_query(
             """
-            MATCH (t:Teacher)
-            OPTIONAL MATCH (d:Department)-[:HAS_TEACHER]->(t)
+            MATCH (d:Department)-[:HAS_TEACHER]->(t:Teacher)
             OPTIONAL MATCH (f:Faculty)-[:HAS_DEPARTMENT]->(d)
             WHERE ($search = "" OR toLower(coalesce(t.full_name, t.name, "")) CONTAINS toLower($search))
               AND ($department_code = "" OR coalesce(d.code, d.department_id) = $department_code)
@@ -279,6 +377,7 @@ class Neo4jService:
             """,
             {"search": search.strip(), "department_code": department_code.strip()},
         )
+        return [normalize_teacher_row(row) for row in rows]
 
     def get_teacher_profile(self, teacher_id: str) -> dict[str, Any] | None:
         rows = self.run_query(
@@ -306,14 +405,15 @@ class Neo4jService:
             """,
             {"teacher_id": teacher_id},
         )
-        return rows[0] if rows else None
+        return normalize_teacher_row(rows[0]) if rows else None
 
     def get_teacher_publications(self, teacher_id: str) -> list[dict[str, Any]]:
-        return self.run_query(
+        rows = self.run_query(
             """
             MATCH (t:Teacher)-[:AUTHORED]->(p:Publication)
             WHERE coalesce(t.id, t.teacher_id) = $teacher_id
             OPTIONAL MATCH (co:Teacher)-[:AUTHORED]->(p)
+            WITH p, collect(DISTINCT coalesce(co.full_name, co.name)) AS graph_authors
             RETURN
                 coalesce(p.id, p.publication_id) AS id,
                 p.title AS title,
@@ -321,14 +421,18 @@ class Neo4jService:
                 coalesce(p.doi, "") AS doi,
                 coalesce(p.pub_type, "") AS pub_type,
                 coalesce(p.source, "") AS source,
-                collect(DISTINCT coalesce(co.full_name, co.name)) AS authors
+                CASE
+                    WHEN p.authors IS NOT NULL AND size(p.authors) > 0 THEN p.authors
+                    ELSE graph_authors
+                END AS authors
             ORDER BY coalesce(p.year, 0) DESC, title
             """,
             {"teacher_id": teacher_id},
         )
+        return [normalize_teacher_row(row) for row in rows]
 
     def get_teacher_coauthors(self, teacher_id: str) -> list[dict[str, Any]]:
-        return self.run_query(
+        rows = self.run_query(
             """
             MATCH (t:Teacher)-[:AUTHORED]->(p:Publication)<-[:AUTHORED]-(co:Teacher)
             WHERE coalesce(t.id, t.teacher_id) = $teacher_id
@@ -342,6 +446,7 @@ class Neo4jService:
             """,
             {"teacher_id": teacher_id},
         )
+        return [normalize_teacher_row(row) for row in rows]
 
     def get_publication_years(self) -> list[int]:
         rows = self.run_query(
@@ -355,12 +460,12 @@ class Neo4jService:
         return [int(row["year"]) for row in rows if row.get("year") is not None]
 
     def get_publications(self, year: int | None = None) -> list[dict[str, Any]]:
-        return self.run_query(
+        rows = self.run_query(
             """
             MATCH (p:Publication)
             WHERE ($year IS NULL OR p.year = $year)
             OPTIONAL MATCH (t:Teacher)-[:AUTHORED]->(p)
-            WITH p, collect(DISTINCT coalesce(t.full_name, t.name)) AS authors
+            WITH p, collect(DISTINCT coalesce(t.full_name, t.name)) AS graph_authors
             RETURN
                 coalesce(p.id, p.publication_id) AS id,
                 p.title AS title,
@@ -368,15 +473,22 @@ class Neo4jService:
                 coalesce(p.doi, "") AS doi,
                 coalesce(p.pub_type, "") AS pub_type,
                 coalesce(p.source, "") AS source,
-                authors,
-                size(authors) AS authors_count
+                CASE
+                    WHEN p.authors IS NOT NULL AND size(p.authors) > 0 THEN p.authors
+                    ELSE graph_authors
+                END AS authors,
+                CASE
+                    WHEN p.authors IS NOT NULL AND size(p.authors) > 0 THEN size(p.authors)
+                    ELSE size(graph_authors)
+                END AS authors_count
             ORDER BY coalesce(p.year, 0) DESC, title
             """,
             {"year": year},
         )
+        return [normalize_teacher_row(row) for row in rows]
 
     def get_graph_edges(self, department_code: str = "", limit: int = 160) -> list[dict[str, Any]]:
-        return self.run_query(
+        rows = self.run_query(
             """
             MATCH (d:Department)-[:HAS_TEACHER]->(t:Teacher)-[:AUTHORED]->(p:Publication)
             WHERE ($department_code = "" OR coalesce(d.code, d.department_id) = $department_code)
@@ -393,8 +505,13 @@ class Neo4jService:
             {"department_code": department_code.strip(), "limit": int(limit)},
         )
 
+        for row in rows:
+            row["teacher_name"] = title_case_name(row.get("teacher_name"))
+
+        return rows
+
     def get_top_teachers_by_publications(self, limit: int = 10) -> list[dict[str, Any]]:
-        return self.run_query(
+        rows = self.run_query(
             """
             MATCH (t:Teacher)
             OPTIONAL MATCH (d:Department)-[:HAS_TEACHER]->(t)
@@ -408,9 +525,10 @@ class Neo4jService:
             """,
             {"limit": int(limit)},
         )
+        return [normalize_teacher_row(row) for row in rows]
 
     def get_top_coauthor_pairs(self, limit: int = 10) -> list[dict[str, Any]]:
-        return self.run_query(
+        rows = self.run_query(
             """
             MATCH (a:Teacher)-[:AUTHORED]->(p:Publication)<-[:AUTHORED]-(b:Teacher)
             WHERE coalesce(a.id, a.teacher_id) < coalesce(b.id, b.teacher_id)
@@ -425,9 +543,10 @@ class Neo4jService:
             """,
             {"limit": int(limit)},
         )
+        return [normalize_teacher_row(row) for row in rows]
 
     def get_coauthor_edges(self) -> list[dict[str, Any]]:
-        return self.run_query(
+        rows = self.run_query(
             """
             MATCH (a:Teacher)-[:AUTHORED]->(p:Publication)<-[:AUTHORED]-(b:Teacher)
             WHERE coalesce(a.id, a.teacher_id) < coalesce(b.id, b.teacher_id)
@@ -440,3 +559,4 @@ class Neo4jService:
             ORDER BY weight DESC, source_name, target_name
             """
         )
+        return [normalize_teacher_row(row) for row in rows]
