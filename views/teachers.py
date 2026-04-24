@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import streamlit as st
 
-from ui.components import render_header, render_key_value_card, require_service
+from ui.components import (
+    render_empty_state,
+    render_header,
+    render_key_value_card,
+    render_section_heading,
+    render_summary_strip,
+    require_service,
+)
 from ui.formatters import coauthors_dataframe, teacher_publications_dataframe, teachers_dataframe
 
 
@@ -26,27 +33,58 @@ def render() -> None:
     teacher_rows = service.get_teachers(search=search_value, department_code=selected_department_code)
     teachers_table = teachers_dataframe(teacher_rows)
 
-    st.markdown("### Таблиця викладачів")
     if teachers_table.empty:
-        st.info("За вибраними параметрами викладачів не знайдено.")
+        render_empty_state(
+            "Викладачів не знайдено",
+            "Спробуйте змінити запит або послабити фільтр за кафедрою, щоб побачити доступних викладачів.",
+        )
         return
 
-    st.dataframe(teachers_table, use_container_width=True, hide_index=True)
+    metrics = st.columns(3, gap="medium")
+    teacher_count = len(teacher_rows)
+    publication_count = sum(int(row.get("publications", 0) or 0) for row in teacher_rows)
+    departments_count = len({row.get("department_code") for row in teacher_rows if row.get("department_code")})
+
+    with metrics[0]:
+        render_summary_strip("Викладачі у вибірці", str(teacher_count), "Кількість записів після застосування фільтрів.")
+    with metrics[1]:
+        render_summary_strip("Публікації у вибірці", str(publication_count), "Сумарний публікаційний обсяг відфільтрованих викладачів.")
+    with metrics[2]:
+        render_summary_strip("Кафедри у вибірці", str(departments_count), "Скільки кафедр представлено у поточному результаті.")
 
     teacher_labels = {f"{row['full_name']} | {row['department_name']}": row["id"] for row in teacher_rows}
-    selected_teacher_label = st.selectbox(
-        "Картка викладача",
-        list(teacher_labels.keys()),
-        help="Оберіть викладача для детального перегляду публікацій і співавторства.",
-    )
-    selected_teacher_id = teacher_labels[selected_teacher_label]
+    layout = st.columns([1.18, 0.94], gap="large")
 
-    profile = service.get_teacher_profile(selected_teacher_id)
-    publications = service.get_teacher_publications(selected_teacher_id)
-    coauthors = service.get_teacher_coauthors(selected_teacher_id)
+    with layout[0]:
+        render_section_heading(
+            "Таблиця викладачів",
+            "Повний список викладачів у межах поточного пошуку та фільтра кафедри.",
+        )
+        st.dataframe(teachers_table, use_container_width=True, hide_index=True)
 
-    profile_columns = st.columns([1.05, 1.25], gap="large")
-    with profile_columns[0]:
+    with layout[1]:
+        render_section_heading(
+            "Картка викладача",
+            "Оберіть одного викладача, щоб переглянути профіль, публікації та співавторство.",
+        )
+        selected_teacher_label = st.selectbox(
+            "Обраний викладач",
+            list(teacher_labels.keys()),
+            help="Список оновлюється відповідно до поточних фільтрів.",
+        )
+        selected_teacher_id = teacher_labels[selected_teacher_label]
+
+        profile = service.get_teacher_profile(selected_teacher_id)
+        if profile is None:
+            render_empty_state(
+                "Профіль тимчасово недоступний",
+                "Не вдалося знайти детальну картку цього викладача. Спробуйте оновити вибір або перевірити дані у графі.",
+            )
+            return
+
+        publications = service.get_teacher_publications(selected_teacher_id)
+        coauthors = service.get_teacher_coauthors(selected_teacher_id)
+
         render_key_value_card(
             "Паспорт викладача",
             [
@@ -58,8 +96,6 @@ def render() -> None:
                 ("Вчене звання", profile["academic_title"]),
             ],
         )
-
-    with profile_columns[1]:
         render_key_value_card(
             "Наукові профілі",
             [
@@ -71,19 +107,31 @@ def render() -> None:
             ],
         )
 
-    bottom_columns = st.columns(2, gap="large")
-    with bottom_columns[0]:
-        st.markdown("### Публікації викладача")
+    tabs = st.tabs(["Публікації викладача", "Співавтори"])
+    with tabs[0]:
+        render_section_heading(
+            "Публікації викладача",
+            "Список публікацій із роком, DOI та складом авторів.",
+        )
         publications_table = teacher_publications_dataframe(publications)
         if publications_table.empty:
-            st.info("Для цього викладача публікацій поки не знайдено.")
+            render_empty_state(
+                "Публікацій не знайдено",
+                "Для цього викладача у поточній базі ще немає зафіксованих публікацій.",
+            )
         else:
             st.dataframe(publications_table, use_container_width=True, hide_index=True)
 
-    with bottom_columns[1]:
-        st.markdown("### Співавтори")
+    with tabs[1]:
+        render_section_heading(
+            "Співавтори",
+            "Основні колаборації викладача та приклади спільних публікацій.",
+        )
         coauthors_table = coauthors_dataframe(coauthors)
         if coauthors_table.empty:
-            st.info("Співавторів поки не виявлено.")
+            render_empty_state(
+                "Співавторів не виявлено",
+                "У мережі ще не зафіксовано спільних публікацій з іншими викладачами.",
+            )
         else:
             st.dataframe(coauthors_table, use_container_width=True, hide_index=True)

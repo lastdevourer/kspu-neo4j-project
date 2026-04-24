@@ -3,7 +3,7 @@ from __future__ import annotations
 import streamlit as st
 import streamlit.components.v1 as components
 
-from ui.components import render_header, require_service
+from ui.components import render_empty_state, render_header, render_info_card, render_section_heading, require_service
 from ui.formatters import graph_edges_dataframe
 from utils.graph_visualization import build_graph_html
 
@@ -31,21 +31,41 @@ def render() -> None:
     )
 
     if not edges:
-        st.info("Для побудови графа поки що недостатньо даних.")
+        render_empty_state(
+            "Недостатньо даних для графа",
+            "Щойно в базі з'являться зв'язки авторства між викладачами та публікаціями, тут можна буде побачити мережу.",
+        )
         return
 
     teacher_count = len({edge["teacher_id"] for edge in edges})
     publication_count = len({edge["publication_id"] for edge in edges})
-    summary_columns = st.columns(2)
-    summary_columns[0].metric("Вузли Teacher", teacher_count)
-    summary_columns[1].metric("Вузли Publication", publication_count)
+    summary_columns = st.columns(3, gap="medium")
+    summary_columns[0].metric("Вузли викладачів", teacher_count)
+    summary_columns[1].metric("Вузли публікацій", publication_count)
+    summary_columns[2].metric("Зв'язки графа", len(edges))
+
+    render_section_heading(
+        "Як читати граф",
+        "Кола позначають викладачів, квадратні вузли — публікації. Зв'язок означає факт авторства.",
+    )
+    render_info_card(
+        "Пояснення візуалізації",
+        "Граф дає змогу побачити щільність зв'язків, окремі осередки співавторства та публікації, які поєднують "
+        "декількох викладачів в одну дослідницьку мережу.",
+    )
+
+    render_section_heading(
+        "Інтерактивна мережа",
+        "Використовуйте перетягування, масштабування та наведення на вузли для детального перегляду.",
+    )
 
     graph_html = build_graph_html(edges)
     if graph_html:
         components.html(graph_html, height=760, scrolling=False)
     else:
-        st.warning(
-            "Бібліотека для інтерактивного графа недоступна. Показано табличний fallback зі зв'язками авторства."
+        render_empty_state(
+            "Інтерактивний граф недоступний",
+            "Бібліотека візуалізації не підключилася, тому нижче показано табличне представлення зв'язків авторства."
         )
         st.dataframe(graph_edges_dataframe(edges), use_container_width=True, hide_index=True)
 

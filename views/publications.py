@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import streamlit as st
 
-from ui.components import render_header, render_key_value_card, require_service
+from ui.components import (
+    render_empty_state,
+    render_header,
+    render_key_value_card,
+    render_section_heading,
+    render_summary_strip,
+    require_service,
+)
 from ui.formatters import publications_dataframe
 
 
@@ -21,32 +28,64 @@ def render() -> None:
     publication_rows = service.get_publications(year=year_value)
     publications_table = publications_dataframe(publication_rows)
 
-    st.markdown("### Таблиця публікацій")
     if publications_table.empty:
-        st.info("Публікацій за вибраним роком не знайдено.")
+        render_empty_state(
+            "Публікацій не знайдено",
+            "За вибраним роком записів немає. Спробуйте інший рік або перегляньте всі доступні публікації.",
+        )
         return
 
-    st.dataframe(publications_table, use_container_width=True, hide_index=True)
+    publications_count = len(publication_rows)
+    authorship_links = sum(int(row.get("authors_count", 0) or 0) for row in publication_rows)
+    covered_years = len({row.get("year") for row in publication_rows if row.get("year") is not None})
+
+    metrics = st.columns(3, gap="medium")
+    with metrics[0]:
+        render_summary_strip("Публікації", str(publications_count), "Кількість записів у поточному фільтрі.")
+    with metrics[1]:
+        render_summary_strip("Авторські входження", str(authorship_links), "Сумарна кількість авторів у відображених публікаціях.")
+    with metrics[2]:
+        render_summary_strip("Охоплені роки", str(covered_years), "Скільки років покриває поточна вибірка.")
 
     publication_map = {
         f"{row['title']} ({row['year'] if row['year'] is not None else 'н/д'})": row
         for row in publication_rows
     }
-    selected_publication_label = st.selectbox(
-        "Склад авторів публікації",
-        list(publication_map.keys()),
-        help="Оберіть публікацію, щоб переглянути її авторів і короткі метадані.",
-    )
-    selected_publication = publication_map[selected_publication_label]
 
-    render_key_value_card(
-        "Коротка інформація про публікацію",
-        [
-            ("Назва", selected_publication["title"]),
-            ("Рік", str(selected_publication["year"] or "н/д")),
-            ("Тип", selected_publication["pub_type"]),
-            ("Джерело", selected_publication["source"]),
-            ("DOI", selected_publication["doi"]),
-            ("Автори", ", ".join(selected_publication["authors"]) if selected_publication["authors"] else "—"),
-        ],
-    )
+    layout = st.columns([1.16, 0.94], gap="large")
+    with layout[0]:
+        render_section_heading(
+            "Таблиця публікацій",
+            "Основний перелік публікацій з роком, типом, джерелом та переліком авторів.",
+        )
+        st.dataframe(publications_table, use_container_width=True, hide_index=True)
+
+    with layout[1]:
+        render_section_heading(
+            "Деталі публікації",
+            "Оберіть один запис зі списку, щоб переглянути короткі метадані та авторський склад.",
+        )
+        selected_publication_label = st.selectbox(
+            "Обрана публікація",
+            list(publication_map.keys()),
+            help="Назви формуються з урахуванням року, щоб легше знаходити потрібний запис.",
+        )
+        selected_publication = publication_map[selected_publication_label]
+
+        render_key_value_card(
+            "Коротка інформація",
+            [
+                ("Назва", selected_publication["title"]),
+                ("Рік", str(selected_publication["year"] or "н/д")),
+                ("Тип", selected_publication["pub_type"]),
+                ("Джерело", selected_publication["source"]),
+                ("DOI", selected_publication["doi"]),
+                ("Кількість авторів", str(selected_publication["authors_count"] or 0)),
+            ],
+        )
+        render_key_value_card(
+            "Авторський склад",
+            [
+                ("Автори", ", ".join(selected_publication["authors"]) if selected_publication["authors"] else "—"),
+            ],
+        )

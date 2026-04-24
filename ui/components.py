@@ -155,26 +155,6 @@ def apply_theme() -> None:
             max-width: 920px;
         }
 
-        .hero-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.65rem;
-            margin-top: 1.05rem;
-        }
-
-        .hero-meta-pill {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.45rem;
-            border-radius: 999px;
-            padding: 0.42rem 0.82rem;
-            background: rgba(148, 163, 184, 0.08);
-            border: 1px solid rgba(148, 163, 184, 0.12);
-            color: var(--text-soft);
-            font-size: 0.85rem;
-            font-weight: 600;
-        }
-
         .info-card {
             border: 1px solid var(--line-soft);
             border-radius: 24px;
@@ -194,6 +174,81 @@ def apply_theme() -> None:
         .info-card div {
             color: var(--text-soft);
             line-height: 1.72;
+        }
+
+        .section-heading {
+            margin: 0.1rem 0 0.9rem;
+        }
+
+        .section-heading-title {
+            font-family: "Space Grotesk", "Manrope", sans-serif;
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            color: var(--text-main);
+        }
+
+        .section-heading-subtitle {
+            margin-top: 0.28rem;
+            color: var(--text-soft);
+            font-size: 0.95rem;
+            line-height: 1.65;
+        }
+
+        .empty-state {
+            border: 1px dashed rgba(148, 163, 184, 0.18);
+            border-radius: 24px;
+            background: rgba(8, 22, 41, 0.72);
+            padding: 1.2rem 1.2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .empty-state-title {
+            font-family: "Space Grotesk", "Manrope", sans-serif;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 0.4rem;
+        }
+
+        .empty-state-body {
+            color: var(--text-soft);
+            line-height: 1.7;
+        }
+
+        .summary-strip {
+            border: 1px solid var(--line-soft);
+            border-radius: 24px;
+            background: linear-gradient(180deg, rgba(10, 25, 47, 0.78), rgba(8, 22, 41, 0.92));
+            padding: 1rem 1.05rem;
+            box-shadow: var(--shadow);
+            margin-bottom: 0.9rem;
+        }
+
+        .summary-strip-title {
+            color: var(--text-soft);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.75rem;
+            font-weight: 800;
+            margin-bottom: 0.4rem;
+        }
+
+        .summary-strip-value {
+            font-family: "Space Grotesk", "Manrope", sans-serif;
+            font-size: clamp(1.1rem, 1.55vw, 1.55rem);
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            color: var(--text-main);
+            word-break: break-word;
+            line-height: 1.15;
+        }
+
+        .summary-strip-caption {
+            margin-top: 0.35rem;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+            line-height: 1.55;
         }
 
         .kv-card {
@@ -384,6 +439,11 @@ def apply_theme() -> None:
             background: rgba(9, 24, 43, 0.74);
         }
 
+        [data-testid="stExpander"] details summary p {
+            color: var(--text-main);
+            font-weight: 700;
+        }
+
         [data-testid="stMarkdownContainer"] p code,
         code {
             background: rgba(45, 212, 191, 0.10);
@@ -477,10 +537,6 @@ def apply_theme() -> None:
                 border-radius: 24px;
             }
 
-            .hero-meta {
-                gap: 0.45rem;
-            }
-
             div[data-testid="stMetricValue"] {
                 font-size: 1.65rem;
             }
@@ -498,11 +554,6 @@ def render_header(title: str, subtitle: str) -> None:
             <div class="hero-kicker">Streamlit + Neo4j MVP</div>
             <div class="hero-title">{escape(title)}</div>
             <div class="hero-subtitle">{escape(subtitle)}</div>
-            <div class="hero-meta">
-                <div class="hero-meta-pill">Академічна мережа</div>
-                <div class="hero-meta-pill">Neo4j Aura</div>
-                <div class="hero-meta-pill">Мережева аналітика</div>
-            </div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -515,6 +566,45 @@ def render_info_card(title: str, body: str) -> None:
         <div class="info-card">
             <h3>{escape(title)}</h3>
             <div>{escape(body)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_section_heading(title: str, subtitle: str = "") -> None:
+    subtitle_markup = f'<div class="section-heading-subtitle">{escape(subtitle)}</div>' if subtitle else ""
+    st.markdown(
+        f"""
+        <div class="section-heading">
+            <div class="section-heading-title">{escape(title)}</div>
+            {subtitle_markup}
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_empty_state(title: str, body: str) -> None:
+    st.markdown(
+        f"""
+        <div class="empty-state">
+            <div class="empty-state-title">{escape(title)}</div>
+            <div class="empty-state-body">{escape(body)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_summary_strip(title: str, value: str, caption: str = "") -> None:
+    caption_markup = f'<div class="summary-strip-caption">{escape(caption)}</div>' if caption else ""
+    st.markdown(
+        f"""
+        <div class="summary-strip">
+            <div class="summary-strip-title">{escape(title)}</div>
+            <div class="summary-strip-value">{escape(value)}</div>
+            {caption_markup}
         </div>
         """,
         unsafe_allow_html=True,
@@ -584,41 +674,43 @@ def render_sidebar(service: Neo4jService) -> None:
             """,
             unsafe_allow_html=True,
         )
-        st.markdown("## Керування")
         st.markdown(
-            '<div class="sidebar-note"><strong>Хмарний сценарій:</strong> Streamlit Cloud + <code>Secrets</code>, база даних — Neo4j Aura.</div>',
+            '<div class="sidebar-note"><strong>Призначення:</strong> акуратний сервіс для демонстрації структури факультетів, викладачів, публікацій і співавторства.</div>',
             unsafe_allow_html=True,
         )
 
-        if st.button("Перевірити підключення", use_container_width=True):
-            try:
-                service.verify_connection()
-                st.success("Підключення до Neo4j Aura активне.")
-            except Exception as exc:
-                st.error(f"Помилка підключення: {exc}")
+        with st.expander("Службові дії", expanded=False):
+            st.caption("Ці дії потрібні лише для первинного налаштування або перевірки бази.")
 
-        if st.button("Створити схему та індекси", use_container_width=True):
-            try:
-                service.prepare_database()
-                st.success("Constraints та indexes створено.")
-            except Exception as exc:
-                st.error(f"Не вдалося підготувати схему: {exc}")
+            if st.button("Перевірити підключення", use_container_width=True):
+                try:
+                    service.verify_connection()
+                    st.success("Підключення до Neo4j Aura активне.")
+                except Exception as exc:
+                    st.error(f"Помилка підключення: {exc}")
 
-        if st.button("Заповнити факультети та кафедри", use_container_width=True):
-            try:
-                service.seed_reference_data(FACULTIES, DEPARTMENTS)
-                st.success("Довідник факультетів і кафедр оновлено.")
-            except Exception as exc:
-                st.error(f"Не вдалося заповнити довідник: {exc}")
+            if st.button("Створити схему та індекси", use_container_width=True):
+                try:
+                    service.prepare_database()
+                    st.success("Обмеження та індекси створено.")
+                except Exception as exc:
+                    st.error(f"Не вдалося підготувати схему: {exc}")
 
-        st.markdown(
-            """
-            <div class="sidebar-model">
-                <strong>Модель даних</strong><br>
-                <code>(:Faculty)-[:HAS_DEPARTMENT]-&gt;(:Department)</code><br>
-                <code>(:Department)-[:HAS_TEACHER]-&gt;(:Teacher)</code><br>
-                <code>(:Teacher)-[:AUTHORED]-&gt;(:Publication)</code>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+            if st.button("Заповнити факультети та кафедри", use_container_width=True):
+                try:
+                    service.seed_reference_data(FACULTIES, DEPARTMENTS)
+                    st.success("Довідник факультетів і кафедр оновлено.")
+                except Exception as exc:
+                    st.error(f"Не вдалося заповнити довідник: {exc}")
+
+        with st.expander("Модель даних", expanded=False):
+            st.markdown(
+                """
+                <div class="sidebar-model">
+                    <code>(:Faculty)-[:HAS_DEPARTMENT]-&gt;(:Department)</code><br>
+                    <code>(:Department)-[:HAS_TEACHER]-&gt;(:Teacher)</code><br>
+                    <code>(:Teacher)-[:AUTHORED]-&gt;(:Publication)</code>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )

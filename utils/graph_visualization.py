@@ -13,8 +13,8 @@ def build_graph_html(edges: list[dict]) -> str | None:
     net = Network(
         height="720px",
         width="100%",
-        bgcolor="#fffaf0",
-        font_color="#102a43",
+        bgcolor="#081526",
+        font_color="#e5eefb",
         directed=False,
     )
     net.barnes_hut(gravity=-22000, central_gravity=0.22, spring_length=160, spring_strength=0.035, damping=0.88)
@@ -32,9 +32,11 @@ def build_graph_html(edges: list[dict]) -> str | None:
                 teacher_node,
                 label=edge["teacher_name"],
                 title=f"Викладач: {edge['teacher_name']}<br>Кафедра: {edge['department_name']}",
-                color="#0f766e",
+                group="teacher",
+                color="#2dd4bf",
                 shape="dot",
-                size=18,
+                size=20,
+                borderWidth=2,
             )
 
         if publication_node not in publication_nodes:
@@ -44,12 +46,14 @@ def build_graph_html(edges: list[dict]) -> str | None:
                 publication_node,
                 label=edge["publication_title"][:48],
                 title=f"Публікація: {edge['publication_title']}<br>Рік: {year_value}",
-                color="#c2410c",
+                group="publication",
+                color="#38bdf8",
                 shape="square",
-                size=16,
+                size=17,
+                borderWidth=2,
             )
 
-        net.add_edge(teacher_node, publication_node, color="#94a3b8")
+        net.add_edge(teacher_node, publication_node, color="#5b728f")
 
     net.set_options(
         """
@@ -57,18 +61,49 @@ def build_graph_html(edges: list[dict]) -> str | None:
           "nodes": {
             "font": {
               "size": 14,
-              "face": "Trebuchet MS"
+              "face": "Manrope",
+              "color": "#e5eefb"
+            },
+            "borderWidth": 2,
+            "shadow": {
+              "enabled": true,
+              "color": "rgba(15, 23, 42, 0.55)",
+              "size": 16,
+              "x": 0,
+              "y": 8
             }
           },
           "edges": {
             "smooth": false,
             "color": {
               "inherit": false
-            }
+            },
+            "width": 1.2,
+            "selectionWidth": 2.6,
+            "hoverWidth": 2.2
+          },
+          "layout": {
+            "improvedLayout": true
+          },
+          "configure": {
+            "enabled": false
           },
           "interaction": {
             "hover": true,
-            "tooltipDelay": 120
+            "tooltipDelay": 120,
+            "navigationButtons": true,
+            "keyboard": true
+          },
+          "manipulation": {
+            "enabled": false
+          },
+          "groups": {
+            "teacher": {
+              "color": "#2dd4bf"
+            },
+            "publication": {
+              "color": "#38bdf8"
+            }
           },
           "physics": {
             "enabled": true,
