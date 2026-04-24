@@ -161,7 +161,10 @@ def render_import_block(service) -> None:
                     save_teacher_scholar_profile(service, selected_teacher["id"], scholar_url)
 
             if not scholar_id:
-                st.error("Не вдалося визначити Scholar ID. Встав URL профілю або спочатку знайди профіль.")
+                st.error( 
+                    "Scholar-профіль автоматично не знайдено. "
+                    "Встав посилання на Google Scholar профіль вручну у поле вище."
+                 )
             else:
                 with st.spinner("Завантажую публікації з Google Scholar..."):
                     publications = load_publications_from_scholar_id(
