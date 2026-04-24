@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from services.publication_sources import search_openalex_publications
 from ui.components import (
     render_empty_state,
     render_header,
@@ -13,9 +14,115 @@ from ui.components import (
 from ui.formatters import publications_dataframe
 
 
+def render_import_block(service) -> None:
+    render_section_heading("Імпорт публікацій з OpenAlex")
+
+    departments = service.get_departments()
+    department_labels = {"Усі кафедри": ""}
+    for row in departments:
+        department_labels[f"{row['name']} ({row['code']})"] = row["code"]
+
+    cols = st.columns([1.1, 1.1, 0.8], gap="medium")
+    selected_department_label = cols[0].selectbox(
+        "Кафедра для імпорту",
+        list(department_labels.keys()),
+        key="publication_import_department",
+    )
+    selected_department_code = department_labels[selected_department_label]
+
+    from_year = cols[1].number_input(
+        "З якого року шукати",
+        min_value=1990,
+        max_value=2030,
+        value=2018,
+        step=1,
+    )
+
+    per_page = cols[2].slider(
+        "Ліміт на викладача",
+        min_value=3,
+        max_value=25,
+        value=10,
+        step=1,
+    )
+
+    teachers = service.get_teacher_import_options(department_code=selected_department_code)
+
+    if not teachers:
+        render_empty_state(
+            "Викладачів для імпорту не знайдено",
+            "Спочатку завантажте викладачів або змініть фільтр кафедри.",
+        )
+        return
+
+    teacher_labels = {
+        f"{row['full_name']} | {row['department_name']} | зараз публікацій: {row['publications']}": row
+        for row in teachers
+    }
+
+    selected_teacher_label = st.selectbox(
+        "Обрати викладача",
+        list(teacher_labels.keys()),
+        key="publication_import_teacher",
+    )
+    selected_teacher = teacher_labels[selected_teacher_label]
+
+    st.caption(
+        "Основне джерело — OpenAlex. Google Scholar краще залишити як допоміжний профіль, "
+        "бо прямий парсинг Scholar нестабільний і може блокувати запити."
+    )
+
+    preview_button = st.button("Знайти публікації", type="secondary")
+    import_button_placeholder = st.empty()
+
+    if preview_button:
+        with st.spinner("Шукаю публікації в OpenAlex..."):
+            found_publications = search_openalex_publications(
+                selected_teacher["full_name"],
+                from_year=int(from_year),
+                per_page=int(per_page),
+            )
+
+        st.session_state["openalex_preview_teacher_id"] = selected_teacher["id"]
+        st.session_state["openalex_preview_publications"] = found_publications
+
+    preview_publications = st.session_state.get("openalex_preview_publications", [])
+    preview_teacher_id = st.session_state.get("openalex_preview_teacher_id")
+
+    if preview_publications:
+        st.success(f"Знайдено публікацій: {len(preview_publications)}")
+
+        preview_rows = [
+            {
+                "id": row["id"],
+                "title": row["title"],
+                "year": row["year"],
+                "doi": row["doi"],
+                "pub_type": row["pub_type"],
+                "source": row["source"],
+                "authors": row["authors"],
+                "authors_count": len(row["authors"]),
+            }
+            for row in preview_publications
+        ]
+        st.dataframe(publications_dataframe(preview_rows), use_container_width=True, hide_index=True)
+
+        if import_button_placeholder.button("Зберегти ці публікації в Neo4j", type="primary"):
+            imported = service.import_teacher_publications(
+                teacher_id=preview_teacher_id,
+                publications=preview_publications,
+            )
+            st.success(f"Імпортовано / оновлено публікацій: {imported}")
+            st.cache_data.clear()
+            st.rerun()
+
+
 def render() -> None:
     service = require_service()
     render_header("Публікації", "")
+
+    with st.expander("Додати публікації викладачу через OpenAlex", expanded=False):
+        render_import_block(service)
 
     years = service.get_publication_years()
     year_options = ["Усі роки"] + [str(year) for year in years]
@@ -28,7 +135,7 @@ def render() -> None:
     if publications_table.empty:
         render_empty_state(
             "Публікацій не знайдено",
-            "За вибраним роком записів немає. Спробуйте інший рік або перегляньте всі доступні публікації.",
+            "За вибраним роком записів немає. Спробуйте імпортувати публікації через OpenAlex.",
         )
         return
 
