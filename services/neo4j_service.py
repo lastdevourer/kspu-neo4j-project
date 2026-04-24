@@ -325,6 +325,56 @@ class Neo4jService:
             {"year": year},
         )
 
+        def import_teacher_publications(self, teacher_id: str, publications: list[dict[str, Any]]) -> int:
+        if not publications:
+            return 0
+
+        self.prepare_database()
+        self.execute(
+            """
+            MATCH (t:Teacher)
+            WHERE coalesce(t.id, t.teacher_id) = $teacher_id
+            UNWIND $rows AS row
+            MERGE (p:Publication {id: row.id})
+            SET
+                p.publication_id = row.id,
+                p.title = row.title,
+                p.year = row.year,
+                p.doi = coalesce(row.doi, ""),
+                p.openalex_id = coalesce(row.openalex_id, ""),
+                p.pub_type = coalesce(row.pub_type, ""),
+                p.source = coalesce(row.source, "OpenAlex"),
+                p.external_url = coalesce(row.external_url, ""),
+                p.cited_by_count = coalesce(row.cited_by_count, 0),
+                p.authors = coalesce(row.authors, [])
+            MERGE (t)-[:AUTHORED]->(p)
+            """,
+            {
+                "teacher_id": teacher_id,
+                "rows": publications,
+            },
+        )
+        return len(publications)
+
+    def get_teacher_import_options(self, department_code: str = "") -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (t:Teacher)
+            OPTIONAL MATCH (d:Department)-[:HAS_TEACHER]->(t)
+            OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
+            WHERE ($department_code = "" OR coalesce(d.code, d.department_id) = $department_code)
+            RETURN
+                coalesce(t.id, t.teacher_id) AS id,
+                coalesce(t.full_name, t.name) AS full_name,
+                coalesce(d.name, "") AS department_name,
+                coalesce(t.orcid, "") AS orcid,
+                coalesce(t.google_scholar, "") AS google_scholar,
+                count(DISTINCT p) AS publications
+            ORDER BY publications ASC, full_name
+            """,
+            {"department_code": department_code.strip()},
+        )
+        
     def get_graph_edges(self, department_code: str = "", limit: int = 160) -> list[dict[str, Any]]:
         return self.run_query(
             """
