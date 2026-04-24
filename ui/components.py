@@ -491,24 +491,6 @@ def apply_theme() -> None:
             font-weight: 700;
             color: var(--text-main);
             line-height: 1.2;
-            margin-bottom: 0.45rem;
-        }
-
-        .sidebar-brand-body {
-            color: var(--text-soft);
-            font-size: 0.9rem;
-            line-height: 1.55;
-        }
-
-        .sidebar-note {
-            color: var(--text-muted);
-            font-size: 0.86rem;
-            line-height: 1.6;
-            margin-bottom: 1rem;
-        }
-
-        .sidebar-note strong {
-            color: var(--text-main);
         }
 
         .sidebar-model {
@@ -547,13 +529,14 @@ def apply_theme() -> None:
     )
 
 
-def render_header(title: str, subtitle: str) -> None:
+def render_header(title: str, subtitle: str = "", kicker: str = "Академічна мережа KSPU / KhDU") -> None:
+    subtitle_markup = f'<div class="hero-subtitle">{escape(subtitle)}</div>' if subtitle else ""
     st.markdown(
         f"""
         <div class="hero-card">
-            <div class="hero-kicker">Streamlit + Neo4j MVP</div>
+            <div class="hero-kicker">{escape(kicker)}</div>
             <div class="hero-title">{escape(title)}</div>
-            <div class="hero-subtitle">{escape(subtitle)}</div>
+            {subtitle_markup}
         </div>
         """,
         unsafe_allow_html=True,
@@ -665,23 +648,14 @@ def render_sidebar(service: Neo4jService) -> None:
         st.markdown(
             """
             <div class="sidebar-brand">
-                <div class="sidebar-brand-kicker">KSPU / KhDU Graph</div>
-                <div class="sidebar-brand-title">Облік наукових публікацій викладачів</div>
-                <div class="sidebar-brand-body">
-                    Темний MVP-інтерфейс для аналізу кафедр, викладачів, публікацій і співавторства.
-                </div>
+                <div class="sidebar-brand-kicker">KSPU / KhDU</div>
+                <div class="sidebar-brand-title">Наукова аналітика викладачів</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
-        st.markdown(
-            '<div class="sidebar-note"><strong>Призначення:</strong> акуратний сервіс для демонстрації структури факультетів, викладачів, публікацій і співавторства.</div>',
-            unsafe_allow_html=True,
-        )
 
         with st.expander("Службові дії", expanded=False):
-            st.caption("Ці дії потрібні лише для первинного налаштування або перевірки бази.")
-
             if st.button("Перевірити підключення", use_container_width=True):
                 try:
                     service.verify_connection()

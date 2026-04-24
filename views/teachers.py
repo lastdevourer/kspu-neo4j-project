@@ -17,7 +17,7 @@ def render() -> None:
     service = require_service()
     render_header(
         "Викладачі",
-        "Пошук, фільтрація та детальні картки викладачів із прив'язкою до кафедр, публікацій і співавторів.",
+        "Пошук, фільтри та профілі викладачів.",
     )
 
     departments = service.get_departments()
@@ -56,17 +56,11 @@ def render() -> None:
     layout = st.columns([1.18, 0.94], gap="large")
 
     with layout[0]:
-        render_section_heading(
-            "Таблиця викладачів",
-            "Повний список викладачів у межах поточного пошуку та фільтра кафедри.",
-        )
+        render_section_heading("Таблиця викладачів")
         st.dataframe(teachers_table, use_container_width=True, hide_index=True)
 
     with layout[1]:
-        render_section_heading(
-            "Картка викладача",
-            "Оберіть одного викладача, щоб переглянути профіль, публікації та співавторство.",
-        )
+        render_section_heading("Картка викладача")
         selected_teacher_label = st.selectbox(
             "Обраний викладач",
             list(teacher_labels.keys()),
@@ -109,10 +103,7 @@ def render() -> None:
 
     tabs = st.tabs(["Публікації викладача", "Співавтори"])
     with tabs[0]:
-        render_section_heading(
-            "Публікації викладача",
-            "Список публікацій із роком, DOI та складом авторів.",
-        )
+        render_section_heading("Публікації викладача")
         publications_table = teacher_publications_dataframe(publications)
         if publications_table.empty:
             render_empty_state(
@@ -123,10 +114,7 @@ def render() -> None:
             st.dataframe(publications_table, use_container_width=True, hide_index=True)
 
     with tabs[1]:
-        render_section_heading(
-            "Співавтори",
-            "Основні колаборації викладача та приклади спільних публікацій.",
-        )
+        render_section_heading("Співавтори")
         coauthors_table = coauthors_dataframe(coauthors)
         if coauthors_table.empty:
             render_empty_state(

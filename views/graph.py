@@ -3,7 +3,7 @@ from __future__ import annotations
 import streamlit as st
 import streamlit.components.v1 as components
 
-from ui.components import render_empty_state, render_header, render_info_card, render_section_heading, require_service
+from ui.components import render_empty_state, render_header, render_section_heading, require_service
 from ui.formatters import graph_edges_dataframe
 from utils.graph_visualization import build_graph_html
 
@@ -12,8 +12,7 @@ def render() -> None:
     service = require_service()
     render_header(
         "Граф співавторства",
-        "Інтерактивна візуалізація мережі авторства, де вузли представляють викладачів і публікації, "
-        "а ребра показують зв'язки авторства.",
+        "Мережа авторства між викладачами та публікаціями.",
     )
 
     departments = service.get_departments()
@@ -44,20 +43,7 @@ def render() -> None:
     summary_columns[1].metric("Вузли публікацій", publication_count)
     summary_columns[2].metric("Зв'язки графа", len(edges))
 
-    render_section_heading(
-        "Як читати граф",
-        "Кола позначають викладачів, квадратні вузли — публікації. Зв'язок означає факт авторства.",
-    )
-    render_info_card(
-        "Пояснення візуалізації",
-        "Граф дає змогу побачити щільність зв'язків, окремі осередки співавторства та публікації, які поєднують "
-        "декількох викладачів в одну дослідницьку мережу.",
-    )
-
-    render_section_heading(
-        "Інтерактивна мережа",
-        "Використовуйте перетягування, масштабування та наведення на вузли для детального перегляду.",
-    )
+    render_section_heading("Інтерактивна мережа")
 
     graph_html = build_graph_html(edges)
     if graph_html:

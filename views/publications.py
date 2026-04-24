@@ -17,7 +17,7 @@ def render() -> None:
     service = require_service()
     render_header(
         "Публікації",
-        "Огляд публікаційної бази з фільтрацією за роком та швидким переглядом складу авторів.",
+        "Роки, авторський склад і структура публікацій.",
     )
 
     years = service.get_publication_years()
@@ -54,17 +54,11 @@ def render() -> None:
 
     layout = st.columns([1.16, 0.94], gap="large")
     with layout[0]:
-        render_section_heading(
-            "Таблиця публікацій",
-            "Основний перелік публікацій з роком, типом, джерелом та переліком авторів.",
-        )
+        render_section_heading("Таблиця публікацій")
         st.dataframe(publications_table, use_container_width=True, hide_index=True)
 
     with layout[1]:
-        render_section_heading(
-            "Деталі публікації",
-            "Оберіть один запис зі списку, щоб переглянути короткі метадані та авторський склад.",
-        )
+        render_section_heading("Деталі публікації")
         selected_publication_label = st.selectbox(
             "Обрана публікація",
             list(publication_map.keys()),
