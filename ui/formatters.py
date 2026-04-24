@@ -13,6 +13,12 @@ def _join_authors(value: object) -> str:
     return str(value or "")
 
 
+def _join_examples(value: object) -> str:
+    if isinstance(value, list):
+        return "\n".join(f"• {str(item)}" for item in value if item)
+    return str(value or "")
+
+
 def department_overview_dataframe(rows: list[dict]) -> pd.DataFrame:
     df = _frame(rows)
     if df.empty:
@@ -88,15 +94,15 @@ def coauthors_dataframe(rows: list[dict]) -> pd.DataFrame:
     df = _frame(rows)
     if df.empty:
         return df
-    df["publication_examples"] = df["publication_examples"].apply(_join_authors)
+    df["publication_examples"] = df["publication_examples"].apply(_join_examples)
     renamed = df.rename(
         columns={
             "full_name": "Співавтор",
             "shared_publications": "Спільні публікації",
-            "publication_examples": "Приклади публікацій",
+            "publication_examples": "Приклади спільних публікацій",
         }
     )
-    return renamed[["Співавтор", "Спільні публікації", "Приклади публікацій"]]
+    return renamed[["Співавтор", "Спільні публікації", "Приклади спільних публікацій"]]
 
 
 def publications_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -152,16 +158,16 @@ def top_coauthor_pairs_dataframe(rows: list[dict]) -> pd.DataFrame:
     df = _frame(rows)
     if df.empty:
         return df
-    df["sample_publications"] = df["sample_publications"].apply(_join_authors)
+    df["sample_publications"] = df["sample_publications"].apply(_join_examples)
     renamed = df.rename(
         columns={
             "teacher_a": "Викладач 1",
             "teacher_b": "Викладач 2",
             "shared_publications": "Спільні публікації",
-            "sample_publications": "Приклади",
+            "sample_publications": "Приклади спільних публікацій",
         }
     )
-    return renamed[["Викладач 1", "Викладач 2", "Спільні публікації", "Приклади"]]
+    return renamed[["Викладач 1", "Викладач 2", "Спільні публікації", "Приклади спільних публікацій"]]
 
 
 def centrality_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -173,8 +179,8 @@ def centrality_dataframe(rows: list[dict]) -> pd.DataFrame:
             "teacher": "Викладач",
             "connections": "Кількість зв'язків",
             "weighted_connections": "Зважені зв'язки",
-            "degree_centrality": "Degree centrality",
-            "betweenness_centrality": "Betweenness centrality",
+            "degree_centrality": "Центральність за кількістю зв'язків",
+            "betweenness_centrality": "Посередницька центральність",
         }
     )
     return renamed[
@@ -182,7 +188,7 @@ def centrality_dataframe(rows: list[dict]) -> pd.DataFrame:
             "Викладач",
             "Кількість зв'язків",
             "Зважені зв'язки",
-            "Degree centrality",
-            "Betweenness centrality",
+            "Центральність за кількістю зв'язків",
+            "Посередницька центральність",
         ]
     ]
