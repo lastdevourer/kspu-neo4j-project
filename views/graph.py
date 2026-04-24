@@ -10,10 +10,7 @@ from utils.graph_visualization import build_graph_html
 
 def render() -> None:
     service = require_service()
-    render_header(
-        "Граф співавторства",
-        "Мережа авторства між викладачами та публікаціями.",
-    )
+    render_header("Граф співавторства", "")
 
     departments = service.get_departments()
     department_labels = {"Усі кафедри": ""}
@@ -21,8 +18,8 @@ def render() -> None:
         department_labels[f"{row['name']} ({row['code']})"] = row["code"]
 
     controls = st.columns([1.15, 0.85], gap="large")
-    selected_department_label = controls[0].selectbox("Область перегляду", list(department_labels.keys()))
-    edge_limit = controls[1].slider("Кількість зв'язків", min_value=30, max_value=240, value=120, step=10)
+    selected_department_label = controls[0].selectbox("Кафедра", list(department_labels.keys()))
+    edge_limit = controls[1].slider("Ліміт зв'язків", min_value=30, max_value=240, value=120, step=10)
 
     edges = service.get_graph_edges(
         department_code=department_labels[selected_department_label],
@@ -32,7 +29,7 @@ def render() -> None:
     if not edges:
         render_empty_state(
             "Недостатньо даних для графа",
-            "Щойно в базі з'являться зв'язки авторства між викладачами та публікаціями, тут можна буде побачити мережу.",
+            "Після завантаження публікацій тут з'явиться мережа співавторства.",
         )
         return
 
