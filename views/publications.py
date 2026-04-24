@@ -15,10 +15,7 @@ from ui.formatters import publications_dataframe
 
 def render() -> None:
     service = require_service()
-    render_header(
-        "Публікації",
-        "Роки, авторський склад і структура публікацій.",
-    )
+    render_header("Публікації", "")
 
     years = service.get_publication_years()
     year_options = ["Усі роки"] + [str(year) for year in years]
@@ -41,11 +38,11 @@ def render() -> None:
 
     metrics = st.columns(3, gap="medium")
     with metrics[0]:
-        render_summary_strip("Публікації", str(publications_count), "Кількість записів у поточному фільтрі.")
+        render_summary_strip("Публікації", str(publications_count))
     with metrics[1]:
-        render_summary_strip("Авторські входження", str(authorship_links), "Сумарна кількість авторів у відображених публікаціях.")
+        render_summary_strip("Авторські входження", str(authorship_links))
     with metrics[2]:
-        render_summary_strip("Охоплені роки", str(covered_years), "Скільки років покриває поточна вибірка.")
+        render_summary_strip("Охоплені роки", str(covered_years))
 
     publication_map = {
         f"{row['title']} ({row['year'] if row['year'] is not None else 'н/д'})": row
@@ -60,9 +57,8 @@ def render() -> None:
     with layout[1]:
         render_section_heading("Деталі публікації")
         selected_publication_label = st.selectbox(
-            "Обрана публікація",
+            "Обрати публікацію",
             list(publication_map.keys()),
-            help="Назви формуються з урахуванням року, щоб легше знаходити потрібний запис.",
         )
         selected_publication = publication_map[selected_publication_label]
 
