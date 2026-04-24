@@ -5,6 +5,7 @@ from html import escape
 import streamlit as st
 
 from config import get_connection_help_text, get_neo4j_config
+from data.loaders import load_teachers_seed
 from data.seed_data import DEPARTMENTS, FACULTIES
 from services.neo4j_service import Neo4jService
 
@@ -106,9 +107,9 @@ def apply_theme() -> None:
                 linear-gradient(135deg, rgba(18, 38, 63, 0.94), rgba(8, 24, 43, 0.96)),
                 radial-gradient(circle at top right, rgba(56, 189, 248, 0.22), transparent 32%);
             border-radius: 30px;
-            padding: 1.85rem 1.9rem;
+            padding: 1.55rem 1.8rem;
             box-shadow: var(--shadow);
-            margin-bottom: 1.25rem;
+            margin-bottom: 1.1rem;
             isolation: isolate;
         }
 
@@ -142,10 +143,10 @@ def apply_theme() -> None:
 
         .hero-title {
             max-width: 980px;
-            font-size: clamp(2rem, 3vw, 3.3rem);
+            font-size: clamp(1.75rem, 2.35vw, 2.8rem);
             font-weight: 800;
             line-height: 1.02;
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.22rem;
         }
 
         .hero-subtitle {
@@ -177,7 +178,7 @@ def apply_theme() -> None:
         }
 
         .section-heading {
-            margin: 0.1rem 0 0.9rem;
+            margin: 0.05rem 0 0.7rem;
         }
 
         .section-heading-title {
@@ -291,6 +292,8 @@ def apply_theme() -> None:
             font-weight: 700;
             color: var(--text-main);
             text-align: right;
+            word-break: break-word;
+            max-width: 64%;
         }
 
         div[data-testid="stMetric"] {
@@ -301,6 +304,7 @@ def apply_theme() -> None:
             border: 1px solid var(--line-soft);
             border-radius: 24px;
             padding: 1.05rem 1.1rem;
+            min-height: 7.4rem;
             box-shadow: var(--shadow);
         }
 
@@ -314,11 +318,17 @@ def apply_theme() -> None:
         }
 
         div[data-testid="stMetricLabel"] {
-            font-size: 0.92rem;
+            font-size: 0.84rem;
             color: var(--text-soft);
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.06em;
+            line-height: 1.35;
+        }
+
+        div[data-testid="stMetricLabel"] p {
+            line-height: 1.35;
+            margin-bottom: 0;
         }
 
         div[data-testid="stMetricValue"] {
@@ -529,12 +539,13 @@ def apply_theme() -> None:
     )
 
 
-def render_header(title: str, subtitle: str = "", kicker: str = "Академічна мережа KSPU / KhDU") -> None:
+def render_header(title: str, subtitle: str = "", kicker: str = "") -> None:
+    kicker_markup = f'<div class="hero-kicker">{escape(kicker)}</div>' if kicker else ""
     subtitle_markup = f'<div class="hero-subtitle">{escape(subtitle)}</div>' if subtitle else ""
     st.markdown(
         f"""
         <div class="hero-card">
-            <div class="hero-kicker">{escape(kicker)}</div>
+            {kicker_markup}
             <div class="hero-title">{escape(title)}</div>
             {subtitle_markup}
         </div>
@@ -649,13 +660,13 @@ def render_sidebar(service: Neo4jService) -> None:
             """
             <div class="sidebar-brand">
                 <div class="sidebar-brand-kicker">KSPU / KhDU</div>
-                <div class="sidebar-brand-title">Наукова аналітика викладачів</div>
+                <div class="sidebar-brand-title">Академічна мережа</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        with st.expander("Службові дії", expanded=False):
+        with st.expander("Керування базою", expanded=False):
             if st.button("Перевірити підключення", use_container_width=True):
                 try:
                     service.verify_connection()
@@ -677,14 +688,11 @@ def render_sidebar(service: Neo4jService) -> None:
                 except Exception as exc:
                     st.error(f"Не вдалося заповнити довідник: {exc}")
 
-        with st.expander("Модель даних", expanded=False):
-            st.markdown(
-                """
-                <div class="sidebar-model">
-                    <code>(:Faculty)-[:HAS_DEPARTMENT]-&gt;(:Department)</code><br>
-                    <code>(:Department)-[:HAS_TEACHER]-&gt;(:Teacher)</code><br>
-                    <code>(:Teacher)-[:AUTHORED]-&gt;(:Publication)</code>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+            if st.button("Завантажити викладачів KSPU", use_container_width=True):
+                try:
+                    service.seed_reference_data(FACULTIES, DEPARTMENTS)
+                    teachers = load_teachers_seed()
+                    service.seed_teachers(teachers)
+                    st.success(f"Завантажено {len(teachers)} викладачів KSPU.")
+                except Exception as exc:
+                    st.error(f"Не вдалося завантажити викладачів: {exc}")
