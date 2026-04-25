@@ -18,6 +18,8 @@ STATUS_ORDER = [
     "Підтверджено",
     "Кандидат",
     "Потребує перевірки",
+    "Відхилено",
+    "В чорному списку",
 ]
 
 PUBLICATION_FLASH_KEY = "publication_management_flash"
@@ -50,6 +52,28 @@ def _publication_option(row: dict[str, object]) -> str:
     year = row.get("year")
     year_label = str(year) if year is not None else "н/д"
     return f"{row.get('title', 'Без назви')} ({year_label})"
+
+
+def _render_review_shortcuts(service, publication_id: str, review_note: str) -> None:
+    top = st.columns(2, gap="medium")
+    if top[0].button("Підтвердити", key=f"pub_confirm_{publication_id}", use_container_width=True):
+        if service.set_publication_review_status(publication_id, "Підтверджено", review_note=review_note):
+            st.session_state[PUBLICATION_FLASH_KEY] = "Статус публікації оновлено."
+            st.rerun()
+    if top[1].button("Відхилити", key=f"pub_reject_{publication_id}", use_container_width=True):
+        if service.set_publication_review_status(publication_id, "Відхилено", review_note=review_note):
+            st.session_state[PUBLICATION_FLASH_KEY] = "Публікацію відхилено."
+            st.rerun()
+
+    bottom = st.columns(2, gap="medium")
+    if bottom[0].button("В чорний список", key=f"pub_blacklist_{publication_id}", use_container_width=True):
+        if service.set_publication_review_status(publication_id, "В чорному списку", review_note=review_note):
+            st.session_state[PUBLICATION_FLASH_KEY] = "Публікацію додано до чорного списку."
+            st.rerun()
+    if bottom[1].button("Скинути ручний статус", key=f"pub_reset_{publication_id}", use_container_width=True):
+        if service.clear_publication_review_status(publication_id):
+            st.session_state[PUBLICATION_FLASH_KEY] = "Ручний статус скинуто."
+            st.rerun()
 
 
 def render() -> None:
@@ -160,6 +184,12 @@ def render() -> None:
                 ),
             ],
         )
+        review_note = st.text_area(
+            "Нотатка модератора",
+            value=str(details.get("review_note") or selected_publication.get("review_note") or ""),
+            height=100,
+            key=f"publication_review_note_{publication_id}",
+        )
         render_key_value_card(
             "Авторський склад",
             [
@@ -169,6 +199,62 @@ def render() -> None:
                 ),
             ],
         )
+
+        with st.expander("Модерація", expanded=False):
+            _render_review_shortcuts(service, publication_id, review_note)
+            edit_columns = st.columns(2, gap="medium")
+            edited_year_raw = edit_columns[0].text_input(
+                "Рік",
+                value="" if details.get("year") is None else str(details.get("year")),
+                key=f"publication_year_{publication_id}",
+            )
+            edited_confidence = edit_columns[1].slider(
+                "Рівень довіри",
+                min_value=0.0,
+                max_value=1.0,
+                value=float(details.get("confidence") or selected_publication.get("confidence") or 0.0),
+                step=0.01,
+                key=f"publication_confidence_{publication_id}",
+            )
+            edited_title = st.text_input(
+                "Назва",
+                value=str(details.get("title") or selected_publication.get("title") or ""),
+                key=f"publication_title_{publication_id}",
+            )
+            edited_doi = st.text_input(
+                "DOI",
+                value=str(details.get("doi") or selected_publication.get("doi") or ""),
+                key=f"publication_doi_{publication_id}",
+            )
+            edited_pub_type = st.text_input(
+                "Тип",
+                value=str(details.get("pub_type") or selected_publication.get("pub_type") or ""),
+                key=f"publication_type_{publication_id}",
+            )
+            edited_source = st.text_input(
+                "Джерело",
+                value=str(details.get("source") or selected_publication.get("source") or ""),
+                key=f"publication_source_{publication_id}",
+            )
+            if st.button(
+                "Зберегти редагування",
+                key=f"publication_save_{publication_id}",
+                use_container_width=True,
+            ):
+                edited_year = int(edited_year_raw) if edited_year_raw.strip().isdigit() else None
+                if service.update_publication_metadata(
+                    publication_id,
+                    title=edited_title,
+                    year=edited_year,
+                    doi=edited_doi,
+                    pub_type=edited_pub_type,
+                    source=edited_source,
+                    confidence=edited_confidence,
+                    review_note=review_note,
+                ):
+                    st.session_state[PUBLICATION_FLASH_KEY] = "Зміни по публікації збережено."
+                    st.rerun()
+                st.error("Не вдалося зберегти редагування.")
 
         with st.expander("Керування записом", expanded=False):
             delete_confirm = st.checkbox(
