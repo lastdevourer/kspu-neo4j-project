@@ -20,6 +20,8 @@ STATUS_ORDER = [
     "Потребує перевірки",
 ]
 
+PUBLICATION_FLASH_KEY = "publication_management_flash"
+
 
 def _status_counts(rows: list[dict[str, object]]) -> dict[str, int]:
     counts = {status: 0 for status in STATUS_ORDER}
@@ -38,9 +40,22 @@ def _source_counts(rows: list[dict[str, object]]) -> dict[str, int]:
     return counts
 
 
+def _show_flash_message() -> None:
+    message = st.session_state.pop(PUBLICATION_FLASH_KEY, "")
+    if message:
+        st.success(message)
+
+
+def _publication_option(row: dict[str, object]) -> str:
+    year = row.get("year")
+    year_label = str(year) if year is not None else "н/д"
+    return f"{row.get('title', 'Без назви')} ({year_label})"
+
+
 def render() -> None:
     service = require_service()
     render_header("Публікації")
+    _show_flash_message()
 
     years = service.get_publication_years()
     year_options = ["Усі роки"] + [str(year) for year in years]
@@ -62,7 +77,11 @@ def render() -> None:
     if selected_status != "Усі статуси":
         filtered_rows = [row for row in filtered_rows if row.get("status") == selected_status]
     if selected_source != "Усі джерела":
-        filtered_rows = [row for row in filtered_rows if (str(row.get("source") or "").strip() or "Невідомо") == selected_source]
+        filtered_rows = [
+            row
+            for row in filtered_rows
+            if (str(row.get("source") or "").strip() or "Невідомо") == selected_source
+        ]
 
     publications_table = publications_dataframe(filtered_rows)
 
@@ -96,10 +115,7 @@ def render() -> None:
     secondary[1].metric("Кандидати", filtered_status_counts["Кандидат"])
     secondary[2].metric("Офіційно підтверджено", filtered_status_counts["Офіційно підтверджено"])
 
-    publication_map = {
-        f"{row['title']} ({row['year'] if row['year'] is not None else 'н/д'})": row
-        for row in filtered_rows
-    }
+    publication_map = {_publication_option(row): row for row in filtered_rows}
 
     layout = st.columns([1.16, 0.94], gap="large")
     with layout[0]:
@@ -110,6 +126,8 @@ def render() -> None:
         render_section_heading("Деталі публікації")
         selected_publication_label = st.selectbox("Обрати публікацію", list(publication_map.keys()))
         selected_publication = publication_map[selected_publication_label]
+        publication_id = str(selected_publication.get("id") or "").strip()
+        details = service.get_publication_management_details(publication_id) or {}
 
         confidence = float(selected_publication.get("confidence") or 0.0)
         confidence_label = f"{confidence:.2f}"
@@ -133,6 +151,16 @@ def render() -> None:
             ],
         )
         render_key_value_card(
+            "Вплив на базу",
+            [
+                ("Пов'язані викладачі", str(details.get("linked_teachers_count") or 0)),
+                (
+                    "Список викладачів",
+                    ", ".join(str(item) for item in details.get("linked_teachers", []) if item) or "Немає",
+                ),
+            ],
+        )
+        render_key_value_card(
             "Авторський склад",
             [
                 (
@@ -141,3 +169,22 @@ def render() -> None:
                 ),
             ],
         )
+
+        with st.expander("Керування записом", expanded=False):
+            delete_confirm = st.checkbox(
+                "Підтверджую повне видалення цієї публікації з бази",
+                key=f"publication_delete_confirm_{publication_id}",
+            )
+            if st.button(
+                "Видалити публікацію з бази",
+                key=f"publication_delete_button_{publication_id}",
+                use_container_width=True,
+                type="primary",
+            ):
+                if not delete_confirm:
+                    st.warning("Спочатку підтвердіть видалення запису.")
+                elif service.delete_publication(publication_id):
+                    st.session_state[PUBLICATION_FLASH_KEY] = "Публікацію видалено з бази."
+                    st.rerun()
+                else:
+                    st.error("Не вдалося видалити публікацію. Спробуйте ще раз.")
