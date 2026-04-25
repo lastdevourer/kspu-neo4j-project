@@ -13,27 +13,21 @@ def _join_authors(value: object) -> str:
     return str(value or "")
 
 
-def _join_examples(value: object) -> str:
-    if isinstance(value, list):
-        return "\n".join(f"• {str(item)}" for item in value if item)
-    return str(value or "")
-
-
 def department_overview_dataframe(rows: list[dict]) -> pd.DataFrame:
     df = _frame(rows)
     if df.empty:
         return df
     renamed = df.rename(
         columns={
-            "code": "Код кафедри",
-            "name": "Кафедра",
-            "faculty_code": "Код факультету",
-            "faculty_name": "Факультет",
-            "teachers": "Викладачі",
-            "publications": "Публікації",
+            "code": "ÐšÐ¾Ð´ ÐºÐ°Ñ„ÐµÐ´Ñ€Ð¸",
+            "name": "ÐšÐ°Ñ„ÐµÐ´Ñ€Ð°",
+            "faculty_code": "ÐšÐ¾Ð´ Ñ„Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚Ñƒ",
+            "faculty_name": "Ð¤Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚",
+            "teachers": "Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–",
+            "publications": "ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—",
         }
     )
-    return renamed[["Код кафедри", "Кафедра", "Факультет", "Викладачі", "Публікації"]]
+    return renamed[["ÐšÐ¾Ð´ ÐºÐ°Ñ„ÐµÐ´Ñ€Ð¸", "ÐšÐ°Ñ„ÐµÐ´Ñ€Ð°", "Ð¤Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚", "Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–", "ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—"]]
 
 
 def faculty_overview_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -42,14 +36,14 @@ def faculty_overview_dataframe(rows: list[dict]) -> pd.DataFrame:
         return df
     renamed = df.rename(
         columns={
-            "code": "Код факультету",
-            "name": "Факультет",
-            "departments": "Кафедри",
-            "teachers": "Викладачі",
-            "publications": "Публікації",
+            "code": "ÐšÐ¾Ð´ Ñ„Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚Ñƒ",
+            "name": "Ð¤Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚",
+            "departments": "ÐšÐ°Ñ„ÐµÐ´Ñ€Ð¸",
+            "teachers": "Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–",
+            "publications": "ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—",
         }
     )
-    return renamed[["Код факультету", "Факультет", "Кафедри", "Викладачі", "Публікації"]]
+    return renamed[["ÐšÐ¾Ð´ Ñ„Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚Ñƒ", "Ð¤Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚", "ÐšÐ°Ñ„ÐµÐ´Ñ€Ð¸", "Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–", "ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—"]]
 
 
 def teachers_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -59,16 +53,16 @@ def teachers_dataframe(rows: list[dict]) -> pd.DataFrame:
     renamed = df.rename(
         columns={
             "id": "ID",
-            "full_name": "ПІБ",
-            "position": "Посада",
-            "academic_degree": "Науковий ступінь",
-            "academic_title": "Вчене звання",
-            "department_name": "Кафедра",
-            "faculty_name": "Факультет",
-            "publications": "Публікації",
+            "full_name": "ÐŸÐ†Ð‘",
+            "position": "ÐŸÐ¾ÑÐ°Ð´Ð°",
+            "academic_degree": "ÐÐ°ÑƒÐºÐ¾Ð²Ð¸Ð¹ ÑÑ‚ÑƒÐ¿Ñ–Ð½ÑŒ",
+            "academic_title": "Ð’Ñ‡ÐµÐ½Ðµ Ð·Ð²Ð°Ð½Ð½Ñ",
+            "department_name": "ÐšÐ°Ñ„ÐµÐ´Ñ€Ð°",
+            "faculty_name": "Ð¤Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚",
+            "publications": "ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—",
         }
     )
-    return renamed[["ID", "ПІБ", "Посада", "Науковий ступінь", "Вчене звання", "Кафедра", "Факультет", "Публікації"]]
+    return renamed[["ID", "ÐŸÐ†Ð‘", "ÐŸÐ¾ÑÐ°Ð´Ð°", "ÐÐ°ÑƒÐºÐ¾Ð²Ð¸Ð¹ ÑÑ‚ÑƒÐ¿Ñ–Ð½ÑŒ", "Ð’Ñ‡ÐµÐ½Ðµ Ð·Ð²Ð°Ð½Ð½Ñ", "ÐšÐ°Ñ„ÐµÐ´Ñ€Ð°", "Ð¤Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚", "ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—"]]
 
 
 def teacher_publications_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -79,30 +73,30 @@ def teacher_publications_dataframe(rows: list[dict]) -> pd.DataFrame:
     renamed = df.rename(
         columns={
             "id": "ID",
-            "title": "Публікація",
-            "year": "Рік",
+            "title": "ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ",
+            "year": "Ð Ñ–Ðº",
             "doi": "DOI",
-            "pub_type": "Тип",
-            "source": "Джерело",
-            "authors": "Автори",
+            "pub_type": "Ð¢Ð¸Ð¿",
+            "source": "Ð”Ð¶ÐµÑ€ÐµÐ»Ð¾",
+            "authors": "ÐÐ²Ñ‚Ð¾Ñ€Ð¸",
         }
     )
-    return renamed[["ID", "Публікація", "Рік", "DOI", "Тип", "Джерело", "Автори"]]
+    return renamed[["ID", "ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ", "Ð Ñ–Ðº", "DOI", "Ð¢Ð¸Ð¿", "Ð”Ð¶ÐµÑ€ÐµÐ»Ð¾", "ÐÐ²Ñ‚Ð¾Ñ€Ð¸"]]
 
 
 def coauthors_dataframe(rows: list[dict]) -> pd.DataFrame:
     df = _frame(rows)
     if df.empty:
         return df
-    df["publication_examples"] = df["publication_examples"].apply(_join_examples)
+    df["publication_examples"] = df["publication_examples"].apply(_join_authors)
     renamed = df.rename(
         columns={
-            "full_name": "Співавтор",
-            "shared_publications": "Спільні публікації",
-            "publication_examples": "Приклади спільних публікацій",
+            "full_name": "Ð¡Ð¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€",
+            "shared_publications": "Ð¡Ð¿Ñ–Ð»ÑŒÐ½Ñ– Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—",
+            "publication_examples": "ÐŸÑ€Ð¸ÐºÐ»Ð°Ð´Ð¸ Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ð¹",
         }
     )
-    return renamed[["Співавтор", "Спільні публікації", "Приклади спільних публікацій"]]
+    return renamed[["Ð¡Ð¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€", "Ð¡Ð¿Ñ–Ð»ÑŒÐ½Ñ– Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—", "ÐŸÑ€Ð¸ÐºÐ»Ð°Ð´Ð¸ Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ð¹"]]
 
 
 def publications_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -113,16 +107,16 @@ def publications_dataframe(rows: list[dict]) -> pd.DataFrame:
     renamed = df.rename(
         columns={
             "id": "ID",
-            "title": "Назва",
-            "year": "Рік",
+            "title": "ÐÐ°Ð·Ð²Ð°",
+            "year": "Ð Ñ–Ðº",
             "doi": "DOI",
-            "pub_type": "Тип",
-            "source": "Джерело",
-            "authors": "Автори",
-            "authors_count": "Кількість авторів",
+            "pub_type": "Ð¢Ð¸Ð¿",
+            "source": "Ð”Ð¶ÐµÑ€ÐµÐ»Ð¾",
+            "authors": "ÐÐ²Ñ‚Ð¾Ñ€Ð¸",
+            "authors_count": "ÐšÑ–Ð»ÑŒÐºÑ–ÑÑ‚ÑŒ Ð°Ð²Ñ‚Ð¾Ñ€Ñ–Ð²",
         }
     )
-    return renamed[["ID", "Назва", "Рік", "DOI", "Тип", "Джерело", "Кількість авторів", "Автори"]]
+    return renamed[["ID", "ÐÐ°Ð·Ð²Ð°", "Ð Ñ–Ðº", "DOI", "Ð¢Ð¸Ð¿", "Ð”Ð¶ÐµÑ€ÐµÐ»Ð¾", "ÐšÑ–Ð»ÑŒÐºÑ–ÑÑ‚ÑŒ Ð°Ð²Ñ‚Ð¾Ñ€Ñ–Ð²", "ÐÐ²Ñ‚Ð¾Ñ€Ð¸"]]
 
 
 def graph_edges_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -131,13 +125,13 @@ def graph_edges_dataframe(rows: list[dict]) -> pd.DataFrame:
         return df
     renamed = df.rename(
         columns={
-            "teacher_name": "Викладач",
-            "department_name": "Кафедра",
-            "publication_title": "Публікація",
-            "year": "Рік",
+            "teacher_name": "Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡",
+            "department_name": "ÐšÐ°Ñ„ÐµÐ´Ñ€Ð°",
+            "publication_title": "ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ",
+            "year": "Ð Ñ–Ðº",
         }
     )
-    return renamed[["Викладач", "Кафедра", "Публікація", "Рік"]]
+    return renamed[["Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡", "ÐšÐ°Ñ„ÐµÐ´Ñ€Ð°", "ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ", "Ð Ñ–Ðº"]]
 
 
 def top_teachers_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -146,28 +140,28 @@ def top_teachers_dataframe(rows: list[dict]) -> pd.DataFrame:
         return df
     renamed = df.rename(
         columns={
-            "teacher": "Викладач",
-            "department": "Кафедра",
-            "publications": "Кількість публікацій",
+            "teacher": "Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡",
+            "department": "ÐšÐ°Ñ„ÐµÐ´Ñ€Ð°",
+            "publications": "ÐšÑ–Ð»ÑŒÐºÑ–ÑÑ‚ÑŒ Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ð¹",
         }
     )
-    return renamed[["Викладач", "Кафедра", "Кількість публікацій"]]
+    return renamed[["Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡", "ÐšÐ°Ñ„ÐµÐ´Ñ€Ð°", "ÐšÑ–Ð»ÑŒÐºÑ–ÑÑ‚ÑŒ Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ð¹"]]
 
 
 def top_coauthor_pairs_dataframe(rows: list[dict]) -> pd.DataFrame:
     df = _frame(rows)
     if df.empty:
         return df
-    df["sample_publications"] = df["sample_publications"].apply(_join_examples)
+    df["sample_publications"] = df["sample_publications"].apply(_join_authors)
     renamed = df.rename(
         columns={
-            "teacher_a": "Викладач 1",
-            "teacher_b": "Викладач 2",
-            "shared_publications": "Спільні публікації",
-            "sample_publications": "Приклади спільних публікацій",
+            "teacher_a": "Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡ 1",
+            "teacher_b": "Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡ 2",
+            "shared_publications": "Ð¡Ð¿Ñ–Ð»ÑŒÐ½Ñ– Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—",
+            "sample_publications": "ÐŸÑ€Ð¸ÐºÐ»Ð°Ð´Ð¸",
         }
     )
-    return renamed[["Викладач 1", "Викладач 2", "Спільні публікації", "Приклади спільних публікацій"]]
+    return renamed[["Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡ 1", "Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡ 2", "Ð¡Ð¿Ñ–Ð»ÑŒÐ½Ñ– Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—", "ÐŸÑ€Ð¸ÐºÐ»Ð°Ð´Ð¸"]]
 
 
 def centrality_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -176,19 +170,32 @@ def centrality_dataframe(rows: list[dict]) -> pd.DataFrame:
         return df
     renamed = df.rename(
         columns={
-            "teacher": "Викладач",
-            "connections": "Кількість зв'язків",
-            "weighted_connections": "Зважені зв'язки",
-            "degree_centrality": "Центральність за кількістю зв'язків",
-            "betweenness_centrality": "Посередницька центральність",
+            "teacher": "Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡",
+            "connections": "ÐšÑ–Ð»ÑŒÐºÑ–ÑÑ‚ÑŒ Ð·Ð²'ÑÐ·ÐºÑ–Ð²",
+            "weighted_connections": "Ð—Ð²Ð°Ð¶ÐµÐ½Ñ– Ð·Ð²'ÑÐ·ÐºÐ¸",
+            "degree_centrality": "Degree centrality",
+            "betweenness_centrality": "Betweenness centrality",
         }
     )
     return renamed[
         [
-            "Викладач",
-            "Кількість зв'язків",
-            "Зважені зв'язки",
-            "Центральність за кількістю зв'язків",
-            "Посередницька центральність",
+            "Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡",
+            "ÐšÑ–Ð»ÑŒÐºÑ–ÑÑ‚ÑŒ Ð·Ð²'ÑÐ·ÐºÑ–Ð²",
+            "Ð—Ð²Ð°Ð¶ÐµÐ½Ñ– Ð·Ð²'ÑÐ·ÐºÐ¸",
+            "Degree centrality",
+            "Betweenness centrality",
         ]
     ]
+
+
+def publication_sources_dataframe(rows: list[dict]) -> pd.DataFrame:
+    df = _frame(rows)
+    if df.empty:
+        return df
+    renamed = df.rename(
+        columns={
+            "source": "Ð”Ð¶ÐµÑ€ÐµÐ»Ð¾",
+            "publications": "ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—",
+        }
+    )
+    return renamed[["Ð”Ð¶ÐµÑ€ÐµÐ»Ð¾", "ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—"]]
