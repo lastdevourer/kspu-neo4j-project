@@ -18,6 +18,8 @@ STATUS_ORDER = [
     "Підтверджено",
     "Кандидат",
     "Потребує перевірки",
+    "Відхилено",
+    "В чорному списку",
 ]
 
 TEACHER_FLASH_KEY = "teacher_management_flash"
@@ -119,6 +121,31 @@ def _render_publication_management(
         linked_teachers = details.get("linked_teachers") or []
         if linked_teachers:
             st.caption("Запис зараз прив'язаний до: " + ", ".join(str(item) for item in linked_teachers if item))
+
+        review_note = st.text_area(
+            "Нотатка модератора",
+            value=str(details.get("review_note") or selected_publication.get("review_note") or ""),
+            height=90,
+            key=f"teacher_review_note_{teacher_id}_{publication_id}",
+        )
+
+        status_actions = st.columns(2, gap="medium")
+        if status_actions[0].button(
+            "Підтвердити запис",
+            key=f"teacher_confirm_{teacher_id}_{publication_id}",
+            use_container_width=True,
+        ):
+            if service.set_publication_review_status(publication_id, "Підтверджено", review_note=review_note):
+                st.session_state[TEACHER_FLASH_KEY] = "Статус публікації оновлено."
+                st.rerun()
+        if status_actions[1].button(
+            "Відхилити запис",
+            key=f"teacher_reject_{teacher_id}_{publication_id}",
+            use_container_width=True,
+        ):
+            if service.set_publication_review_status(publication_id, "Відхилено", review_note=review_note):
+                st.session_state[TEACHER_FLASH_KEY] = "Публікацію відхилено."
+                st.rerun()
 
         detach_confirm = st.checkbox(
             "Підтверджую видалення зв'язку цієї роботи з поточним викладачем",
