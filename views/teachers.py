@@ -20,6 +20,8 @@ STATUS_ORDER = [
     "Потребує перевірки",
 ]
 
+TEACHER_FLASH_KEY = "teacher_management_flash"
+
 
 def _profile_count(profile: dict[str, object]) -> int:
     return sum(
@@ -40,7 +42,7 @@ def _profile_readiness(profile: dict[str, object], publications: list[dict[str, 
         return "Середня", "Є кілька зовнішніх профілів і вже знайдені роботи."
     if profile_count >= 1:
         return "Базова", "Початкові ідентифікатори є, але варто розширити покриття джерел."
-    return "Низька", "Профіль ще потребує ORCID, Scopus, WoS або Scholar для кращого матчингу."
+    return "Низька", "Профіль ще потребує ORCID, Scopus, WoS або Scholar для кращого матчінгу."
 
 
 def _profile_status(value: str) -> str:
@@ -71,9 +73,95 @@ def _status_counts(publications: list[dict[str, object]]) -> dict[str, int]:
     return counts
 
 
+def _show_flash_message() -> None:
+    message = st.session_state.pop(TEACHER_FLASH_KEY, "")
+    if message:
+        st.success(message)
+
+
+def _publication_option(row: dict[str, object]) -> str:
+    year = row.get("year")
+    year_label = str(year) if year is not None else "н/д"
+    status = str(row.get("status") or "")
+    return f"{row.get('title', 'Без назви')} ({year_label}) | {status}"
+
+
+def _render_publication_management(
+    service,
+    teacher_id: str,
+    publications: list[dict[str, object]],
+) -> None:
+    if not publications:
+        return
+
+    publication_map = {_publication_option(row): row for row in publications}
+
+    with st.expander("Керування публікаціями", expanded=False):
+        selected_label = st.selectbox(
+            "Запис для редагування",
+            list(publication_map.keys()),
+            key=f"teacher_publication_manage_{teacher_id}",
+        )
+        selected_publication = publication_map[selected_label]
+        publication_id = str(selected_publication.get("id") or "").strip()
+        details = service.get_publication_management_details(publication_id) or {}
+
+        render_key_value_card(
+            "Вплив на базу",
+            [
+                ("Публікація", str(details.get("title") or selected_publication.get("title") or "")),
+                ("Рік", str(details.get("year") or selected_publication.get("year") or "н/д")),
+                ("Джерело", str(details.get("source") or selected_publication.get("source") or "Невідомо")),
+                ("Пов'язані викладачі", str(details.get("linked_teachers_count") or 0)),
+            ],
+        )
+
+        linked_teachers = details.get("linked_teachers") or []
+        if linked_teachers:
+            st.caption("Запис зараз прив'язаний до: " + ", ".join(str(item) for item in linked_teachers if item))
+
+        detach_confirm = st.checkbox(
+            "Підтверджую видалення зв'язку цієї роботи з поточним викладачем",
+            key=f"detach_confirm_{teacher_id}_{publication_id}",
+        )
+        delete_confirm = st.checkbox(
+            "Підтверджую повне видалення цієї публікації з бази",
+            key=f"delete_confirm_{teacher_id}_{publication_id}",
+        )
+
+        actions = st.columns(2, gap="medium")
+        if actions[0].button(
+            "Видалити зв'язок з викладачем",
+            key=f"detach_button_{teacher_id}_{publication_id}",
+            use_container_width=True,
+        ):
+            if not detach_confirm:
+                st.warning("Спочатку підтвердіть видалення зв'язку.")
+            elif service.delete_teacher_publication_link(teacher_id, publication_id):
+                st.session_state[TEACHER_FLASH_KEY] = "Зв'язок автора з публікацією видалено."
+                st.rerun()
+            else:
+                st.error("Не вдалося видалити зв'язок. Спробуйте ще раз.")
+
+        if actions[1].button(
+            "Видалити публікацію повністю",
+            key=f"delete_button_{teacher_id}_{publication_id}",
+            use_container_width=True,
+            type="primary",
+        ):
+            if not delete_confirm:
+                st.warning("Спочатку підтвердіть повне видалення запису.")
+            elif service.delete_publication(publication_id):
+                st.session_state[TEACHER_FLASH_KEY] = "Публікацію повністю видалено з бази."
+                st.rerun()
+            else:
+                st.error("Не вдалося видалити публікацію. Спробуйте ще раз.")
+
+
 def render() -> None:
     service = require_service()
     render_header("Викладачі")
+    _show_flash_message()
 
     departments = service.get_departments()
     department_labels = {"Усі кафедри": ""}
@@ -148,7 +236,10 @@ def render() -> None:
         counters = st.columns(4, gap="medium")
         counters[0].metric("Публікації", len(publications))
         counters[1].metric("Співавтори", len(coauthors))
-        counters[2].metric("Підтверджені", status_counts["Офіційно підтверджено"] + status_counts["Підтверджено"])
+        counters[2].metric(
+            "Підтверджені",
+            status_counts["Офіційно підтверджено"] + status_counts["Підтверджено"],
+        )
         counters[3].metric("Кандидати", status_counts["Кандидат"])
 
         render_key_value_card(
@@ -205,6 +296,7 @@ def render() -> None:
             )
         else:
             st.dataframe(publications_table, use_container_width=True, hide_index=True)
+            _render_publication_management(service, selected_teacher_id, filtered_publications)
 
     with tabs[1]:
         render_section_heading("Співавтори")
