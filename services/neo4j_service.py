@@ -215,7 +215,13 @@ class Neo4jService:
                 coalesce(p.id, p.publication_id) AS id,
                 p.title AS title,
                 p.year AS year,
+                coalesce(p.doi, "") AS doi,
+                coalesce(p.pub_type, "") AS pub_type,
                 coalesce(p.source, "") AS source,
+                coalesce(p.confidence, 0.0) AS confidence,
+                coalesce(p.review_status, "") AS review_status,
+                coalesce(p.review_note, "") AS review_note,
+                coalesce(p.authors_snapshot, []) AS authors_snapshot,
                 count(DISTINCT t) AS linked_teachers_count,
                 collect(DISTINCT coalesce(t.full_name, t.name)) AS linked_teachers
             LIMIT 1
@@ -223,6 +229,81 @@ class Neo4jService:
             {"publication_id": publication_id},
         )
         return rows[0] if rows else None
+
+    def update_publication_metadata(
+        self,
+        publication_id: str,
+        *,
+        title: str,
+        year: int | None,
+        doi: str,
+        pub_type: str,
+        source: str,
+        confidence: float,
+        review_note: str = "",
+    ) -> bool:
+        rows = self.run_query(
+            """
+            MATCH (p:Publication)
+            WHERE coalesce(p.id, p.publication_id) = $publication_id
+            SET
+                p.title = $title,
+                p.year = $year,
+                p.doi = $doi,
+                p.pub_type = $pub_type,
+                p.source = $source,
+                p.confidence = $confidence,
+                p.review_note = $review_note
+            RETURN true AS updated
+            LIMIT 1
+            """,
+            {
+                "publication_id": publication_id,
+                "title": title.strip(),
+                "year": year,
+                "doi": doi.strip(),
+                "pub_type": pub_type.strip(),
+                "source": source.strip(),
+                "confidence": max(0.0, min(float(confidence), 1.0)),
+                "review_note": review_note.strip(),
+            },
+        )
+        return bool(rows)
+
+    def set_publication_review_status(self, publication_id: str, review_status: str, review_note: str = "") -> bool:
+        rows = self.run_query(
+            """
+            MATCH (p:Publication)
+            WHERE coalesce(p.id, p.publication_id) = $publication_id
+            SET
+                p.review_status = $review_status,
+                p.review_note = CASE
+                    WHEN $review_note = "" THEN coalesce(p.review_note, "")
+                    ELSE $review_note
+                END
+            RETURN true AS updated
+            LIMIT 1
+            """,
+            {
+                "publication_id": publication_id,
+                "review_status": review_status.strip(),
+                "review_note": review_note.strip(),
+            },
+        )
+        return bool(rows)
+
+    def clear_publication_review_status(self, publication_id: str) -> bool:
+        rows = self.run_query(
+            """
+            MATCH (p:Publication)
+            WHERE coalesce(p.id, p.publication_id) = $publication_id
+            REMOVE p.review_status
+            RETURN true AS updated
+            LIMIT 1
+            """,
+            {"publication_id": publication_id},
+        )
+        return bool(rows)
 
     def delete_teacher_publication_link(self, teacher_id: str, publication_id: str) -> bool:
         rows = self.run_query(
@@ -585,11 +666,13 @@ class Neo4jService:
                 coalesce(p.source, "") AS source,
                 coalesce(p.confidence, 0.0) AS confidence,
                 CASE
+                    WHEN coalesce(p.review_status, "") <> "" THEN p.review_status
                     WHEN any(source_name IN source_names WHERE source_name IN ["Scopus", "Web of Science"]) THEN "Офіційно підтверджено"
                     WHEN coalesce(p.confidence, 0.0) >= 0.9 THEN "Підтверджено"
                     WHEN coalesce(p.confidence, 0.0) >= 0.72 THEN "Кандидат"
                     ELSE "Потребує перевірки"
                 END AS status,
+                coalesce(p.review_note, "") AS review_note,
                 CASE
                     WHEN size(linked_authors) > 0 THEN linked_authors
                     ELSE coalesce(p.authors_snapshot, [])
@@ -646,11 +729,13 @@ class Neo4jService:
                 coalesce(p.source, "") AS source,
                 coalesce(p.confidence, 0.0) AS confidence,
                 CASE
+                    WHEN coalesce(p.review_status, "") <> "" THEN p.review_status
                     WHEN any(source_name IN source_names WHERE source_name IN ["Scopus", "Web of Science"]) THEN "Офіційно підтверджено"
                     WHEN coalesce(p.confidence, 0.0) >= 0.9 THEN "Підтверджено"
                     WHEN coalesce(p.confidence, 0.0) >= 0.72 THEN "Кандидат"
                     ELSE "Потребує перевірки"
                 END AS status,
+                coalesce(p.review_note, "") AS review_note,
                 CASE
                     WHEN size(linked_authors) > 0 THEN linked_authors
                     ELSE coalesce(p.authors_snapshot, [])
