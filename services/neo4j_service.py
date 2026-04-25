@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
+from uuid import uuid4
 
 from neo4j import GraphDatabase
 
@@ -11,10 +13,12 @@ SCHEMA_STATEMENTS = [
     "CREATE CONSTRAINT teacher_id_unique IF NOT EXISTS FOR (t:Teacher) REQUIRE t.id IS UNIQUE",
     "CREATE CONSTRAINT publication_id_unique IF NOT EXISTS FOR (p:Publication) REQUIRE p.id IS UNIQUE",
     "CREATE CONSTRAINT system_state_key_unique IF NOT EXISTS FOR (s:SystemState) REQUIRE s.key IS UNIQUE",
+    "CREATE CONSTRAINT audit_event_id_unique IF NOT EXISTS FOR (a:AuditEvent) REQUIRE a.id IS UNIQUE",
     "CREATE RANGE INDEX faculty_name_idx IF NOT EXISTS FOR (f:Faculty) ON (f.name)",
     "CREATE RANGE INDEX department_name_idx IF NOT EXISTS FOR (d:Department) ON (d.name)",
     "CREATE RANGE INDEX teacher_full_name_idx IF NOT EXISTS FOR (t:Teacher) ON (t.full_name)",
     "CREATE RANGE INDEX publication_year_idx IF NOT EXISTS FOR (p:Publication) ON (p.year)",
+    "CREATE RANGE INDEX audit_event_created_at_idx IF NOT EXISTS FOR (a:AuditEvent) ON (a.created_at)",
 ]
 
 
@@ -53,6 +57,62 @@ class Neo4jService:
     def execute(self, query: str, params: dict[str, Any] | None = None) -> None:
         with self.driver.session(**self._session_kwargs()) as session:
             session.run(query, params or {})
+
+    @staticmethod
+    def _now_utc() -> str:
+        return datetime.now(timezone.utc).isoformat()
+
+    @staticmethod
+    def _unique_strings(values: list[str]) -> list[str]:
+        seen: set[str] = set()
+        result: list[str] = []
+        for value in values:
+            cleaned = str(value or "").strip()
+            if cleaned and cleaned not in seen:
+                seen.add(cleaned)
+                result.append(cleaned)
+        return result
+
+    @staticmethod
+    def _normalize_publication_key(title: str, year: int | None = None) -> str:
+        normalized = "".join(char.lower() if char.isalnum() else " " for char in str(title or ""))
+        compact = " ".join(normalized.split())
+        return f"{compact}|{year or ''}"
+
+    def log_audit_event(
+        self,
+        *,
+        action: str,
+        entity_type: str,
+        entity_id: str,
+        summary: str,
+        details: str = "",
+        actor: str = "streamlit_ui",
+    ) -> None:
+        self.execute(
+            """
+            CREATE (a:AuditEvent {
+                id: $id,
+                created_at: $created_at,
+                action: $action,
+                entity_type: $entity_type,
+                entity_id: $entity_id,
+                summary: $summary,
+                details: $details,
+                actor: $actor
+            })
+            """,
+            {
+                "id": f"audit:{uuid4().hex}",
+                "created_at": self._now_utc(),
+                "action": action.strip(),
+                "entity_type": entity_type.strip(),
+                "entity_id": entity_id.strip(),
+                "summary": summary.strip(),
+                "details": details.strip(),
+                "actor": actor.strip(),
+            },
+        )
 
     def prepare_database(self) -> None:
         for statement in LEGACY_MIGRATION_STATEMENTS:
@@ -268,6 +328,14 @@ class Neo4jService:
                 "review_note": review_note.strip(),
             },
         )
+        if rows:
+            self.log_audit_event(
+                action="publication.update",
+                entity_type="Publication",
+                entity_id=publication_id,
+                summary=f"Оновлено метадані публікації '{title.strip()}'.",
+                details=f"Рік: {year or 'н/д'} | DOI: {doi.strip() or 'немає'} | Джерело: {source.strip() or 'невідомо'}",
+            )
         return bool(rows)
 
     def set_publication_review_status(self, publication_id: str, review_status: str, review_note: str = "") -> bool:
@@ -290,6 +358,14 @@ class Neo4jService:
                 "review_note": review_note.strip(),
             },
         )
+        if rows:
+            self.log_audit_event(
+                action="publication.review_status.set",
+                entity_type="Publication",
+                entity_id=publication_id,
+                summary=f"Для публікації встановлено статус '{review_status.strip()}'.",
+                details=review_note.strip(),
+            )
         return bool(rows)
 
     def clear_publication_review_status(self, publication_id: str) -> bool:
@@ -303,6 +379,13 @@ class Neo4jService:
             """,
             {"publication_id": publication_id},
         )
+        if rows:
+            self.log_audit_event(
+                action="publication.review_status.clear",
+                entity_type="Publication",
+                entity_id=publication_id,
+                summary="Ручний статус публікації скинуто.",
+            )
         return bool(rows)
 
     def delete_teacher_publication_link(self, teacher_id: str, publication_id: str) -> bool:
@@ -321,6 +404,14 @@ class Neo4jService:
             """,
             {"teacher_id": teacher_id, "publication_id": publication_id},
         )
+        if rows:
+            self.log_audit_event(
+                action="publication.link.delete",
+                entity_type="Authorship",
+                entity_id=f"{teacher_id}|{publication_id}",
+                summary="Видалено зв'язок викладача з публікацією.",
+                details=f"Teacher: {teacher_id} | Publication: {publication_id}",
+            )
         return bool(rows)
 
     def delete_publication(self, publication_id: str) -> bool:
@@ -334,7 +425,176 @@ class Neo4jService:
             """,
             {"publication_id": publication_id},
         )
+        if rows:
+            self.log_audit_event(
+                action="publication.delete",
+                entity_type="Publication",
+                entity_id=publication_id,
+                summary="Публікацію повністю видалено з бази.",
+            )
         return bool(rows)
+
+    def create_manual_publication(
+        self,
+        *,
+        title: str,
+        year: int | None,
+        doi: str,
+        pub_type: str,
+        source: str,
+        teacher_ids: list[str],
+        authors_snapshot: list[str] | None = None,
+        confidence: float = 1.0,
+        review_status: str = "Підтверджено",
+        review_note: str = "",
+        url: str = "",
+    ) -> dict[str, Any]:
+        cleaned_title = title.strip()
+        cleaned_doi = doi.strip().lower()
+        cleaned_teacher_ids = self._unique_strings(teacher_ids)
+        cleaned_authors = self._unique_strings(list(authors_snapshot or []))
+        if not cleaned_title or not cleaned_teacher_ids:
+            return {"created": False, "publication_id": "", "matched_existing": False}
+
+        existing_rows = self.run_query(
+            """
+            MATCH (p:Publication)
+            WHERE (
+                $doi <> "" AND toLower(coalesce(p.doi, "")) = $doi
+            ) OR (
+                $doi = ""
+                AND coalesce(p.canonical_key, "") = $canonical_key
+            )
+            RETURN coalesce(p.id, p.publication_id) AS id
+            LIMIT 1
+            """,
+            {
+                "doi": cleaned_doi,
+                "canonical_key": self._normalize_publication_key(cleaned_title, year),
+            },
+        )
+        publication_id = (
+            str(existing_rows[0]["id"]).strip()
+            if existing_rows and existing_rows[0].get("id")
+            else f"manual:{uuid4().hex}"
+        )
+        matched_existing = bool(existing_rows)
+
+        teacher_rows = self.run_query(
+            """
+            MATCH (t:Teacher)
+            WHERE coalesce(t.id, t.teacher_id) IN $teacher_ids
+            RETURN coalesce(t.full_name, t.name) AS full_name
+            ORDER BY full_name
+            """,
+            {"teacher_ids": cleaned_teacher_ids},
+        )
+        teacher_names = [str(row.get("full_name") or "").strip() for row in teacher_rows]
+        final_authors = self._unique_strings(teacher_names + cleaned_authors)
+        final_source = source.strip() or "Ручне додавання"
+        final_confidence = max(0.0, min(float(confidence), 1.0))
+        canonical_key = cleaned_doi or self._normalize_publication_key(cleaned_title, year)
+
+        self.seed_publications(
+            [
+                {
+                    "id": publication_id,
+                    "title": cleaned_title,
+                    "year": year,
+                    "doi": cleaned_doi,
+                    "pub_type": pub_type.strip(),
+                    "source": final_source,
+                    "url": url.strip(),
+                    "canonical_key": canonical_key,
+                    "external_ids": [cleaned_doi] if cleaned_doi else [],
+                    "authors_snapshot": final_authors,
+                    "confidence": final_confidence,
+                    "matched_by": "manual_entry",
+                }
+            ],
+            [
+                {
+                    "teacher_id": teacher_id,
+                    "publication_id": publication_id,
+                    "source": final_source,
+                    "confidence": final_confidence,
+                    "matched_by": "manual_entry",
+                }
+                for teacher_id in cleaned_teacher_ids
+            ],
+        )
+        self.set_publication_review_status(publication_id, review_status, review_note=review_note)
+        self.log_audit_event(
+            action="publication.manual_create",
+            entity_type="Publication",
+            entity_id=publication_id,
+            summary=(
+                f"Публікацію {'повторно використано' if matched_existing else 'додано вручну'}: "
+                f"'{cleaned_title}'."
+            ),
+            details=(
+                f"Викладачів: {len(cleaned_teacher_ids)} | DOI: {cleaned_doi or 'немає'} | "
+                f"Джерело: {final_source}"
+            ),
+        )
+        return {
+            "created": True,
+            "publication_id": publication_id,
+            "matched_existing": matched_existing,
+            "teacher_links": len(cleaned_teacher_ids),
+        }
+
+    def get_audit_events(self, limit: int = 80) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (a:AuditEvent)
+            RETURN
+                a.created_at AS created_at,
+                a.action AS action,
+                a.entity_type AS entity_type,
+                a.entity_id AS entity_id,
+                a.summary AS summary,
+                coalesce(a.details, "") AS details,
+                coalesce(a.actor, "") AS actor
+            ORDER BY a.created_at DESC
+            LIMIT $limit
+            """,
+            {"limit": int(limit)},
+        )
+
+    def bulk_set_publication_review_status(
+        self,
+        publication_ids: list[str],
+        review_status: str,
+        review_note: str = "",
+    ) -> int:
+        updated = 0
+        for publication_id in self._unique_strings(publication_ids):
+            if self.set_publication_review_status(publication_id, review_status, review_note=review_note):
+                updated += 1
+        if updated:
+            self.log_audit_event(
+                action="publication.bulk_review_status",
+                entity_type="Publication",
+                entity_id="bulk",
+                summary=f"Масово оновлено статус для {updated} публікацій.",
+                details=f"Новий статус: {review_status}",
+            )
+        return updated
+
+    def bulk_delete_publications(self, publication_ids: list[str]) -> int:
+        deleted = 0
+        for publication_id in self._unique_strings(publication_ids):
+            if self.delete_publication(publication_id):
+                deleted += 1
+        if deleted:
+            self.log_audit_event(
+                action="publication.bulk_delete",
+                entity_type="Publication",
+                entity_id="bulk",
+                summary=f"Масово видалено {deleted} публікацій.",
+            )
+        return deleted
 
     def upsert_system_state(self, key: str, values: dict[str, Any]) -> None:
         self.execute(
