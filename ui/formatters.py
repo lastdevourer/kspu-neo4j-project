@@ -216,3 +216,21 @@ def publication_sources_dataframe(rows: list[dict]) -> pd.DataFrame:
         }
     )
     return renamed[["Джерело", "Публікації"]]
+
+
+def audit_events_dataframe(rows: list[dict]) -> pd.DataFrame:
+    df = _frame(rows)
+    if df.empty:
+        return df
+    renamed = df.rename(
+        columns={
+            "created_at": "Час",
+            "action": "Дія",
+            "entity_type": "Сутність",
+            "entity_id": "ID сутності",
+            "summary": "Опис",
+            "details": "Деталі",
+            "actor": "Ініціатор",
+        }
+    )
+    return renamed[["Час", "Дія", "Сутність", "ID сутності", "Опис", "Деталі", "Ініціатор"]]
