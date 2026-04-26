@@ -5,22 +5,53 @@ import streamlit as st
 from services.neo4j_service import Neo4jService
 
 
-def render_sidebar(service: Neo4jService) -> None:
+def render_sidebar(
+    service: Neo4jService,
+    *,
+    current_page: str,
+    pages: dict[str, dict[str, object]],
+) -> str:
+    selected_page = current_page
+    counts = service.get_overview_counts()
+    section_order = ["Огляд", "Каталог", "Адміністрування"]
+
     with st.sidebar:
         st.markdown(
             """
             <div class="sidebar-brand">
-                <div class="sidebar-brand-kicker">KSPU / KhDU</div>
+                <div class="sidebar-brand-kicker">KSPU</div>
                 <div class="sidebar-brand-title">Академічна мережа</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
-        coverage = service.get_profile_coverage()
-        total_teachers = int(coverage.get("teachers", 0) or 0)
-        total_profiles = int(coverage.get("with_any_profile", 0) or 0)
-        if total_teachers:
-            st.caption(f"Покриття профілів: {total_profiles} / {total_teachers}")
+        for section_name in section_order:
+            section_pages = [
+                (page_key, page_meta)
+                for page_key, page_meta in pages.items()
+                if page_meta.get("section") == section_name
+            ]
+            if not section_pages:
+                continue
 
-        st.caption("Основні сервісні дії перенесено в сторінки `Структура` та `Центр даних`.")
+            with st.expander(section_name, expanded=False):
+                for page_key, page_meta in section_pages:
+                    button_type = "primary" if page_key == current_page else "secondary"
+                    if st.button(
+                        str(page_meta["title"]),
+                        key=f"sidebar_nav_{page_key}",
+                        use_container_width=True,
+                        type=button_type,
+                    ):
+                        selected_page = page_key
+
+        with st.expander("Швидкий стан бази", expanded=False):
+            status_columns = st.columns(2, gap="small")
+            status_columns[0].metric("Факультети", counts["faculties"])
+            status_columns[1].metric("Кафедри", counts["departments"])
+            status_columns[0].metric("Викладачі", counts["teachers"])
+            status_columns[1].metric("Публікації", counts["publications"])
+            st.caption("Імпорт, очищення та сервісні дії зібрано на сторінках `Структура` та `Центр даних`.")
+
+    return selected_page
