@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pandas as pd
 import streamlit as st
 
 from ui.components import (
@@ -12,9 +13,11 @@ from ui.components import (
 )
 from ui.formatters import (
     centrality_dataframe,
+    department_overview_dataframe,
     publication_sources_dataframe,
     top_coauthor_pairs_dataframe,
     top_teachers_dataframe,
+    teachers_dataframe,
 )
 from utils.analytics import (
     build_centrality_edges,
@@ -25,6 +28,20 @@ from utils.analytics import (
     calculate_centrality_rows,
     filter_publications_by_scope,
 )
+
+
+def _csv_bytes(frame: pd.DataFrame) -> bytes:
+    return frame.to_csv(index=False).encode("utf-8-sig")
+
+
+def _scoped_teacher_rows(teachers: list[dict], publications: list[dict]) -> list[dict]:
+    publication_counts = {row["teacher"]: row["publications"] for row in build_teacher_publication_rankings(publications, teachers, 10_000)}
+    rows: list[dict] = []
+    for teacher in teachers:
+        row = dict(teacher)
+        row["publications"] = int(publication_counts.get(str(teacher.get("full_name") or "").strip(), 0))
+        rows.append(row)
+    return rows
 
 
 def render() -> None:
@@ -69,6 +86,43 @@ def render() -> None:
         "Короткий висновок",
         build_diploma_summary(top_teachers, top_pairs, centrality_rows),
     )
+
+    export_columns = st.columns(4, gap="medium")
+    top_teachers_export = top_teachers_dataframe(top_teachers)
+    top_pairs_export = top_coauthor_pairs_dataframe(top_pairs)
+    centrality_export = centrality_dataframe(centrality_rows)
+    with export_columns[0]:
+        st.download_button(
+            "Експорт топу викладачів",
+            _csv_bytes(top_teachers_export if not top_teachers_export.empty else pd.DataFrame(columns=["Викладач"])),
+            file_name="top_teachers.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+    with export_columns[1]:
+        st.download_button(
+            "Експорт пар співавторів",
+            _csv_bytes(top_pairs_export if not top_pairs_export.empty else pd.DataFrame(columns=["Викладач 1"])),
+            file_name="top_coauthor_pairs.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+    with export_columns[2]:
+        st.download_button(
+            "Експорт centrality",
+            _csv_bytes(centrality_export if not centrality_export.empty else pd.DataFrame(columns=["Викладач"])),
+            file_name="centrality.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+    with export_columns[3]:
+        st.download_button(
+            "Експорт джерел",
+            _csv_bytes(source_rows if not source_rows.empty else pd.DataFrame(columns=["Джерело"])),
+            file_name="publication_sources.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
 
     if profile_coverage.get("teachers", 0):
         render_section_heading("Готовність профілів до автоматичного імпорту")
@@ -124,3 +178,60 @@ def render() -> None:
             st.bar_chart(source_rows.set_index("Джерело"), use_container_width=True, height=280)
         with source_columns[1]:
             st.dataframe(source_rows, use_container_width=True, hide_index=True)
+
+    render_section_heading("Звіт кафедри", "Швидкий експорт аналітичного зрізу для конкретної кафедри.")
+    departments = service.get_departments()
+    department_labels = {f"{row['name']} ({row['code']})": row["code"] for row in departments}
+    if not department_labels:
+        render_empty_state("Кафедри недоступні", "Спочатку потрібно заповнити довідник факультетів і кафедр.")
+        return
+
+    selected_department_label = st.selectbox("Оберіть кафедру для звіту", list(department_labels.keys()))
+    selected_department_code = department_labels[selected_department_label]
+    scoped_department_teachers = _scoped_teacher_rows(
+        service.get_teachers(department_code=selected_department_code),
+        scoped_publications,
+    )
+    teacher_report_frame = teachers_dataframe(scoped_department_teachers)
+    department_overview_rows = [row for row in service.get_department_overview() if row.get("code") == selected_department_code]
+    department_frame = department_overview_dataframe(department_overview_rows)
+    teachers_in_scope = len(scoped_department_teachers)
+    publications_in_scope = sum(int(row.get("publications", 0) or 0) for row in scoped_department_teachers)
+    profiles_ready = sum(
+        1
+        for row in scoped_department_teachers
+        if any(str(row.get(key) or "").strip() for key in ("orcid", "google_scholar", "scopus", "web_of_science"))
+    )
+
+    report_summary = st.columns(3, gap="medium")
+    report_summary[0].metric("Викладачі кафедри", teachers_in_scope)
+    report_summary[1].metric("Публікації в контурі", publications_in_scope)
+    report_summary[2].metric("Профілі готові", profiles_ready)
+
+    report_columns = st.columns([1.15, 0.85], gap="large")
+    with report_columns[0]:
+        if teacher_report_frame.empty:
+            render_empty_state(
+                "Дані кафедри порожні",
+                "За поточним контуром даних у вибраної кафедри немає записів для звіту.",
+            )
+        else:
+            st.dataframe(teacher_report_frame, use_container_width=True, hide_index=True)
+    with report_columns[1]:
+        if not department_frame.empty:
+            st.dataframe(department_frame, use_container_width=True, hide_index=True)
+        report_csv = pd.concat(
+            [
+                department_frame.assign(Тип_звіту="Огляд кафедри") if not department_frame.empty else pd.DataFrame(),
+                teacher_report_frame.assign(Тип_звіту="Викладачі кафедри") if not teacher_report_frame.empty else pd.DataFrame(),
+            ],
+            ignore_index=True,
+            sort=False,
+        )
+        st.download_button(
+            "Завантажити звіт кафедри CSV",
+            _csv_bytes(report_csv if not report_csv.empty else pd.DataFrame(columns=["Тип_звіту"])),
+            file_name=f"department_report_{selected_department_code}.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
