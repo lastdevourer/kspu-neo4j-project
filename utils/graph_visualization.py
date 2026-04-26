@@ -6,18 +6,60 @@ except Exception:  # pragma: no cover - handled by UI fallback
     Network = None
 
 
-def build_graph_html(edges: list[dict]) -> str | None:
-    if Network is None or not edges:
+def _base_network(height: str = "720px") -> Network | None:
+    if Network is None:
         return None
-
     net = Network(
-        height="720px",
+        height=height,
         width="100%",
         bgcolor="#081526",
         font_color="#e5eefb",
         directed=False,
     )
     net.barnes_hut(gravity=-22000, central_gravity=0.22, spring_length=160, spring_strength=0.035, damping=0.88)
+    net.set_options(
+        """
+        const options = {
+          "nodes": {
+            "font": { "size": 14, "face": "Manrope", "color": "#e5eefb" },
+            "borderWidth": 2,
+            "shadow": { "enabled": true, "color": "rgba(15, 23, 42, 0.55)", "size": 16, "x": 0, "y": 8 }
+          },
+          "edges": {
+            "smooth": false,
+            "color": { "inherit": false },
+            "selectionWidth": 2.6,
+            "hoverWidth": 2.2
+          },
+          "layout": { "improvedLayout": true },
+          "configure": { "enabled": false },
+          "interaction": {
+            "hover": true,
+            "tooltipDelay": 120,
+            "navigationButtons": true,
+            "keyboard": true
+          },
+          "physics": {
+            "enabled": true,
+            "barnesHut": {
+              "gravitationalConstant": -22000,
+              "centralGravity": 0.22,
+              "springLength": 160,
+              "springConstant": 0.035,
+              "damping": 0.88
+            },
+            "minVelocity": 0.75
+          }
+        }
+        """
+    )
+    return net
+
+
+def build_bipartite_graph_html(edges: list[dict]) -> str | None:
+    net = _base_network()
+    if net is None or not edges:
+        return None
 
     teacher_nodes: set[str] = set()
     publication_nodes: set[str] = set()
@@ -36,7 +78,6 @@ def build_graph_html(edges: list[dict]) -> str | None:
                 color="#2dd4bf",
                 shape="dot",
                 size=20,
-                borderWidth=2,
             )
 
         if publication_node not in publication_nodes:
@@ -50,73 +91,92 @@ def build_graph_html(edges: list[dict]) -> str | None:
                 color="#38bdf8",
                 shape="square",
                 size=17,
-                borderWidth=2,
             )
 
-        net.add_edge(teacher_node, publication_node, color="#5b728f")
+        net.add_edge(teacher_node, publication_node, color="#5b728f", width=1.2)
 
-    net.set_options(
-        """
-        const options = {
-          "nodes": {
-            "font": {
-              "size": 14,
-              "face": "Manrope",
-              "color": "#e5eefb"
-            },
-            "borderWidth": 2,
-            "shadow": {
-              "enabled": true,
-              "color": "rgba(15, 23, 42, 0.55)",
-              "size": 16,
-              "x": 0,
-              "y": 8
-            }
-          },
-          "edges": {
-            "smooth": false,
-            "color": {
-              "inherit": false
-            },
-            "width": 1.2,
-            "selectionWidth": 2.6,
-            "hoverWidth": 2.2
-          },
-          "layout": {
-            "improvedLayout": true
-          },
-          "configure": {
-            "enabled": false
-          },
-          "interaction": {
-            "hover": true,
-            "tooltipDelay": 120,
-            "navigationButtons": true,
-            "keyboard": true
-          },
-          "manipulation": {
-            "enabled": false
-          },
-          "groups": {
-            "teacher": {
-              "color": "#2dd4bf"
-            },
-            "publication": {
-              "color": "#38bdf8"
-            }
-          },
-          "physics": {
-            "enabled": true,
-            "barnesHut": {
-              "gravitationalConstant": -22000,
-              "centralGravity": 0.22,
-              "springLength": 160,
-              "springConstant": 0.035,
-              "damping": 0.88
-            },
-            "minVelocity": 0.75
-          }
-        }
-        """
-    )
+    return net.generate_html()
+
+
+def build_coauthor_graph_html(edges: list[dict]) -> str | None:
+    net = _base_network()
+    if net is None or not edges:
+        return None
+
+    seen_nodes: set[str] = set()
+    for edge in edges:
+        source_id = f"teacher::{edge['source_id']}"
+        target_id = f"teacher::{edge['target_id']}"
+        if source_id not in seen_nodes:
+            seen_nodes.add(source_id)
+            net.add_node(
+                source_id,
+                label=edge["source_name"],
+                title=f"Викладач: {edge['source_name']}<br>Кафедра: {edge['source_department']}",
+                color="#2dd4bf",
+                shape="dot",
+                size=18 + min(int(edge.get("weight", 1)), 8),
+            )
+        if target_id not in seen_nodes:
+            seen_nodes.add(target_id)
+            net.add_node(
+                target_id,
+                label=edge["target_name"],
+                title=f"Викладач: {edge['target_name']}<br>Кафедра: {edge['target_department']}",
+                color="#7dd3fc",
+                shape="dot",
+                size=18 + min(int(edge.get("weight", 1)), 8),
+            )
+
+        titles = "<br>".join(str(item) for item in edge.get("sample_titles", []) if item)
+        net.add_edge(
+            source_id,
+            target_id,
+            color="#f59e0b",
+            width=max(1.6, min(float(edge.get("weight", 1)) * 1.4, 8.0)),
+            title=f"Спільні публікації: {edge.get('weight', 1)}<br>{titles}",
+        )
+
+    return net.generate_html()
+
+
+def build_department_graph_html(edges: list[dict]) -> str | None:
+    net = _base_network()
+    if net is None or not edges:
+        return None
+
+    seen_nodes: set[str] = set()
+    for edge in edges:
+        source_id = f"department::{edge['source_id']}"
+        target_id = f"department::{edge['target_id']}"
+        if source_id not in seen_nodes:
+            seen_nodes.add(source_id)
+            net.add_node(
+                source_id,
+                label=edge["source_name"],
+                title=f"Кафедра: {edge['source_name']}<br>Факультет: {edge['source_faculty']}",
+                color="#2dd4bf",
+                shape="box",
+                size=24,
+            )
+        if target_id not in seen_nodes:
+            seen_nodes.add(target_id)
+            net.add_node(
+                target_id,
+                label=edge["target_name"],
+                title=f"Кафедра: {edge['target_name']}<br>Факультет: {edge['target_faculty']}",
+                color="#38bdf8",
+                shape="box",
+                size=24,
+            )
+
+        titles = "<br>".join(str(item) for item in edge.get("sample_titles", []) if item)
+        net.add_edge(
+            source_id,
+            target_id,
+            color="#f59e0b",
+            width=max(2.0, min(float(edge.get("weight", 1)) * 1.5, 9.0)),
+            title=f"Спільні публікації: {edge.get('weight', 1)}<br>{titles}",
+        )
+
     return net.generate_html()
