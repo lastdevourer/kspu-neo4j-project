@@ -47,6 +47,56 @@ def _teacher_gap_frame(rows: list[dict[str, object]]) -> pd.DataFrame:
     return renamed[columns]
 
 
+def _normalized_duplicate_key(row: dict[str, object]) -> str:
+    doi = str(row.get("doi") or "").strip().lower()
+    if doi:
+        return f"doi::{doi}"
+    title = " ".join("".join(char.lower() if char.isalnum() else " " for char in str(row.get("title") or "")).split())
+    year = str(row.get("year") or "").strip()
+    return f"title::{title}|{year}"
+
+
+def _build_duplicate_candidates(rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    grouped: dict[str, list[dict[str, object]]] = {}
+    for row in rows:
+        publication_id = str(row.get("id") or "").strip()
+        title = str(row.get("title") or "").strip()
+        if not publication_id or not title:
+            continue
+        key = _normalized_duplicate_key(row)
+        if key in {"title::|", "title::"}:
+            continue
+        grouped.setdefault(key, []).append(row)
+
+    results: list[dict[str, object]] = []
+    for duplicate_key, items in grouped.items():
+        if len(items) < 2:
+            continue
+        sorted_items = sorted(
+            items,
+            key=lambda item: (
+                str(item.get("doi") or "") == "",
+                -(int(item.get("year") or 0)),
+                str(item.get("title") or ""),
+            ),
+        )
+        for item in sorted_items:
+            results.append(
+                {
+                    "duplicate_key": duplicate_key,
+                    "id": str(item.get("id") or ""),
+                    "title": str(item.get("title") or ""),
+                    "year": item.get("year"),
+                    "doi": str(item.get("doi") or ""),
+                    "source": str(item.get("source") or ""),
+                    "review_status": str(item.get("status") or ""),
+                    "authors": list(item.get("authors") or []),
+                    "authors_count": int(item.get("authors_count", 0) or 0),
+                }
+            )
+    return results
+
+
 def _problem_publication_option(row: dict[str, object]) -> str:
     year = row.get("year")
     year_label = str(year) if year is not None else "н/д"
@@ -266,12 +316,12 @@ def _render_audit_tab(service) -> None:
         )
 
 
-def _render_duplicate_candidates(service) -> None:
+def _render_duplicate_candidates(service, all_publications: list[dict[str, object]]) -> None:
     render_section_heading(
         "Підозра на дублювання",
         "Система показує збіги за DOI або дуже схожі повтори записів, щоб їх можна було швидко перевірити.",
     )
-    rows = service.get_duplicate_publication_candidates(limit=150)
+    rows = _build_duplicate_candidates(all_publications)
     duplicate_frame = duplicate_candidates_dataframe(rows)
     if duplicate_frame.empty:
         render_empty_state("Підозрілих дублів не знайдено", "Зараз база не містить повторів, які потрапили під правила пошуку дублювання.")
@@ -560,7 +610,7 @@ def render() -> None:
             else:
                 st.dataframe(without_publications_frame, use_container_width=True, hide_index=True)
 
-        _render_duplicate_candidates(service)
+        _render_duplicate_candidates(service, all_publications)
 
     with manual_tab:
         _render_manual_add(service, all_teachers, departments)
