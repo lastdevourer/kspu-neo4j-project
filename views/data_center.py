@@ -11,7 +11,7 @@ from ui.components import (
     render_summary_strip,
     require_service,
 )
-from ui.formatters import audit_events_dataframe, publications_dataframe
+from ui.formatters import audit_events_dataframe, duplicate_candidates_dataframe, publications_dataframe
 
 
 FLASH_KEY = "data_center_flash"
@@ -266,6 +266,37 @@ def _render_audit_tab(service) -> None:
         )
 
 
+def _render_duplicate_candidates(service) -> None:
+    render_section_heading(
+        "Підозра на дублювання",
+        "Система показує збіги за DOI або дуже схожі повтори записів, щоб їх можна було швидко перевірити.",
+    )
+    rows = service.get_duplicate_publication_candidates(limit=150)
+    duplicate_frame = duplicate_candidates_dataframe(rows)
+    if duplicate_frame.empty:
+        render_empty_state("Підозрілих дублів не знайдено", "Зараз база не містить повторів, які потрапили під правила пошуку дублювання.")
+        return
+
+    top = st.columns([1.18, 0.82], gap="large")
+    with top[0]:
+        st.dataframe(duplicate_frame, use_container_width=True, hide_index=True)
+    with top[1]:
+        render_key_value_card(
+            "Огляд дублювання",
+            [
+                ("Підозрілих записів", str(len(rows))),
+                ("Ключів дубля", str(len({str(row.get('duplicate_key') or '') for row in rows if row.get('duplicate_key')}))),
+            ],
+        )
+        st.download_button(
+            "Експорт CSV",
+            duplicate_frame.to_csv(index=False).encode("utf-8-sig"),
+            file_name="duplicate_candidates.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+
+
 def _render_publication_detail(service, selected_publication: dict[str, object]) -> None:
     publication_id = str(selected_publication.get("id") or "").strip()
     details = service.get_publication_management_details(publication_id) or {}
@@ -473,6 +504,8 @@ def render() -> None:
                 render_empty_state("Усі мають знайдені роботи", "Зараз у вибірці немає викладачів без жодної публікації.")
             else:
                 st.dataframe(without_publications_frame, use_container_width=True, hide_index=True)
+
+        _render_duplicate_candidates(service)
 
     with manual_tab:
         _render_manual_add(service, all_teachers, departments)
