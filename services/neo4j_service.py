@@ -145,6 +145,150 @@ class Neo4jService:
             {"rows": departments},
         )
 
+    def get_faculties(self) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (f:Faculty)
+            RETURN
+                coalesce(f.code, f.faculty_id) AS code,
+                f.name AS name
+            ORDER BY name
+            """
+        )
+
+    def upsert_faculty(self, *, code: str, name: str) -> bool:
+        cleaned_code = code.strip()
+        cleaned_name = name.strip()
+        if not cleaned_code or not cleaned_name:
+            return False
+
+        self.execute(
+            """
+            MERGE (f:Faculty {code: $code})
+            SET f.name = $name,
+                f.faculty_id = $code
+            """,
+            {"code": cleaned_code, "name": cleaned_name},
+        )
+        self.log_audit_event(
+            action="faculty.upsert",
+            entity_type="Faculty",
+            entity_id=cleaned_code,
+            summary=f"Оновлено факультет '{cleaned_name}'.",
+        )
+        return True
+
+    def delete_faculty(self, faculty_code: str) -> dict[str, Any]:
+        cleaned_code = faculty_code.strip()
+        if not cleaned_code:
+            return {"deleted": False, "reason": "invalid"}
+
+        rows = self.run_query(
+            """
+            MATCH (f:Faculty)
+            WHERE coalesce(f.code, f.faculty_id) = $faculty_code
+            OPTIONAL MATCH (f)-[:HAS_DEPARTMENT]->(d:Department)
+            RETURN count(DISTINCT d) AS departments
+            LIMIT 1
+            """,
+            {"faculty_code": cleaned_code},
+        )
+        if not rows:
+            return {"deleted": False, "reason": "not_found"}
+
+        departments_count = int(rows[0].get("departments", 0) or 0)
+        if departments_count > 0:
+            return {"deleted": False, "reason": "has_departments", "departments": departments_count}
+
+        self.execute(
+            """
+            MATCH (f:Faculty)
+            WHERE coalesce(f.code, f.faculty_id) = $faculty_code
+            DETACH DELETE f
+            """,
+            {"faculty_code": cleaned_code},
+        )
+        self.log_audit_event(
+            action="faculty.delete",
+            entity_type="Faculty",
+            entity_id=cleaned_code,
+            summary="Факультет видалено з довідника.",
+        )
+        return {"deleted": True, "departments": 0}
+
+    def upsert_department(self, *, code: str, faculty_code: str, name: str) -> bool:
+        cleaned_code = code.strip()
+        cleaned_faculty_code = faculty_code.strip()
+        cleaned_name = name.strip()
+        if not cleaned_code or not cleaned_faculty_code or not cleaned_name:
+            return False
+
+        rows = self.run_query(
+            """
+            MATCH (f:Faculty {code: $faculty_code})
+            MERGE (d:Department {code: $code})
+            SET d.name = $name,
+                d.department_id = $code,
+                d.faculty_code = $faculty_code,
+                d.faculty_id = $faculty_code
+            WITH f, d
+            OPTIONAL MATCH (old_f:Faculty)-[r:HAS_DEPARTMENT]->(d)
+            WHERE coalesce(old_f.code, old_f.faculty_id) <> $faculty_code
+            DELETE r
+            MERGE (f)-[:HAS_DEPARTMENT]->(d)
+            RETURN true AS ok
+            LIMIT 1
+            """,
+            {"code": cleaned_code, "faculty_code": cleaned_faculty_code, "name": cleaned_name},
+        )
+        if rows:
+            self.log_audit_event(
+                action="department.upsert",
+                entity_type="Department",
+                entity_id=cleaned_code,
+                summary=f"Оновлено кафедру '{cleaned_name}'.",
+                details=f"Факультет: {cleaned_faculty_code}",
+            )
+        return bool(rows)
+
+    def delete_department(self, department_code: str) -> dict[str, Any]:
+        cleaned_code = department_code.strip()
+        if not cleaned_code:
+            return {"deleted": False, "reason": "invalid"}
+
+        rows = self.run_query(
+            """
+            MATCH (d:Department)
+            WHERE coalesce(d.code, d.department_id) = $department_code
+            OPTIONAL MATCH (d)-[:HAS_TEACHER]->(t:Teacher)
+            RETURN count(DISTINCT t) AS teachers
+            LIMIT 1
+            """,
+            {"department_code": cleaned_code},
+        )
+        if not rows:
+            return {"deleted": False, "reason": "not_found"}
+
+        teachers_count = int(rows[0].get("teachers", 0) or 0)
+        if teachers_count > 0:
+            return {"deleted": False, "reason": "has_teachers", "teachers": teachers_count}
+
+        self.execute(
+            """
+            MATCH (d:Department)
+            WHERE coalesce(d.code, d.department_id) = $department_code
+            DETACH DELETE d
+            """,
+            {"department_code": cleaned_code},
+        )
+        self.log_audit_event(
+            action="department.delete",
+            entity_type="Department",
+            entity_id=cleaned_code,
+            summary="Кафедру видалено з довідника.",
+        )
+        return {"deleted": True, "teachers": 0}
+
     def seed_teachers(self, teachers: list[dict[str, str]]) -> None:
         self.prepare_database()
         self.execute(
@@ -169,6 +313,153 @@ class Neo4jService:
             """,
             {"rows": teachers},
         )
+
+    def upsert_teacher(
+        self,
+        *,
+        teacher_id: str,
+        full_name: str,
+        department_code: str,
+        position: str = "",
+        academic_degree: str = "",
+        academic_title: str = "",
+        orcid: str = "",
+        google_scholar: str = "",
+        scopus: str = "",
+        web_of_science: str = "",
+        profile_url: str = "",
+    ) -> bool:
+        cleaned_id = teacher_id.strip()
+        cleaned_name = full_name.strip()
+        cleaned_department_code = department_code.strip()
+        if not cleaned_id or not cleaned_name or not cleaned_department_code:
+            return False
+
+        rows = self.run_query(
+            """
+            MATCH (d:Department)
+            WHERE coalesce(d.code, d.department_id) = $department_code
+            MERGE (t:Teacher {id: $teacher_id})
+            SET
+                t.teacher_id = $teacher_id,
+                t.full_name = $full_name,
+                t.name = $full_name,
+                t.position = $position,
+                t.academic_degree = $academic_degree,
+                t.academic_title = $academic_title,
+                t.orcid = $orcid,
+                t.google_scholar = $google_scholar,
+                t.scopus = $scopus,
+                t.web_of_science = $web_of_science,
+                t.profile_url = $profile_url,
+                t.department_code = $department_code
+            WITH t, d
+            OPTIONAL MATCH (old_d:Department)-[r:HAS_TEACHER]->(t)
+            WHERE coalesce(old_d.code, old_d.department_id) <> $department_code
+            DELETE r
+            MERGE (d)-[:HAS_TEACHER]->(t)
+            RETURN true AS ok
+            LIMIT 1
+            """,
+            {
+                "teacher_id": cleaned_id,
+                "full_name": cleaned_name,
+                "department_code": cleaned_department_code,
+                "position": position.strip(),
+                "academic_degree": academic_degree.strip(),
+                "academic_title": academic_title.strip(),
+                "orcid": orcid.strip(),
+                "google_scholar": google_scholar.strip(),
+                "scopus": scopus.strip(),
+                "web_of_science": web_of_science.strip(),
+                "profile_url": profile_url.strip(),
+            },
+        )
+        if rows:
+            self.log_audit_event(
+                action="teacher.upsert",
+                entity_type="Teacher",
+                entity_id=cleaned_id,
+                summary=f"Оновлено профіль викладача '{cleaned_name}'.",
+                details=f"Кафедра: {cleaned_department_code}",
+            )
+        return bool(rows)
+
+    def delete_teacher(self, teacher_id: str) -> dict[str, Any]:
+        cleaned_id = teacher_id.strip()
+        if not cleaned_id:
+            return {"deleted": False, "reason": "invalid", "orphan_publications": 0}
+
+        rows = self.run_query(
+            """
+            MATCH (t:Teacher)
+            WHERE coalesce(t.id, t.teacher_id) = $teacher_id
+            OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
+            RETURN
+                count(DISTINCT p) AS linked_publications
+            LIMIT 1
+            """,
+            {"teacher_id": cleaned_id},
+        )
+        if not rows:
+            return {"deleted": False, "reason": "not_found", "orphan_publications": 0}
+
+        linked_publications = int(rows[0].get("linked_publications", 0) or 0)
+        orphan_rows = self.run_query(
+            """
+            MATCH (t:Teacher)-[:AUTHORED]->(p:Publication)
+            WHERE coalesce(t.id, t.teacher_id) = $teacher_id
+            OPTIONAL MATCH (other:Teacher)-[:AUTHORED]->(p)
+            WHERE coalesce(other.id, other.teacher_id) <> $teacher_id
+            WITH p, count(DISTINCT other) AS other_authors
+            WHERE other_authors = 0
+            RETURN collect(DISTINCT coalesce(p.id, p.publication_id)) AS ids
+            """,
+            {"teacher_id": cleaned_id},
+        )
+        orphan_publication_ids = [
+            str(publication_id).strip()
+            for publication_id in (orphan_rows[0].get("ids", []) if orphan_rows else [])
+            if str(publication_id or "").strip()
+        ]
+
+        self.execute(
+            """
+            MATCH (t:Teacher)
+            WHERE coalesce(t.id, t.teacher_id) = $teacher_id
+            DETACH DELETE t
+            """,
+            {"teacher_id": cleaned_id},
+        )
+        if orphan_publication_ids:
+            self.execute(
+                """
+                UNWIND $publication_ids AS publication_id
+                MATCH (p:Publication)
+                WHERE coalesce(p.id, p.publication_id) = publication_id
+                DETACH DELETE p
+                """,
+                {"publication_ids": orphan_publication_ids},
+            )
+        self.log_audit_event(
+            action="teacher.delete",
+            entity_type="Teacher",
+            entity_id=cleaned_id,
+            summary="Викладача видалено з бази.",
+            details=(
+                f"Пов'язаних публікацій: {linked_publications} | "
+                f"Осиротілих публікацій видалено: {len(orphan_publication_ids)}"
+            ),
+        )
+        return {"deleted": True, "reason": "", "orphan_publications": len(orphan_publication_ids)}
+
+    def bulk_delete_teachers(self, teacher_ids: list[str]) -> int:
+        deleted = 0
+        for teacher_id in self._unique_strings(teacher_ids):
+            result = self.delete_teacher(teacher_id)
+            if result.get("deleted"):
+                deleted += 1
+        return deleted
 
     def seed_publications(self, publications: list[dict[str, Any]], authorships: list[dict[str, Any]]) -> None:
         self.prepare_database()
