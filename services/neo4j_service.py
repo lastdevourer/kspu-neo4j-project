@@ -1074,6 +1074,80 @@ class Neo4jService:
             {"department_code": department_code.strip(), "limit": int(limit)},
         )
 
+    def get_teacher_coauthor_graph(self, department_code: str = "", limit: int = 120) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (d1:Department)-[:HAS_TEACHER]->(a:Teacher)-[:AUTHORED]->(p:Publication)<-[:AUTHORED]-(b:Teacher)<-[:HAS_TEACHER]-(d2:Department)
+            WHERE coalesce(a.id, a.teacher_id) < coalesce(b.id, b.teacher_id)
+              AND ($department_code = "" OR coalesce(d1.code, d1.department_id) = $department_code OR coalesce(d2.code, d2.department_id) = $department_code)
+            WITH a, b, d1, d2, count(DISTINCT p) AS weight, collect(DISTINCT p.title)[0..4] AS sample_titles
+            RETURN
+                coalesce(a.id, a.teacher_id) AS source_id,
+                coalesce(a.full_name, a.name) AS source_name,
+                d1.name AS source_department,
+                coalesce(b.id, b.teacher_id) AS target_id,
+                coalesce(b.full_name, b.name) AS target_name,
+                d2.name AS target_department,
+                weight,
+                sample_titles
+            ORDER BY weight DESC, source_name, target_name
+            LIMIT $limit
+            """,
+            {"department_code": department_code.strip(), "limit": int(limit)},
+        )
+
+    def get_department_collaboration_edges(self, faculty_code: str = "", limit: int = 80) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (f1:Faculty)-[:HAS_DEPARTMENT]->(d1:Department)-[:HAS_TEACHER]->(a:Teacher)-[:AUTHORED]->(p:Publication)<-[:AUTHORED]-(b:Teacher)<-[:HAS_TEACHER]-(d2:Department)<-[:HAS_DEPARTMENT]-(f2:Faculty)
+            WHERE coalesce(d1.code, d1.department_id) < coalesce(d2.code, d2.department_id)
+              AND ($faculty_code = "" OR coalesce(f1.code, f1.faculty_id) = $faculty_code OR coalesce(f2.code, f2.faculty_id) = $faculty_code)
+            WITH d1, d2, f1, f2, count(DISTINCT p) AS weight, collect(DISTINCT p.title)[0..5] AS sample_titles
+            RETURN
+                coalesce(d1.code, d1.department_id) AS source_id,
+                d1.name AS source_name,
+                f1.name AS source_faculty,
+                coalesce(d2.code, d2.department_id) AS target_id,
+                d2.name AS target_name,
+                f2.name AS target_faculty,
+                weight,
+                sample_titles
+            ORDER BY weight DESC, source_name, target_name
+            LIMIT $limit
+            """,
+            {"faculty_code": faculty_code.strip(), "limit": int(limit)},
+        )
+
+    def get_duplicate_publication_candidates(self, limit: int = 120) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (p:Publication)
+            WITH
+                p,
+                toLower(trim(coalesce(p.doi, ""))) AS doi_key,
+                toLower(trim(coalesce(p.title, ""))) AS title_key
+            WITH doi_key, title_key, collect(p) AS publications
+            WHERE
+                (doi_key <> "" AND size(publications) > 1)
+                OR (doi_key = "" AND title_key <> "" AND size(publications) > 1)
+            UNWIND publications AS p
+            OPTIONAL MATCH (t:Teacher)-[:AUTHORED]->(p)
+            WITH doi_key, title_key, p, collect(DISTINCT coalesce(t.full_name, t.name)) AS authors
+            RETURN
+                CASE WHEN doi_key <> "" THEN doi_key ELSE title_key END AS duplicate_key,
+                coalesce(p.id, p.publication_id) AS id,
+                p.title AS title,
+                p.year AS year,
+                coalesce(p.doi, "") AS doi,
+                coalesce(p.source, "") AS source,
+                coalesce(p.review_status, "") AS review_status,
+                authors,
+                size(authors) AS authors_count
+            ORDER BY duplicate_key, year DESC, title
+            LIMIT $limit
+            """
+        )
+
     def get_top_teachers_by_publications(self, limit: int = 10) -> list[dict[str, Any]]:
         return self.run_query(
             """
