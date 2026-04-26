@@ -283,12 +283,59 @@ class Neo4jService:
                 coalesce(p.review_note, "") AS review_note,
                 coalesce(p.authors_snapshot, []) AS authors_snapshot,
                 count(DISTINCT t) AS linked_teachers_count,
-                collect(DISTINCT coalesce(t.full_name, t.name)) AS linked_teachers
+                collect(DISTINCT coalesce(t.full_name, t.name)) AS linked_teachers,
+                collect(DISTINCT coalesce(t.id, t.teacher_id)) AS linked_teacher_ids
             LIMIT 1
             """,
             {"publication_id": publication_id},
         )
         return rows[0] if rows else None
+
+    def create_teacher_publication_link(
+        self,
+        teacher_id: str,
+        publication_id: str,
+        *,
+        source: str = "Ручне прив'язування",
+        confidence: float = 1.0,
+        matched_by: str = "manual_link",
+    ) -> bool:
+        rows = self.run_query(
+            """
+            MATCH (t:Teacher)
+            WHERE coalesce(t.id, t.teacher_id) = $teacher_id
+            MATCH (p:Publication)
+            WHERE coalesce(p.id, p.publication_id) = $publication_id
+            MERGE (t)-[r:AUTHORED]->(p)
+            SET
+                r.source = $source,
+                r.confidence = $confidence,
+                r.matched_by = $matched_by,
+                p.authors_snapshot = CASE
+                    WHEN coalesce(t.full_name, t.name) IN coalesce(p.authors_snapshot, [])
+                    THEN coalesce(p.authors_snapshot, [])
+                    ELSE coalesce(p.authors_snapshot, []) + coalesce(t.full_name, t.name)
+                END
+            RETURN true AS created
+            LIMIT 1
+            """,
+            {
+                "teacher_id": teacher_id,
+                "publication_id": publication_id,
+                "source": source.strip() or "Ручне прив'язування",
+                "confidence": max(0.0, min(float(confidence), 1.0)),
+                "matched_by": matched_by.strip() or "manual_link",
+            },
+        )
+        if rows:
+            self.log_audit_event(
+                action="publication.link.create",
+                entity_type="Authorship",
+                entity_id=f"{teacher_id}|{publication_id}",
+                summary="Створено ручний зв'язок викладача з публікацією.",
+                details=f"Teacher: {teacher_id} | Publication: {publication_id}",
+            )
+        return bool(rows)
 
     def update_publication_metadata(
         self,
