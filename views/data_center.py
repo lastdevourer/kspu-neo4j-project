@@ -296,6 +296,61 @@ def _render_duplicate_candidates(service) -> None:
             use_container_width=True,
         )
 
+    grouped: dict[str, list[dict[str, object]]] = {}
+    for row in rows:
+        key = str(row.get("duplicate_key") or "").strip()
+        grouped.setdefault(key, []).append(row)
+
+    selected_group = st.selectbox("Група дубля", list(grouped.keys()), key="duplicate_group_select")
+    group_rows = grouped[selected_group]
+    group_options = {
+        f"{row.get('title', 'Без назви')} | {row.get('year', 'н/д')} | {row.get('id', '')}": str(row.get("id") or "").strip()
+        for row in group_rows
+        if row.get("id")
+    }
+    if len(group_options) >= 2:
+        action_columns = st.columns([1.05, 0.95], gap="large")
+        with action_columns[0]:
+            canonical_label = st.selectbox("Основний запис", list(group_options.keys()), key="duplicate_canonical")
+            canonical_id = group_options[canonical_label]
+            merge_candidates = {
+                label: pub_id
+                for label, pub_id in group_options.items()
+                if pub_id != canonical_id
+            }
+            merge_labels = st.multiselect(
+                "Записи для злиття",
+                list(merge_candidates.keys()),
+                key="duplicate_merge_candidates",
+                placeholder="Оберіть дублікати, які треба злити",
+            )
+        with action_columns[1]:
+            render_key_value_card(
+                "Керування дублями",
+                [
+                    ("Група", selected_group[:48] + ("…" if len(selected_group) > 48 else "")),
+                    ("Записів у групі", str(len(group_rows))),
+                    ("Обрано для злиття", str(len(merge_labels))),
+                ],
+            )
+            merge_confirm = st.checkbox(
+                "Підтверджую злиття дубльованих записів",
+                key="duplicate_merge_confirm",
+            )
+            if st.button("Злити вибрані дублікати", use_container_width=True, type="primary"):
+                if not merge_labels:
+                    st.warning("Оберіть хоча б один дубль для злиття.")
+                elif not merge_confirm:
+                    st.warning("Підтвердіть злиття перед виконанням дії.")
+                else:
+                    merged = 0
+                    for label in merge_labels:
+                        duplicate_id = merge_candidates[label]
+                        if service.merge_publications(canonical_id, duplicate_id):
+                            merged += 1
+                    st.session_state[FLASH_KEY] = f"Успішно злито {merged} дубльованих записів."
+                    st.rerun()
+
 
 def _render_publication_detail(service, selected_publication: dict[str, object]) -> None:
     publication_id = str(selected_publication.get("id") or "").strip()
