@@ -643,6 +643,99 @@ class Neo4jService:
             )
         return deleted
 
+    def merge_publications(self, canonical_publication_id: str, duplicate_publication_id: str) -> bool:
+        if not canonical_publication_id or not duplicate_publication_id:
+            return False
+        if canonical_publication_id.strip() == duplicate_publication_id.strip():
+            return False
+
+        rows = self.run_query(
+            """
+            MATCH (canonical:Publication)
+            WHERE coalesce(canonical.id, canonical.publication_id) = $canonical_id
+            MATCH (duplicate:Publication)
+            WHERE coalesce(duplicate.id, duplicate.publication_id) = $duplicate_id
+            OPTIONAL MATCH (t:Teacher)-[r:AUTHORED]->(duplicate)
+            WITH canonical, duplicate, collect({
+                teacher: t,
+                source: coalesce(r.source, ""),
+                confidence: coalesce(r.confidence, 0.0),
+                matched_by: coalesce(r.matched_by, "")
+            }) AS links
+            FOREACH (link IN links |
+                FOREACH (_ IN CASE WHEN link.teacher IS NULL THEN [] ELSE [1] END |
+                    MERGE (link.teacher)-[new_r:AUTHORED]->(canonical)
+                    SET
+                        new_r.source = CASE
+                            WHEN coalesce(new_r.source, "") = "" THEN link.source
+                            WHEN link.source = "" OR new_r.source CONTAINS link.source THEN new_r.source
+                            ELSE new_r.source + "; " + link.source
+                        END,
+                        new_r.confidence = CASE
+                            WHEN coalesce(link.confidence, 0.0) > coalesce(new_r.confidence, 0.0)
+                            THEN link.confidence
+                            ELSE coalesce(new_r.confidence, 0.0)
+                        END,
+                        new_r.matched_by = CASE
+                            WHEN coalesce(new_r.matched_by, "") <> "" THEN new_r.matched_by
+                            ELSE link.matched_by
+                        END
+                )
+            )
+            SET
+                canonical.title = CASE WHEN coalesce(canonical.title, "") <> "" THEN canonical.title ELSE duplicate.title END,
+                canonical.year = CASE WHEN canonical.year IS NOT NULL THEN canonical.year ELSE duplicate.year END,
+                canonical.doi = CASE WHEN coalesce(canonical.doi, "") <> "" THEN canonical.doi ELSE coalesce(duplicate.doi, "") END,
+                canonical.pub_type = CASE WHEN coalesce(canonical.pub_type, "") <> "" THEN canonical.pub_type ELSE coalesce(duplicate.pub_type, "") END,
+                canonical.url = CASE WHEN coalesce(canonical.url, "") <> "" THEN canonical.url ELSE coalesce(duplicate.url, "") END,
+                canonical.canonical_key = CASE WHEN coalesce(canonical.canonical_key, "") <> "" THEN canonical.canonical_key ELSE coalesce(duplicate.canonical_key, "") END,
+                canonical.confidence = CASE
+                    WHEN coalesce(duplicate.confidence, 0.0) > coalesce(canonical.confidence, 0.0)
+                    THEN duplicate.confidence
+                    ELSE coalesce(canonical.confidence, 0.0)
+                END,
+                canonical.review_status = CASE
+                    WHEN coalesce(canonical.review_status, "") <> "" THEN canonical.review_status
+                    ELSE coalesce(duplicate.review_status, "")
+                END,
+                canonical.review_note = CASE
+                    WHEN coalesce(canonical.review_note, "") <> "" THEN canonical.review_note
+                    ELSE coalesce(duplicate.review_note, "")
+                END,
+                canonical.source = CASE
+                    WHEN coalesce(canonical.source, "") = "" THEN coalesce(duplicate.source, "")
+                    WHEN coalesce(duplicate.source, "") = "" OR canonical.source CONTAINS duplicate.source THEN canonical.source
+                    ELSE canonical.source + "; " + duplicate.source
+                END,
+                canonical.external_ids = reduce(
+                    acc = coalesce(canonical.external_ids, []),
+                    item IN coalesce(duplicate.external_ids, []) |
+                    CASE WHEN item IN acc THEN acc ELSE acc + item END
+                ),
+                canonical.authors_snapshot = reduce(
+                    acc = coalesce(canonical.authors_snapshot, []),
+                    item IN coalesce(duplicate.authors_snapshot, []) |
+                    CASE WHEN item IN acc THEN acc ELSE acc + item END
+                )
+            DETACH DELETE duplicate
+            RETURN true AS merged
+            LIMIT 1
+            """,
+            {
+                "canonical_id": canonical_publication_id.strip(),
+                "duplicate_id": duplicate_publication_id.strip(),
+            },
+        )
+        if rows:
+            self.log_audit_event(
+                action="publication.merge",
+                entity_type="Publication",
+                entity_id=canonical_publication_id.strip(),
+                summary="Виконано злиття дубльованих публікацій.",
+                details=f"Canonical: {canonical_publication_id.strip()} | Duplicate: {duplicate_publication_id.strip()}",
+            )
+        return bool(rows)
+
     def upsert_system_state(self, key: str, values: dict[str, Any]) -> None:
         self.execute(
             """
