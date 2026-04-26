@@ -234,3 +234,60 @@ def audit_events_dataframe(rows: list[dict]) -> pd.DataFrame:
         }
     )
     return renamed[["Час", "Дія", "Сутність", "ID сутності", "Опис", "Деталі", "Ініціатор"]]
+
+
+def coauthor_graph_dataframe(rows: list[dict]) -> pd.DataFrame:
+    df = _frame(rows)
+    if df.empty:
+        return df
+    df["sample_titles"] = df["sample_titles"].apply(_join_authors)
+    renamed = df.rename(
+        columns={
+            "source_name": "Викладач 1",
+            "source_department": "Кафедра 1",
+            "target_name": "Викладач 2",
+            "target_department": "Кафедра 2",
+            "weight": "Спільні публікації",
+            "sample_titles": "Приклади робіт",
+        }
+    )
+    return renamed[["Викладач 1", "Кафедра 1", "Викладач 2", "Кафедра 2", "Спільні публікації", "Приклади робіт"]]
+
+
+def department_collaboration_dataframe(rows: list[dict]) -> pd.DataFrame:
+    df = _frame(rows)
+    if df.empty:
+        return df
+    df["sample_titles"] = df["sample_titles"].apply(_join_authors)
+    renamed = df.rename(
+        columns={
+            "source_name": "Кафедра 1",
+            "source_faculty": "Факультет 1",
+            "target_name": "Кафедра 2",
+            "target_faculty": "Факультет 2",
+            "weight": "Спільні публікації",
+            "sample_titles": "Приклади робіт",
+        }
+    )
+    return renamed[["Кафедра 1", "Факультет 1", "Кафедра 2", "Факультет 2", "Спільні публікації", "Приклади робіт"]]
+
+
+def duplicate_candidates_dataframe(rows: list[dict]) -> pd.DataFrame:
+    df = _frame(rows)
+    if df.empty:
+        return df
+    df["authors"] = df["authors"].apply(_join_authors)
+    renamed = df.rename(
+        columns={
+            "duplicate_key": "Ключ дубля",
+            "id": "ID",
+            "title": "Назва",
+            "year": "Рік",
+            "doi": "DOI",
+            "source": "Джерело",
+            "review_status": "Статус",
+            "authors_count": "Кількість авторів",
+            "authors": "Автори",
+        }
+    )
+    return renamed[["Ключ дубля", "ID", "Назва", "Рік", "DOI", "Джерело", "Статус", "Кількість авторів", "Автори"]]
