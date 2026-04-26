@@ -1,9 +1,118 @@
 from __future__ import annotations
 
+from collections import Counter
+from itertools import combinations
+
 try:
     import networkx as nx
 except Exception:  # pragma: no cover - handled in UI fallback
     nx = None
+
+
+OFFICIAL_STATUSES = {"Офіційно підтверджено"}
+CONFIRMED_STATUSES = {"Офіційно підтверджено", "Підтверджено"}
+
+
+def filter_publications_by_scope(rows: list[dict], scope: str) -> list[dict]:
+    if scope == "Підтверджені":
+        return [row for row in rows if str(row.get("status") or "") in CONFIRMED_STATUSES]
+    if scope == "Офіційні":
+        return [row for row in rows if str(row.get("status") or "") in OFFICIAL_STATUSES]
+    return rows
+
+
+def build_teacher_publication_rankings(
+    publications: list[dict],
+    teachers: list[dict],
+    limit: int,
+) -> list[dict]:
+    teacher_meta = {
+        str(row.get("full_name") or "").strip(): {
+            "department": str(row.get("department_name") or "").strip(),
+        }
+        for row in teachers
+        if str(row.get("full_name") or "").strip()
+    }
+    counts: Counter[str] = Counter()
+    for publication in publications:
+        authors = {str(author).strip() for author in (publication.get("authors") or []) if str(author).strip()}
+        for author in authors:
+            if author in teacher_meta:
+                counts[author] += 1
+
+    rows = [
+        {
+            "teacher": teacher,
+            "department": teacher_meta.get(teacher, {}).get("department", ""),
+            "publications": total,
+        }
+        for teacher, total in counts.items()
+    ]
+    rows.sort(key=lambda item: (-item["publications"], item["teacher"]))
+    return rows[:limit]
+
+
+def build_coauthor_pair_rankings(publications: list[dict], teachers: list[dict], limit: int) -> list[dict]:
+    teacher_names = {str(row.get("full_name") or "").strip() for row in teachers if str(row.get("full_name") or "").strip()}
+    pair_data: dict[tuple[str, str], dict[str, object]] = {}
+    for publication in publications:
+        title = str(publication.get("title") or "").strip()
+        authors = sorted({str(author).strip() for author in (publication.get("authors") or []) if str(author).strip() in teacher_names})
+        for teacher_a, teacher_b in combinations(authors, 2):
+            key = (teacher_a, teacher_b)
+            if key not in pair_data:
+                pair_data[key] = {
+                    "teacher_a": teacher_a,
+                    "teacher_b": teacher_b,
+                    "shared_publications": 0,
+                    "sample_publications": [],
+                }
+            pair_data[key]["shared_publications"] = int(pair_data[key]["shared_publications"]) + 1
+            if title and title not in pair_data[key]["sample_publications"]:
+                pair_data[key]["sample_publications"].append(title)
+
+    rows = list(pair_data.values())
+    rows.sort(key=lambda item: (-int(item["shared_publications"]), str(item["teacher_a"]), str(item["teacher_b"])))
+    return rows[:limit]
+
+
+def build_centrality_edges(publications: list[dict], teachers: list[dict]) -> list[dict]:
+    teacher_meta = {
+        str(row.get("full_name") or "").strip(): str(row.get("id") or "").strip()
+        for row in teachers
+        if str(row.get("full_name") or "").strip()
+    }
+    pair_weights: Counter[tuple[str, str]] = Counter()
+    for publication in publications:
+        authors = sorted({str(author).strip() for author in (publication.get("authors") or []) if str(author).strip() in teacher_meta})
+        for teacher_a, teacher_b in combinations(authors, 2):
+            pair_weights[(teacher_a, teacher_b)] += 1
+
+    rows = []
+    for (teacher_a, teacher_b), weight in pair_weights.items():
+        rows.append(
+            {
+                "source_id": teacher_meta.get(teacher_a) or teacher_a,
+                "source_name": teacher_a,
+                "target_id": teacher_meta.get(teacher_b) or teacher_b,
+                "target_name": teacher_b,
+                "weight": int(weight),
+            }
+        )
+    rows.sort(key=lambda item: (-int(item["weight"]), str(item["source_name"]), str(item["target_name"])))
+    return rows
+
+
+def build_publication_source_rows(publications: list[dict]) -> list[dict]:
+    counts: Counter[str] = Counter()
+    for row in publications:
+        source_value = str(row.get("source") or "").strip()
+        sources = [item.strip() for item in source_value.split(";") if item.strip()] or ["Невідомо"]
+        for source in sources:
+            counts[source] += 1
+    rows = [{"source": source, "publications": total} for source, total in counts.items()]
+    rows.sort(key=lambda item: (-int(item["publications"]), str(item["source"])))
+    return rows
 
 
 def calculate_centrality_rows(edges: list[dict]) -> list[dict]:
@@ -91,4 +200,3 @@ def build_diploma_summary(
         )
 
     return " ".join(insights)
-
