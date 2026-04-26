@@ -20,8 +20,10 @@ def render() -> None:
     counts = service.get_overview_counts()
     profile_coverage = service.get_profile_coverage()
     publication_sources = publication_sources_dataframe(service.get_publication_source_summary())
-    faculty_overview = faculty_overview_dataframe(service.get_faculty_overview())
-    department_overview = department_overview_dataframe(service.get_department_overview())
+    faculty_overview_rows = service.get_faculty_overview()
+    department_overview_rows = service.get_department_overview()
+    faculty_overview = faculty_overview_dataframe(faculty_overview_rows)
+    department_overview = department_overview_dataframe(department_overview_rows)
 
     render_section_heading("Ключові показники")
 
@@ -39,16 +41,10 @@ def render() -> None:
         render_empty_state("Дані відсутні", "Завантажте викладачів KSPU або відкрийте сторінку `Структура`, щоб заповнити базу.")
         return
 
-    status_columns = st.columns([1.15, 0.85], gap="large")
-    with status_columns[0]:
-        render_section_heading("Стан бази")
-        if counts["publications"] == 0:
-            st.info("Структура вже заведена. Наступний крок — імпорт викладачів і публікацій.")
-        else:
-            st.success("База заповнена. Можна переходити до детальної аналітики, графа та модерації записів.")
-    with status_columns[1]:
-        render_section_heading("Швидкий доступ")
-        st.caption("Для імпорту, оновлення структури й очищення бази відкрийте сторінки `Структура` та `Центр даних` у лівому меню.")
+    if counts["publications"] == 0:
+        st.info("Структура вже заведена. Для наповнення бази відкрийте `Структура` і запустіть імпорт викладачів та публікацій.")
+    else:
+        st.success("База заповнена. Можна переходити до аналітики, графа та модерації записів.")
 
     overview_columns = st.columns([0.92, 1.08], gap="large")
 
@@ -64,10 +60,15 @@ def render() -> None:
         if department_overview.empty:
             render_empty_state("Немає даних", "Таблиця кафедр з'явиться після імпорту структури.")
         else:
-            top_departments = department_overview.sort_values(
-                by=["Викладачі", "Публікації", "Кафедра"],
-                ascending=[False, False, True],
-            ).head(12)
+            top_department_rows = sorted(
+                department_overview_rows,
+                key=lambda row: (
+                    -(int(row.get("teachers") or 0)),
+                    -(int(row.get("publications") or 0)),
+                    str(row.get("name") or ""),
+                ),
+            )[:12]
+            top_departments = department_overview_dataframe(top_department_rows)
             st.dataframe(top_departments, use_container_width=True, hide_index=True)
 
     total_teachers = int(profile_coverage.get("teachers", 0) or 0)
