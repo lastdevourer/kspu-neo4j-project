@@ -9,8 +9,8 @@ from data.seed_data import DEPARTMENTS, FACULTIES
 from services.publication_import import PublicationImportService
 from ui.components import (
     render_empty_state,
-    render_fullscreen_bar_chart_button,
-    render_fullscreen_dataframe_button,
+    render_fullscreen_bar_chart_heading,
+    render_fullscreen_dataframe_heading,
     render_header,
     render_section_heading,
     render_summary_strip,
@@ -142,59 +142,45 @@ def _render_faculty_department_tab(service) -> None:
 
     tables = st.columns([0.92, 1.08], gap="large")
     with tables[0]:
-        header_columns = st.columns([0.72, 0.28], gap="small")
-        with header_columns[0]:
-            render_section_heading("Факультети")
-        with header_columns[1]:
-            if not faculty_frame.empty:
-                actions = st.columns(2, gap="small")
-                with actions[0]:
-                    render_fullscreen_dataframe_button(
-                        "Факультети",
-                        faculty_frame,
-                        key="structure_faculties_fullscreen",
-                        caption="Повний перегляд факультетного зрізу.",
-                    )
-                with actions[1]:
-                    st.download_button(
-                        "CSV",
-                        _csv_bytes(faculty_frame),
-                        file_name="faculties_filtered.csv",
-                        mime="text/csv",
-                        use_container_width=True,
-                        key="download_filtered_faculties",
-                    )
         if faculty_frame.empty:
+            render_section_heading("Факультети")
             render_empty_state("Факультети не знайдено", "Змініть пошук або оновіть довідник структури.")
         else:
+            render_fullscreen_dataframe_heading(
+                "Факультети",
+                faculty_frame,
+                key="structure_faculties_fullscreen",
+                caption="Повний перегляд факультетного зрізу.",
+            )
+            st.download_button(
+                "Експорт факультетів CSV",
+                _csv_bytes(faculty_frame),
+                file_name="faculties_filtered.csv",
+                mime="text/csv",
+                use_container_width=True,
+                key="download_filtered_faculties",
+            )
             st.dataframe(faculty_frame, use_container_width=True, hide_index=True)
 
     with tables[1]:
-        header_columns = st.columns([0.72, 0.28], gap="small")
-        with header_columns[0]:
-            render_section_heading("Кафедри")
-        with header_columns[1]:
-            if not department_frame.empty:
-                actions = st.columns(2, gap="small")
-                with actions[0]:
-                    render_fullscreen_dataframe_button(
-                        "Кафедри",
-                        department_frame,
-                        key="structure_departments_fullscreen",
-                        caption="Повний перелік кафедр з поточними фільтрами.",
-                    )
-                with actions[1]:
-                    st.download_button(
-                        "CSV",
-                        _csv_bytes(department_frame),
-                        file_name="departments_filtered.csv",
-                        mime="text/csv",
-                        use_container_width=True,
-                        key="download_filtered_departments",
-                    )
         if department_frame.empty:
+            render_section_heading("Кафедри")
             render_empty_state("Кафедри не знайдено", "Спробуйте інший факультет або скоригуйте пошук.")
         else:
+            render_fullscreen_dataframe_heading(
+                "Кафедри",
+                department_frame,
+                key="structure_departments_fullscreen",
+                caption="Повний перелік кафедр з поточними фільтрами.",
+            )
+            st.download_button(
+                "Експорт кафедр CSV",
+                _csv_bytes(department_frame),
+                file_name="departments_filtered.csv",
+                mime="text/csv",
+                use_container_width=True,
+                key="download_filtered_departments",
+            )
             st.dataframe(department_frame, use_container_width=True, hide_index=True)
 
     edit_columns = st.columns(2, gap="large")
@@ -530,14 +516,12 @@ def _render_teachers_tab(service) -> None:
 
         if filtered_teachers:
             filtered_frame = teachers_dataframe(filtered_teachers)
-            header_columns = st.columns([0.8, 0.2], gap="small")
-            with header_columns[1]:
-                render_fullscreen_dataframe_button(
-                    "Поточний склад викладачів",
-                    filtered_frame,
-                    key="structure_teachers_fullscreen",
-                    caption="Повний перелік викладачів з активними фільтрами.",
-                )
+            render_fullscreen_dataframe_heading(
+                "Поточний склад викладачів",
+                filtered_frame,
+                key="structure_teachers_fullscreen",
+                caption="Повний перелік викладачів з активними фільтрами.",
+            )
             st.download_button(
                 "Експорт поточного зрізу CSV",
                 _csv_bytes(filtered_frame),
@@ -552,16 +536,12 @@ def _render_teachers_tab(service) -> None:
     if teacher_frame.empty:
         render_empty_state("Викладачів не знайдено", "Спробуйте змінити фільтри, завантажте seed-викладачів або створіть профіль вручну.")
     else:
-        header_columns = st.columns([0.92, 0.08], gap="small")
-        with header_columns[0]:
-            render_section_heading("Поточний склад викладачів")
-        with header_columns[1]:
-            render_fullscreen_dataframe_button(
-                "Поточний склад викладачів",
-                teacher_frame,
-                key="structure_teachers_table_fullscreen",
-                caption="Розширений перегляд таблиці викладачів.",
-            )
+        render_fullscreen_dataframe_heading(
+            "Поточний склад викладачів",
+            teacher_frame,
+            key="structure_teachers_table_fullscreen",
+            caption="Розширений перегляд таблиці викладачів.",
+        )
         st.dataframe(teacher_frame, use_container_width=True, hide_index=True)
 
 
@@ -626,24 +606,20 @@ def _render_publications_tab(service) -> None:
     else:
         source_columns = st.columns([0.95, 1.05], gap="large")
         with source_columns[0]:
-            header_columns = st.columns([0.9, 0.1], gap="small")
-            with header_columns[1]:
-                render_fullscreen_bar_chart_button(
-                    "Розподіл джерел публікацій",
-                    publication_sources,
-                    key="structure_publication_sources_chart_fullscreen",
-                    caption="Графік покриття публікацій за джерелами.",
-                )
+            render_fullscreen_bar_chart_heading(
+                "Розподіл джерел публікацій",
+                publication_sources,
+                key="structure_publication_sources_chart_fullscreen",
+                caption="Графік покриття публікацій за джерелами.",
+            )
             st.bar_chart(publication_sources.set_index("Джерело"), use_container_width=True, height=280)
         with source_columns[1]:
-            header_columns = st.columns([0.9, 0.1], gap="small")
-            with header_columns[1]:
-                render_fullscreen_dataframe_button(
-                    "Джерела публікацій",
-                    publication_sources,
-                    key="structure_publication_sources_fullscreen",
-                    caption="Таблиця зведення по джерелах імпорту.",
-                )
+            render_fullscreen_dataframe_heading(
+                "Джерела публікацій",
+                publication_sources,
+                key="structure_publication_sources_fullscreen",
+                caption="Таблиця зведення по джерелах імпорту.",
+            )
             st.dataframe(publication_sources, use_container_width=True, hide_index=True)
             st.download_button(
                 "Експорт джерел CSV",
