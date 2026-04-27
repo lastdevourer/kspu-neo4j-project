@@ -272,13 +272,16 @@ def render() -> None:
     layout = st.columns([1.18, 0.94], gap="large")
 
     with layout[0]:
-        render_section_heading("Таблиця викладачів")
-        render_fullscreen_dataframe_button(
-            "Таблиця викладачів",
-            teachers_table,
-            key="teachers_table_fullscreen",
-            caption="Повний перелік викладачів у поточному зрізі.",
-        )
+        header_columns = st.columns([0.92, 0.08], gap="small")
+        with header_columns[0]:
+            render_section_heading("Таблиця викладачів")
+        with header_columns[1]:
+            render_fullscreen_dataframe_button(
+                "Таблиця викладачів",
+                teachers_table,
+                key="teachers_table_fullscreen",
+                caption="Повний перелік викладачів у поточному зрізі.",
+            )
         st.dataframe(teachers_table, use_container_width=True, hide_index=True)
 
     with layout[1]:
@@ -349,7 +352,9 @@ def render() -> None:
     tabs = st.tabs(["Публікації викладача", "Співавтори"])
 
     with tabs[0]:
-        render_section_heading("Публікації викладача")
+        header_columns = st.columns([0.92, 0.08], gap="small")
+        with header_columns[0]:
+            render_section_heading("Публікації викладача")
         available_statuses = [status for status in STATUS_ORDER if status_counts[status] > 0]
         publication_status_filter = st.selectbox(
             "Показати статус",
@@ -368,17 +373,20 @@ def render() -> None:
                 "Для цього викладача ще немає робіт у вибраному статусі.",
             )
         else:
-            render_fullscreen_dataframe_button(
-                "Публікації викладача",
-                publications_table,
-                key=f"teacher_publications_fullscreen_{selected_teacher_id}",
-                caption="Розширений перегляд публікацій вибраного викладача.",
-            )
+            with header_columns[1]:
+                render_fullscreen_dataframe_button(
+                    "Публікації викладача",
+                    publications_table,
+                    key=f"teacher_publications_fullscreen_{selected_teacher_id}",
+                    caption="Розширений перегляд публікацій вибраного викладача.",
+                )
             st.dataframe(publications_table, use_container_width=True, hide_index=True)
         _render_publication_management(service, selected_teacher_id, publications, all_publications)
 
     with tabs[1]:
-        render_section_heading("Співавтори")
+        header_columns = st.columns([0.92, 0.08], gap="small")
+        with header_columns[0]:
+            render_section_heading("Співавтори")
         coauthors_table = coauthors_dataframe(coauthors)
         if coauthors_table.empty:
             render_empty_state(
@@ -386,10 +394,11 @@ def render() -> None:
                 "У мережі ще не зафіксовано спільних робіт з іншими викладачами.",
             )
         else:
-            render_fullscreen_dataframe_button(
-                "Співавтори викладача",
-                coauthors_table,
-                key=f"teacher_coauthors_fullscreen_{selected_teacher_id}",
-                caption="Повний список співавторів вибраного викладача.",
-            )
+            with header_columns[1]:
+                render_fullscreen_dataframe_button(
+                    "Співавтори викладача",
+                    coauthors_table,
+                    key=f"teacher_coauthors_fullscreen_{selected_teacher_id}",
+                    caption="Повний список співавторів вибраного викладача.",
+                )
             st.dataframe(coauthors_table, use_container_width=True, hide_index=True)
