@@ -4,7 +4,15 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
-from ui.components import render_empty_state, render_header, render_section_heading, render_summary_strip, require_service
+from ui.components import (
+    render_empty_state,
+    render_fullscreen_dataframe_button,
+    render_fullscreen_html_button,
+    render_header,
+    render_section_heading,
+    render_summary_strip,
+    require_service,
+)
 from ui.formatters import coauthor_graph_dataframe, department_collaboration_dataframe, graph_edges_dataframe
 from utils.graph_visualization import (
     build_bipartite_graph_html,
@@ -31,6 +39,11 @@ def _faculty_options(service) -> dict[str, str]:
 
 def _render_table(title: str, frame: pd.DataFrame) -> None:
     with st.expander(title, expanded=False):
+        render_fullscreen_dataframe_button(
+            title,
+            frame,
+            key=f"graph_table_fullscreen_{title}",
+        )
         st.dataframe(frame, use_container_width=True, hide_index=True)
 
 
@@ -61,8 +74,18 @@ def render() -> None:
         summary[1].metric("Вузли публікацій", publication_count)
         summary[2].metric("Зв'язки графа", len(edges))
 
-        render_section_heading("Інтерактивна мережа авторства")
         graph_html = build_bipartite_graph_html(edges)
+        header_columns = st.columns([0.72, 0.28], gap="small")
+        with header_columns[0]:
+            render_section_heading("Інтерактивна мережа авторства")
+        with header_columns[1]:
+            if graph_html:
+                render_fullscreen_html_button(
+                    "Мережа авторства",
+                    graph_html,
+                    key="graph_bipartite_fullscreen",
+                    height=980,
+                )
         if graph_html:
             components.html(graph_html, height=760, scrolling=False)
         else:
@@ -92,9 +115,19 @@ def render() -> None:
         summary[1].metric("Пари співавторів", len(edges))
         summary[2].metric("Сумарні спільні роботи", total_weight)
 
-        render_section_heading("Інтерактивна мережа співавторства")
         graph_html = build_coauthor_graph_html(edges)
         fallback_frame = coauthor_graph_dataframe(edges)
+        header_columns = st.columns([0.72, 0.28], gap="small")
+        with header_columns[0]:
+            render_section_heading("Інтерактивна мережа співавторства")
+        with header_columns[1]:
+            if graph_html:
+                render_fullscreen_html_button(
+                    "Мережа співавторства викладачів",
+                    graph_html,
+                    key="graph_coauthor_fullscreen",
+                    height=980,
+                )
         if graph_html:
             components.html(graph_html, height=760, scrolling=False)
         else:
@@ -123,9 +156,19 @@ def render() -> None:
     summary[1].metric("Міжкафедральні зв'язки", len(edges))
     summary[2].metric("Спільні роботи", total_weight)
 
-    render_section_heading("Інтерактивна міжкафедральна мережа")
     graph_html = build_department_graph_html(edges)
     fallback_frame = department_collaboration_dataframe(edges)
+    header_columns = st.columns([0.72, 0.28], gap="small")
+    with header_columns[0]:
+        render_section_heading("Інтерактивна міжкафедральна мережа")
+    with header_columns[1]:
+        if graph_html:
+            render_fullscreen_html_button(
+                "Міжкафедральна мережа",
+                graph_html,
+                key="graph_department_fullscreen",
+                height=980,
+            )
     if graph_html:
         components.html(graph_html, height=760, scrolling=False)
     else:
