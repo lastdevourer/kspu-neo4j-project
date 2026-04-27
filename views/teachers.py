@@ -4,7 +4,7 @@ import streamlit as st
 
 from ui.components import (
     render_empty_state,
-    render_fullscreen_dataframe_button,
+    render_fullscreen_dataframe_heading,
     render_header,
     render_key_value_card,
     render_section_heading,
@@ -272,16 +272,12 @@ def render() -> None:
     layout = st.columns([1.18, 0.94], gap="large")
 
     with layout[0]:
-        header_columns = st.columns([0.92, 0.08], gap="small")
-        with header_columns[0]:
-            render_section_heading("Таблиця викладачів")
-        with header_columns[1]:
-            render_fullscreen_dataframe_button(
-                "Таблиця викладачів",
-                teachers_table,
-                key="teachers_table_fullscreen",
-                caption="Повний перелік викладачів у поточному зрізі.",
-            )
+        render_fullscreen_dataframe_heading(
+            "Таблиця викладачів",
+            teachers_table,
+            key="teachers_table_fullscreen",
+            caption="Повний перелік викладачів у поточному зрізі.",
+        )
         st.dataframe(teachers_table, use_container_width=True, hide_index=True)
 
     with layout[1]:
@@ -352,9 +348,6 @@ def render() -> None:
     tabs = st.tabs(["Публікації викладача", "Співавтори"])
 
     with tabs[0]:
-        header_columns = st.columns([0.92, 0.08], gap="small")
-        with header_columns[0]:
-            render_section_heading("Публікації викладача")
         available_statuses = [status for status in STATUS_ORDER if status_counts[status] > 0]
         publication_status_filter = st.selectbox(
             "Показати статус",
@@ -368,37 +361,34 @@ def render() -> None:
         )
         publications_table = teacher_publications_dataframe(filtered_publications)
         if publications_table.empty:
+            render_section_heading("Публікації викладача")
             render_empty_state(
                 "Публікацій не знайдено",
                 "Для цього викладача ще немає робіт у вибраному статусі.",
             )
         else:
-            with header_columns[1]:
-                render_fullscreen_dataframe_button(
-                    "Публікації викладача",
-                    publications_table,
-                    key=f"teacher_publications_fullscreen_{selected_teacher_id}",
-                    caption="Розширений перегляд публікацій вибраного викладача.",
-                )
+            render_fullscreen_dataframe_heading(
+                "Публікації викладача",
+                publications_table,
+                key=f"teacher_publications_fullscreen_{selected_teacher_id}",
+                caption="Розширений перегляд публікацій вибраного викладача.",
+            )
             st.dataframe(publications_table, use_container_width=True, hide_index=True)
         _render_publication_management(service, selected_teacher_id, publications, all_publications)
 
     with tabs[1]:
-        header_columns = st.columns([0.92, 0.08], gap="small")
-        with header_columns[0]:
-            render_section_heading("Співавтори")
         coauthors_table = coauthors_dataframe(coauthors)
         if coauthors_table.empty:
+            render_section_heading("Співавтори")
             render_empty_state(
                 "Співавторів не виявлено",
                 "У мережі ще не зафіксовано спільних робіт з іншими викладачами.",
             )
         else:
-            with header_columns[1]:
-                render_fullscreen_dataframe_button(
-                    "Співавтори викладача",
-                    coauthors_table,
-                    key=f"teacher_coauthors_fullscreen_{selected_teacher_id}",
-                    caption="Повний список співавторів вибраного викладача.",
-                )
+            render_fullscreen_dataframe_heading(
+                "Співавтори викладача",
+                coauthors_table,
+                key=f"teacher_coauthors_fullscreen_{selected_teacher_id}",
+                caption="Повний список співавторів вибраного викладача.",
+            )
             st.dataframe(coauthors_table, use_container_width=True, hide_index=True)
