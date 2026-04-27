@@ -5,6 +5,7 @@ import streamlit as st
 
 from ui.components import (
     render_empty_state,
+    render_fullscreen_dataframe_button,
     render_header,
     render_key_value_card,
     render_section_heading,
@@ -301,6 +302,12 @@ def _render_audit_tab(service) -> None:
 
     top = st.columns([1.2, 0.8], gap="large")
     with top[0]:
+        render_fullscreen_dataframe_button(
+            "Журнал аудиту",
+            audit_frame,
+            key="data_center_audit_fullscreen",
+            caption="Повний журнал змін і модераційних дій.",
+        )
         st.dataframe(audit_frame, use_container_width=True, hide_index=True)
     with top[1]:
         last_event = events[0]
@@ -329,6 +336,12 @@ def _render_duplicate_candidates(service, all_publications: list[dict[str, objec
 
     top = st.columns([1.18, 0.82], gap="large")
     with top[0]:
+        render_fullscreen_dataframe_button(
+            "Підозра на дублювання",
+            duplicate_frame,
+            key="data_center_duplicates_fullscreen",
+            caption="Розширений перегляд підозрілих дублів публікацій.",
+        )
         st.dataframe(duplicate_frame, use_container_width=True, hide_index=True)
     with top[1]:
         render_key_value_card(
@@ -577,7 +590,14 @@ def render() -> None:
         moderation_layout = st.columns([1.1, 0.9], gap="large")
         with moderation_layout[0]:
             if filtered_problematic:
-                st.dataframe(publications_dataframe(filtered_problematic), use_container_width=True, hide_index=True)
+                problem_frame = publications_dataframe(filtered_problematic)
+                render_fullscreen_dataframe_button(
+                    "Проблемні записи",
+                    problem_frame,
+                    key="data_center_problematic_fullscreen",
+                    caption="Повний список кандидатів, сумнівних і відхилених записів.",
+                )
+                st.dataframe(problem_frame, use_container_width=True, hide_index=True)
                 _render_bulk_actions(service, filtered_problematic)
             else:
                 render_empty_state(
@@ -600,6 +620,12 @@ def render() -> None:
             if without_profiles_frame.empty:
                 render_empty_state("Усі мають профілі", "Зараз у кожного викладача є хоча б один зовнішній ідентифікатор.")
             else:
+                render_fullscreen_dataframe_button(
+                    "Викладачі без зовнішніх профілів",
+                    without_profiles_frame,
+                    key="data_center_no_profiles_fullscreen",
+                    caption="Перелік викладачів, яким ще бракує зовнішніх ідентифікаторів.",
+                )
                 st.dataframe(without_profiles_frame, use_container_width=True, hide_index=True)
 
         with teacher_sections[1]:
@@ -608,6 +634,12 @@ def render() -> None:
             if without_publications_frame.empty:
                 render_empty_state("Усі мають знайдені роботи", "Зараз у вибірці немає викладачів без жодної публікації.")
             else:
+                render_fullscreen_dataframe_button(
+                    "Викладачі без знайдених публікацій",
+                    without_publications_frame,
+                    key="data_center_no_publications_fullscreen",
+                    caption="Перелік викладачів, для яких ще не знайдено публікацій.",
+                )
                 st.dataframe(without_publications_frame, use_container_width=True, hide_index=True)
 
         _render_duplicate_candidates(service, all_publications)
