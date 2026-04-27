@@ -5,6 +5,8 @@ import streamlit as st
 
 from ui.components import (
     render_empty_state,
+    render_fullscreen_bar_chart_button,
+    render_fullscreen_dataframe_button,
     render_header,
     render_info_card,
     render_section_heading,
@@ -135,8 +137,16 @@ def render() -> None:
 
     top_columns = st.columns(2, gap="large")
     with top_columns[0]:
-        render_section_heading("Топ викладачів за кількістю публікацій")
         top_teachers_table = top_teachers_dataframe(top_teachers)
+        header_columns = st.columns([0.72, 0.28], gap="small")
+        with header_columns[0]:
+            render_section_heading("Топ викладачів за кількістю публікацій")
+        with header_columns[1]:
+            render_fullscreen_dataframe_button(
+                "Топ викладачів",
+                top_teachers_table,
+                key="analytics_top_teachers_fullscreen",
+            )
         if top_teachers_table.empty:
             render_empty_state(
                 "Публікаційні дані відсутні",
@@ -146,8 +156,16 @@ def render() -> None:
             st.dataframe(top_teachers_table, use_container_width=True, hide_index=True)
 
     with top_columns[1]:
-        render_section_heading("Топ пар співавторів")
         top_pairs_table = top_coauthor_pairs_dataframe(top_pairs)
+        header_columns = st.columns([0.72, 0.28], gap="small")
+        with header_columns[0]:
+            render_section_heading("Топ пар співавторів")
+        with header_columns[1]:
+            render_fullscreen_dataframe_button(
+                "Топ пар співавторів",
+                top_pairs_table,
+                key="analytics_top_pairs_fullscreen",
+            )
         if top_pairs_table.empty:
             render_empty_state(
                 "Пари співавторів поки не виявлено",
@@ -156,8 +174,16 @@ def render() -> None:
         else:
             st.dataframe(top_pairs_table, use_container_width=True, hide_index=True)
 
-    render_section_heading("Мережеві показники")
     centrality_table = centrality_dataframe(centrality_rows)
+    header_columns = st.columns([0.72, 0.28], gap="small")
+    with header_columns[0]:
+        render_section_heading("Мережеві показники")
+    with header_columns[1]:
+        render_fullscreen_dataframe_button(
+            "Мережеві показники",
+            centrality_table,
+            key="analytics_centrality_fullscreen",
+        )
     if centrality_table.empty:
         render_empty_state(
             "Недостатньо даних для centrality",
@@ -166,16 +192,32 @@ def render() -> None:
     else:
         st.dataframe(centrality_table, use_container_width=True, hide_index=True)
 
-    render_section_heading("Структура джерел")
     if source_rows.empty:
+        render_section_heading("Структура джерел")
         render_empty_state(
             "Джерела ще не накопичені",
             "Після завантаження робіт тут буде видно, які сервіси реально дають найбільше покриття.",
         )
     else:
+        header_columns = st.columns([0.68, 0.16, 0.16], gap="small")
+        with header_columns[0]:
+            render_section_heading("Структура джерел")
+        chart_source = source_rows.set_index("Джерело")
+        with header_columns[1]:
+            render_fullscreen_bar_chart_button(
+                "Структура джерел",
+                chart_source,
+                key="analytics_sources_chart_fullscreen",
+            )
+        with header_columns[2]:
+            render_fullscreen_dataframe_button(
+                "Таблиця джерел",
+                source_rows,
+                key="analytics_sources_table_fullscreen",
+            )
         source_columns = st.columns([1.05, 0.95], gap="large")
         with source_columns[0]:
-            st.bar_chart(source_rows.set_index("Джерело"), use_container_width=True, height=280)
+            st.bar_chart(chart_source, use_container_width=True, height=280)
         with source_columns[1]:
             st.dataframe(source_rows, use_container_width=True, hide_index=True)
 
@@ -210,6 +252,11 @@ def render() -> None:
 
     report_columns = st.columns([1.15, 0.85], gap="large")
     with report_columns[0]:
+        render_fullscreen_dataframe_button(
+            "Звіт кафедри: викладачі",
+            teacher_report_frame,
+            key="analytics_department_teachers_fullscreen",
+        )
         if teacher_report_frame.empty:
             render_empty_state(
                 "Дані кафедри порожні",
@@ -219,6 +266,11 @@ def render() -> None:
             st.dataframe(teacher_report_frame, use_container_width=True, hide_index=True)
     with report_columns[1]:
         if not department_frame.empty:
+            render_fullscreen_dataframe_button(
+                "Звіт кафедри: огляд",
+                department_frame,
+                key="analytics_department_overview_fullscreen",
+            )
             st.dataframe(department_frame, use_container_width=True, hide_index=True)
         report_csv = pd.concat(
             [
