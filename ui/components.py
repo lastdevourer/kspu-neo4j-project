@@ -359,6 +359,25 @@ def apply_theme() -> None:
             transform: translateY(-1px);
         }
 
+        div.stButton > button[kind="tertiary"] {
+            min-height: 2.5rem;
+            min-width: 2.5rem;
+            padding: 0.35rem 0.5rem;
+            border-radius: 14px;
+            border: 1px solid rgba(96, 165, 250, 0.18);
+            background: rgba(10, 25, 47, 0.72);
+            color: var(--text-main);
+            box-shadow: 0 12px 28px rgba(2, 8, 23, 0.24);
+            font-size: 1rem;
+            line-height: 1;
+        }
+
+        div.stButton > button[kind="tertiary"]:hover {
+            border-color: rgba(45, 212, 191, 0.42);
+            background: rgba(13, 33, 57, 0.96);
+            box-shadow: 0 16px 34px rgba(45, 212, 191, 0.12);
+        }
+
         div[data-baseweb="select"] > div,
         div[data-baseweb="base-input"] > div,
         .stTextInput > div > div,
@@ -704,11 +723,11 @@ def render_fullscreen_dataframe_button(
     *,
     key: str,
     caption: str = "",
-    label: str = "На весь екран",
+    label: str = "⤢",
 ) -> None:
     if frame.empty:
         return
-    if st.button(label, key=key, use_container_width=True):
+    if st.button(label, key=key, type="tertiary", help="Відкрити на весь екран"):
         _fullscreen_dataframe_dialog(title, frame, caption)
 
 
@@ -718,11 +737,11 @@ def render_fullscreen_bar_chart_button(
     *,
     key: str,
     caption: str = "",
-    label: str = "На весь екран",
+    label: str = "⤢",
 ) -> None:
     if data.empty:
         return
-    if st.button(label, key=key, use_container_width=True):
+    if st.button(label, key=key, type="tertiary", help="Відкрити на весь екран"):
         _fullscreen_bar_chart_dialog(title, data, caption)
 
 
@@ -733,11 +752,11 @@ def render_fullscreen_html_button(
     key: str,
     height: int = 980,
     caption: str = "",
-    label: str = "На весь екран",
+    label: str = "⤢",
 ) -> None:
     if not html.strip():
         return
-    if st.button(label, key=key, use_container_width=True):
+    if st.button(label, key=key, type="tertiary", help="Відкрити на весь екран"):
         _fullscreen_html_dialog(title, html, height, caption)
 
 
