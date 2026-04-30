@@ -17,6 +17,10 @@ def format_number(value: int) -> str:
     return f"{value:,}".replace(",", " ")
 
 
+def _csv_bytes(frame):
+    return frame.to_csv(index=False).encode("utf-8-sig")
+
+
 def render() -> None:
     service = require_service()
     render_header(
@@ -53,44 +57,90 @@ def render() -> None:
     else:
         st.success("База заповнена. Можна переходити до аналітики, графа та модерації записів.")
 
-    overview_columns = st.columns([0.92, 1.08], gap="large")
-
-    with overview_columns[0]:
-        render_fullscreen_dataframe_heading(
-            "Факультети",
-            faculty_overview,
-            key="dashboard_faculties_fullscreen",
-            caption="Повна таблиця факультетів, кафедр, викладачів і публікацій.",
-        )
-        if faculty_overview.empty:
-            render_empty_state("Немає даних", "Факультетний зріз з'явиться після імпорту структури.")
-        else:
-            st.dataframe(faculty_overview, use_container_width=True, hide_index=True)
-
-    with overview_columns[1]:
-        if department_overview.empty:
-            render_section_heading("Кафедри")
-            render_empty_state("Немає даних", "Таблиця кафедр з'явиться після імпорту структури.")
-        else:
-            top_department_rows = sorted(
-                department_overview_rows,
-                key=lambda row: (
-                    -(int(row.get("teachers") or 0)),
-                    -(int(row.get("publications") or 0)),
-                    str(row.get("name") or ""),
-                ),
-            )[:12]
-            top_departments = department_overview_dataframe(top_department_rows)
-            render_fullscreen_dataframe_heading(
-                "Кафедри",
-                top_departments,
-                key="dashboard_departments_fullscreen",
-                caption="Поточний топ кафедр за викладачами та публікаціями.",
-            )
-            st.dataframe(top_departments, use_container_width=True, hide_index=True)
-
     total_teachers = int(profile_coverage.get("teachers", 0) or 0)
-    with st.expander("Покриття профілів і джерел", expanded=False):
+    teachers_with_any_profile = int(profile_coverage.get("with_any_profile", 0) or 0)
+    departments_with_publications = sum(1 for row in department_overview_rows if int(row.get("publications", 0) or 0) > 0)
+    average_publications = (counts["publications"] / counts["teachers"]) if counts["teachers"] else 0.0
+
+    spotlight = st.columns(3, gap="medium")
+    with spotlight[0]:
+        render_empty_state(
+            "Оперативний стан",
+            "База вже придатна для огляду структури й аналітики."
+            if counts["publications"]
+            else "Структура готова, але публікаційний контур ще потрібно довантажити.",
+        )
+    with spotlight[1]:
+        render_empty_state(
+            "Покриття профілів",
+            f"{teachers_with_any_profile} з {total_teachers} викладачів уже мають хоча б один зовнішній профіль."
+            if total_teachers
+            else "Після завантаження викладачів тут з'явиться оцінка покриття профілів.",
+        )
+    with spotlight[2]:
+        render_empty_state(
+            "Щільність контуру",
+            f"У середньому {average_publications:.1f} публікацій на викладача, кафедр з роботами: {departments_with_publications}."
+            if counts["teachers"]
+            else "Після наповнення бази тут з'явиться короткий аналітичний зріз.",
+        )
+
+    structure_tab, coverage_tab, distribution_tab = st.tabs(
+        ["Структура зараз", "Покриття та джерела", "Розподіл і повний зріз"]
+    )
+
+    with structure_tab:
+        overview_columns = st.columns([0.92, 1.08], gap="large")
+
+        with overview_columns[0]:
+            render_fullscreen_dataframe_heading(
+                "Факультети",
+                faculty_overview,
+                key="dashboard_faculties_fullscreen",
+                caption="Повна таблиця факультетів, кафедр, викладачів і публікацій.",
+            )
+            if faculty_overview.empty:
+                render_empty_state("Немає даних", "Факультетний зріз з'явиться після імпорту структури.")
+            else:
+                st.download_button(
+                    "Експорт факультетів CSV",
+                    _csv_bytes(faculty_overview),
+                    file_name="dashboard_faculties.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+                st.dataframe(faculty_overview, use_container_width=True, hide_index=True)
+
+        with overview_columns[1]:
+            if department_overview.empty:
+                render_section_heading("Кафедри")
+                render_empty_state("Немає даних", "Таблиця кафедр з'явиться після імпорту структури.")
+            else:
+                top_department_rows = sorted(
+                    department_overview_rows,
+                    key=lambda row: (
+                        -(int(row.get("teachers") or 0)),
+                        -(int(row.get("publications") or 0)),
+                        str(row.get("name") or ""),
+                    ),
+                )[:12]
+                top_departments = department_overview_dataframe(top_department_rows)
+                render_fullscreen_dataframe_heading(
+                    "Кафедри",
+                    top_departments,
+                    key="dashboard_departments_fullscreen",
+                    caption="Поточний топ кафедр за викладачами та публікаціями.",
+                )
+                st.download_button(
+                    "Експорт кафедр CSV",
+                    _csv_bytes(top_departments),
+                    file_name="dashboard_departments.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
+                st.dataframe(top_departments, use_container_width=True, hide_index=True)
+
+    with coverage_tab:
         if total_teachers:
             coverage_columns = st.columns(5, gap="medium")
             coverage_columns[0].metric("Будь-який профіль", f"{profile_coverage['with_any_profile']} / {total_teachers}")
@@ -121,9 +171,18 @@ def render() -> None:
                     publication_sources,
                     key="dashboard_sources_table_fullscreen",
                 )
+                st.download_button(
+                    "Експорт джерел CSV",
+                    _csv_bytes(publication_sources),
+                    file_name="dashboard_publication_sources.csv",
+                    mime="text/csv",
+                    use_container_width=True,
+                )
                 st.dataframe(publication_sources, use_container_width=True, hide_index=True)
+        else:
+            render_empty_state("Джерела ще не накопичені", "Після завантаження робіт тут буде видно, які сервіси дають найбільше покриття.")
 
-    with st.expander("Розподіл викладачів і повна структура кафедр", expanded=False):
+    with distribution_tab:
         if not faculty_overview.empty:
             chart_source = faculty_overview[["Факультет", "Викладачі"]].set_index("Факультет")
             split_columns = st.columns([0.95, 1.05], gap="large")
@@ -147,5 +206,12 @@ def render() -> None:
                 "Уся структура кафедр",
                 department_overview,
                 key="dashboard_full_department_table_fullscreen",
+            )
+            st.download_button(
+                "Експорт повної структури кафедр CSV",
+                _csv_bytes(department_overview),
+                file_name="dashboard_department_structure.csv",
+                mime="text/csv",
+                use_container_width=True,
             )
             st.dataframe(department_overview, use_container_width=True, hide_index=True)
