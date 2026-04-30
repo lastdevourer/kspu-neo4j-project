@@ -23,6 +23,7 @@ REVIEW_OPTIONS = [
     "Відхилено",
     "В чорному списку",
 ]
+SELFTEST_KEY = "data_center_selftest_results"
 
 
 def _csv_bytes(frame: pd.DataFrame) -> bytes:
@@ -33,6 +34,117 @@ def _show_flash_message() -> None:
     message = st.session_state.pop(FLASH_KEY, "")
     if message:
         st.success(message)
+
+
+def _run_selftest(service) -> list[dict[str, object]]:
+    checks: list[tuple[str, str, callable]] = [
+        ("overview", "Огляд бази", service.get_overview_counts),
+        ("faculties", "Факультети", service.get_faculty_overview),
+        ("departments", "Кафедри", service.get_department_overview),
+        ("teachers", "Викладачі", service.get_teachers),
+        ("publications", "Публікації", service.get_publications),
+        ("sources", "Джерела публікацій", service.get_publication_source_summary),
+        ("duplicates", "Пошук дублів", service.get_duplicate_publication_candidates),
+        ("audit", "Журнал аудиту", lambda: service.get_audit_events(limit=10)),
+    ]
+    results: list[dict[str, object]] = []
+    for code, label, callback in checks:
+        try:
+            payload = callback()
+            if isinstance(payload, dict):
+                size = len(payload.keys())
+                summary = ", ".join(f"{key}: {value}" for key, value in list(payload.items())[:4])
+            elif isinstance(payload, list):
+                size = len(payload)
+                summary = f"рядків: {size}"
+            else:
+                size = 1
+                summary = str(payload)
+            results.append(
+                {
+                    "code": code,
+                    "label": label,
+                    "status": "OK",
+                    "size": size,
+                    "summary": summary,
+                    "error": "",
+                }
+            )
+        except Exception as exc:  # pragma: no cover - UI smoke helper
+            results.append(
+                {
+                    "code": code,
+                    "label": label,
+                    "status": "FAIL",
+                    "size": 0,
+                    "summary": "",
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+            )
+    return results
+
+
+def _selftest_frame(results: list[dict[str, object]]) -> pd.DataFrame:
+    if not results:
+        return pd.DataFrame()
+    frame = pd.DataFrame(results)
+    return frame.rename(
+        columns={
+            "label": "Перевірка",
+            "status": "Статус",
+            "size": "Результат",
+            "summary": "Коротко",
+            "error": "Помилка",
+        }
+    )[["Перевірка", "Статус", "Результат", "Коротко", "Помилка"]]
+
+
+def _render_selftest_tab(service) -> None:
+    render_section_heading(
+        "Самоперевірка сценаріїв",
+        "Швидка технічна перевірка основних потоків: структура, викладачі, публікації, дублікати, аудит і зведення.",
+    )
+    top = st.columns([0.95, 1.05], gap="large")
+    with top[0]:
+        if st.button("Запустити самоперевірку", use_container_width=True, key="run_data_center_selftest"):
+            st.session_state[SELFTEST_KEY] = _run_selftest(service)
+            st.rerun()
+        st.caption(
+            "Цей запуск не змінює дані в базі. Він просто проганяє ключові запити та допомагає швидко зловити регресії після імпорту або нових правок."
+        )
+    with top[1]:
+        results = st.session_state.get(SELFTEST_KEY, [])
+        if results:
+            ok_count = sum(1 for row in results if row.get("status") == "OK")
+            fail_count = sum(1 for row in results if row.get("status") == "FAIL")
+            summary = st.columns(2, gap="medium")
+            summary[0].metric("Успішні перевірки", ok_count)
+            summary[1].metric("Проблемні перевірки", fail_count)
+        else:
+            render_empty_state("Самоперевірку ще не запускали", "Натисніть кнопку ліворуч, щоб отримати короткий технічний звіт по ключових сценаріях.")
+
+    results = st.session_state.get(SELFTEST_KEY, [])
+    if not results:
+        return
+
+    results_frame = _selftest_frame(results)
+    render_fullscreen_dataframe_heading(
+        "Результати самоперевірки",
+        results_frame,
+        key="data_center_selftest_fullscreen",
+        caption="Зведення по технічній перевірці ключових запитів і сценаріїв.",
+    )
+    st.dataframe(results_frame, use_container_width=True, hide_index=True)
+    st.download_button(
+        "Експорт результатів самоперевірки CSV",
+        _csv_bytes(results_frame),
+        file_name="selftest_results.csv",
+        mime="text/csv",
+        use_container_width=True,
+    )
+    failed = [row for row in results if row.get("status") == "FAIL"]
+    if failed:
+        st.warning("Є проблемні перевірки. Найчастіше це означає, що зламався окремий запит або одна зі сторінок чекає іншу форму даних.")
 
 
 def _teacher_gap_frame(rows: list[dict[str, object]]) -> pd.DataFrame:
@@ -572,7 +684,7 @@ def render() -> None:
     with summary[3]:
         render_summary_strip("Усього публікацій", str(len(all_publications)))
 
-    moderation_tab, manual_tab, audit_tab = st.tabs(["Модерація", "Ручне додавання", "Аудит"])
+    moderation_tab, manual_tab, audit_tab, selftest_tab = st.tabs(["Модерація", "Ручне додавання", "Аудит", "Самоперевірка"])
 
     with moderation_tab:
         render_section_heading("Проблемні записи", "Працюйте з кандидатами, сумнівними матчами та відхиленими роботами.")
@@ -683,3 +795,6 @@ def render() -> None:
 
     with audit_tab:
         _render_audit_tab(service)
+
+    with selftest_tab:
+        _render_selftest_tab(service)
