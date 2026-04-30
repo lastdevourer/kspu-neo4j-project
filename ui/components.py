@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from textwrap import dedent
 from html import escape, unescape
 from typing import Any
 
@@ -620,25 +621,29 @@ def render_header(title: str, subtitle: str = "", kicker: str = "") -> None:
     kicker_markup = f'<div class="hero-kicker">{escape(unescape(normalized_kicker))}</div>' if normalized_kicker else ""
     subtitle_markup = f'<div class="hero-subtitle">{escape(unescape(normalized_subtitle))}</div>' if normalized_subtitle else ""
     st.markdown(
-        f"""
-        <div class="hero-card">
-            {kicker_markup}
-            <div class="hero-title">{escape(unescape(normalized_title))}</div>
-            {subtitle_markup}
-        </div>
-        """,
+        dedent(
+            f"""
+            <div class="hero-card">
+                {kicker_markup}
+                <div class="hero-title">{escape(unescape(normalized_title))}</div>
+                {subtitle_markup}
+            </div>
+            """
+        ).strip(),
         unsafe_allow_html=True,
     )
 
 
 def render_info_card(title: str, body: str) -> None:
     st.markdown(
-        f"""
-        <div class="info-card">
-            <h3>{escape(title)}</h3>
-            <div>{escape(body)}</div>
-        </div>
-        """,
+        dedent(
+            f"""
+            <div class="info-card">
+                <h3>{escape(title)}</h3>
+                <div>{escape(body)}</div>
+            </div>
+            """
+        ).strip(),
         unsafe_allow_html=True,
     )
 
@@ -646,12 +651,14 @@ def render_info_card(title: str, body: str) -> None:
 def render_section_heading(title: str, subtitle: str = "") -> None:
     subtitle_markup = f'<div class="section-heading-subtitle">{escape(subtitle)}</div>' if subtitle else ""
     st.markdown(
-        f"""
-        <div class="section-heading">
-            <div class="section-heading-title">{escape(title)}</div>
-            {subtitle_markup}
-        </div>
-        """,
+        dedent(
+            f"""
+            <div class="section-heading">
+                <div class="section-heading-title">{escape(title)}</div>
+                {subtitle_markup}
+            </div>
+            """
+        ).strip(),
         unsafe_allow_html=True,
     )
 
@@ -719,12 +726,14 @@ def render_fullscreen_html_heading(
 
 def render_empty_state(title: str, body: str) -> None:
     st.markdown(
-        f"""
-        <div class="empty-state">
-            <div class="empty-state-title">{escape(title)}</div>
-            <div class="empty-state-body">{escape(body)}</div>
-        </div>
-        """,
+        dedent(
+            f"""
+            <div class="empty-state">
+                <div class="empty-state-title">{escape(title)}</div>
+                <div class="empty-state-body">{escape(body)}</div>
+            </div>
+            """
+        ).strip(),
         unsafe_allow_html=True,
     )
 
@@ -732,13 +741,15 @@ def render_empty_state(title: str, body: str) -> None:
 def render_summary_strip(title: str, value: str, caption: str = "") -> None:
     caption_markup = f'<div class="summary-strip-caption">{escape(caption)}</div>' if caption else ""
     st.markdown(
-        f"""
-        <div class="summary-strip">
-            <div class="summary-strip-title">{escape(title)}</div>
-            <div class="summary-strip-value">{escape(value)}</div>
-            {caption_markup}
-        </div>
-        """,
+        dedent(
+            f"""
+            <div class="summary-strip">
+                <div class="summary-strip-title">{escape(title)}</div>
+                <div class="summary-strip-value">{escape(value)}</div>
+                {caption_markup}
+            </div>
+            """
+        ).strip(),
         unsafe_allow_html=True,
     )
 
@@ -754,12 +765,14 @@ def render_key_value_card(title: str, items: list[tuple[str, str]]) -> None:
         for label, value in items
     )
     st.markdown(
-        f"""
-        <div class="kv-card">
-            <div class="kv-title">{escape(title)}</div>
-            {rows}
-        </div>
-        """,
+        dedent(
+            f"""
+            <div class="kv-card">
+                <div class="kv-title">{escape(title)}</div>
+                {rows}
+            </div>
+            """
+        ).strip(),
         unsafe_allow_html=True,
     )
 
