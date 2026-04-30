@@ -12,8 +12,6 @@ def render_sidebar(
     pages: dict[str, dict[str, object]],
 ) -> str:
     selected_page = current_page
-    counts = service.get_overview_counts()
-    coverage = service.get_profile_coverage()
     section_order = ["Огляд", "Каталог", "Адміністрування"]
 
     with st.sidebar:
@@ -36,26 +34,15 @@ def render_sidebar(
             if not section_pages:
                 continue
 
-            with st.expander(section_name, expanded=False):
-                for page_key, page_meta in section_pages:
-                    button_type = "primary" if page_key == current_page else "secondary"
-                    if st.button(
-                        str(page_meta["title"]),
-                        key=f"sidebar_nav_{page_key}",
-                        use_container_width=True,
-                        type=button_type,
-                    ):
-                        selected_page = page_key
-
-        with st.expander("Стан бази", expanded=False):
-            status_columns = st.columns(2, gap="small")
-            status_columns[0].metric("Факультети", counts["faculties"])
-            status_columns[1].metric("Кафедри", counts["departments"])
-            status_columns[0].metric("Викладачі", counts["teachers"])
-            status_columns[1].metric("Публікації", counts["publications"])
-            st.caption(
-                f"Профілі для імпорту: {coverage['with_any_profile']} / {coverage['teachers']}. "
-                "Операційні дії зібрано на сторінках `Структура` та `Центр даних`."
-            )
+            st.markdown(f"**{section_name}**")
+            for page_key, page_meta in section_pages:
+                button_type = "primary" if page_key == current_page else "secondary"
+                if st.button(
+                    str(page_meta["title"]),
+                    key=f"sidebar_nav_{page_key}",
+                    use_container_width=True,
+                    type=button_type,
+                ):
+                    selected_page = page_key
 
     return selected_page
