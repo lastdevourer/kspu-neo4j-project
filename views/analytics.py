@@ -32,6 +32,16 @@ from utils.analytics import (
 )
 
 
+EXPORT_OPTIONS = {
+    "Топ викладачів": ("top_teachers.csv", "top_teachers"),
+    "Пари співавторів": ("top_coauthor_pairs.csv", "coauthor_pairs"),
+    "Centrality": ("centrality.csv", "centrality"),
+    "Джерела публікацій": ("publication_sources.csv", "sources"),
+    "Викладачі поточного контуру": ("scoped_teachers.csv", "scoped_teachers"),
+    "Аналітичний пакет": ("analytics_package.csv", "package"),
+}
+
+
 def _csv_bytes(frame: pd.DataFrame) -> bytes:
     return frame.to_csv(index=False).encode("utf-8-sig")
 
@@ -104,48 +114,14 @@ def render() -> None:
             f"викладачів з роботами: {teachers_with_publications}",
         )
 
-    render_section_heading("Пояснення для диплома")
     render_info_card(
-        "Короткий висновок",
+        "Аналітичний висновок",
         build_diploma_summary(top_teachers, top_pairs, centrality_rows),
     )
 
-    export_columns = st.columns(4, gap="medium")
     top_teachers_export = top_teachers_dataframe(top_teachers)
     top_pairs_export = top_coauthor_pairs_dataframe(top_pairs)
     centrality_export = centrality_dataframe(centrality_rows)
-    with export_columns[0]:
-        st.download_button(
-            "Експорт топу викладачів",
-            _csv_bytes(top_teachers_export if not top_teachers_export.empty else pd.DataFrame(columns=["Викладач"])),
-            file_name="top_teachers.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
-    with export_columns[1]:
-        st.download_button(
-            "Експорт пар співавторів",
-            _csv_bytes(top_pairs_export if not top_pairs_export.empty else pd.DataFrame(columns=["Викладач 1"])),
-            file_name="top_coauthor_pairs.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
-    with export_columns[2]:
-        st.download_button(
-            "Експорт centrality",
-            _csv_bytes(centrality_export if not centrality_export.empty else pd.DataFrame(columns=["Викладач"])),
-            file_name="centrality.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
-    with export_columns[3]:
-        st.download_button(
-            "Експорт джерел",
-            _csv_bytes(source_rows if not source_rows.empty else pd.DataFrame(columns=["Джерело"])),
-            file_name="publication_sources.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
 
     package_frame = _report_package_frame(
         [
@@ -155,24 +131,27 @@ def render() -> None:
             ("Джерела публікацій", source_rows),
         ]
     )
-    package_actions = st.columns(2, gap="medium")
-    with package_actions[0]:
-        st.download_button(
-            "Експорт аналітичного пакета CSV",
-            _csv_bytes(package_frame),
-            file_name="analytics_package.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
-    with package_actions[1]:
-        scoped_teachers_frame = teachers_dataframe(_scoped_teacher_rows(all_teachers, scoped_publications))
-        st.download_button(
-            "Експорт викладачів контуру CSV",
-            _csv_bytes(scoped_teachers_frame if not scoped_teachers_frame.empty else pd.DataFrame(columns=["ПІБ"])),
-            file_name="scoped_teachers.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
+    scoped_teachers_frame = teachers_dataframe(_scoped_teacher_rows(all_teachers, scoped_publications))
+
+    render_section_heading("Експорт")
+    export_choice = st.selectbox("Що завантажити", list(EXPORT_OPTIONS.keys()), key="analytics_export_choice")
+    export_file_name, export_key = EXPORT_OPTIONS[export_choice]
+    export_frames = {
+        "top_teachers": top_teachers_export if not top_teachers_export.empty else pd.DataFrame(columns=["Викладач"]),
+        "coauthor_pairs": top_pairs_export if not top_pairs_export.empty else pd.DataFrame(columns=["Викладач 1"]),
+        "centrality": centrality_export if not centrality_export.empty else pd.DataFrame(columns=["Викладач"]),
+        "sources": source_rows if not source_rows.empty else pd.DataFrame(columns=["Джерело"]),
+        "scoped_teachers": scoped_teachers_frame if not scoped_teachers_frame.empty else pd.DataFrame(columns=["ПІБ"]),
+        "package": package_frame if not package_frame.empty else pd.DataFrame(columns=["Розділ"]),
+    }
+    st.download_button(
+        f"Завантажити: {export_choice}",
+        _csv_bytes(export_frames[export_key]),
+        file_name=export_file_name,
+        mime="text/csv",
+        use_container_width=True,
+        key="analytics_export_download",
+    )
 
     if profile_coverage.get("teachers", 0):
         render_section_heading("Готовність профілів до автоматичного імпорту")
