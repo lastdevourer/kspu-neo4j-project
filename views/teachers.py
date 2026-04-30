@@ -26,6 +26,10 @@ STATUS_ORDER = [
 TEACHER_FLASH_KEY = "teacher_management_flash"
 
 
+def _csv_bytes(frame):
+    return frame.to_csv(index=False).encode("utf-8-sig")
+
+
 def _profile_count(profile: dict[str, object]) -> int:
     return sum(
         1
@@ -277,6 +281,13 @@ def render() -> None:
             teachers_table,
             key="teachers_table_fullscreen",
             caption="Повний перелік викладачів у поточному зрізі.",
+        )
+        st.download_button(
+            "Експорт поточного зрізу CSV",
+            _csv_bytes(teachers_table),
+            file_name="teachers_current_slice.csv",
+            mime="text/csv",
+            use_container_width=True,
         )
         st.dataframe(teachers_table, use_container_width=True, hide_index=True)
 
