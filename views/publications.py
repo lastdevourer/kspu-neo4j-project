@@ -4,6 +4,7 @@ import streamlit as st
 
 from ui.components import (
     render_empty_state,
+    render_fullscreen_dataframe_heading,
     render_header,
     render_key_value_card,
     render_section_heading,
@@ -23,6 +24,10 @@ STATUS_ORDER = [
 ]
 
 PUBLICATION_FLASH_KEY = "publication_management_flash"
+
+
+def _csv_bytes(frame):
+    return frame.to_csv(index=False).encode("utf-8-sig")
 
 
 def _status_counts(rows: list[dict[str, object]]) -> dict[str, int]:
@@ -483,12 +488,23 @@ def render() -> None:
 
     layout = st.columns([1.16, 0.94], gap="large")
     with layout[0]:
-        header_columns = st.columns([0.7, 0.3], gap="small")
-        with header_columns[0]:
-            render_section_heading("Таблиця публікацій")
-        with header_columns[1]:
-            if st.button("Відкрити повну панель", use_container_width=True, key="open_publication_workspace"):
-                _publication_workspace_dialog(service, filtered_rows, all_teachers)
+        action_columns = st.columns([0.68, 0.32], gap="small")
+        render_fullscreen_dataframe_heading(
+            "Таблиця публікацій",
+            publications_table,
+            key="publications_table_fullscreen",
+            subtitle="Натисніть на заголовок, щоб відкрити повний перегляд таблиці.",
+            caption="Повний зріз відфільтрованих публікацій.",
+        )
+        if action_columns[0].button("Відкрити робочу панель", use_container_width=True, key="open_publication_workspace"):
+            _publication_workspace_dialog(service, filtered_rows, all_teachers)
+        action_columns[1].download_button(
+            "Експорт поточного зрізу CSV",
+            _csv_bytes(publications_table),
+            file_name="publications_current_slice.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
         st.dataframe(publications_table, use_container_width=True, hide_index=True)
 
     with layout[1]:
