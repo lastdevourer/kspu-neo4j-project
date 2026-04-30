@@ -11,6 +11,7 @@ def render_sidebar(
     current_page: str,
     pages: dict[str, dict[str, object]],
 ) -> str:
+    del service
     selected_page = current_page
     section_order = ["Огляд", "Каталог", "Адміністрування"]
 
@@ -18,7 +19,7 @@ def render_sidebar(
         st.markdown(
             """
             <div class="sidebar-brand">
-                <div class="sidebar-brand-kicker">KSPU</div>
+                <div class="sidebar-brand-kicker">KSU</div>
                 <div class="sidebar-brand-title">Академічна мережа</div>
             </div>
             """,

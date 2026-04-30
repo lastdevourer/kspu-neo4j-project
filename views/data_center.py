@@ -12,7 +12,7 @@ from ui.components import (
     render_summary_strip,
     require_service,
 )
-from ui.formatters import audit_events_dataframe, duplicate_candidates_dataframe, publications_dataframe
+from ui.formatters import audit_events_dataframe, duplicate_candidates_dataframe, publications_dataframe_admin
 
 
 FLASH_KEY = "data_center_flash"
@@ -723,7 +723,7 @@ def render() -> None:
             key="data_center_export_choice",
         )
         export_frames = {
-            "problematic": publications_dataframe(filtered_problematic) if filtered_problematic else pd.DataFrame(columns=["Назва"]),
+            "problematic": publications_dataframe_admin(filtered_problematic) if filtered_problematic else pd.DataFrame(columns=["Назва"]),
             "without_profiles": _teacher_gap_frame(teachers_without_profiles) if teachers_without_profiles else pd.DataFrame(columns=["ПІБ"]),
             "without_publications": _teacher_gap_frame(teachers_without_publications) if teachers_without_publications else pd.DataFrame(columns=["ПІБ"]),
         }
@@ -740,7 +740,7 @@ def render() -> None:
         moderation_layout = st.columns([1.1, 0.9], gap="large")
         with moderation_layout[0]:
             if filtered_problematic:
-                problem_frame = publications_dataframe(filtered_problematic)
+                problem_frame = publications_dataframe_admin(filtered_problematic)
                 render_fullscreen_dataframe_heading(
                     "Проблемні записи",
                     problem_frame,

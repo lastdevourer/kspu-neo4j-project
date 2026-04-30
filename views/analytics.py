@@ -19,7 +19,7 @@ from ui.formatters import (
     publication_sources_dataframe,
     top_coauthor_pairs_dataframe,
     top_teachers_dataframe,
-    teachers_dataframe,
+    teachers_dataframe_public,
 )
 from utils.analytics import (
     build_centrality_edges,
@@ -131,7 +131,7 @@ def render() -> None:
             ("Джерела публікацій", source_rows),
         ]
     )
-    scoped_teachers_frame = teachers_dataframe(_scoped_teacher_rows(all_teachers, scoped_publications))
+    scoped_teachers_frame = teachers_dataframe_public(_scoped_teacher_rows(all_teachers, scoped_publications))
 
     render_section_heading("Експорт")
     export_choice = st.selectbox("Що завантажити", list(EXPORT_OPTIONS.keys()), key="analytics_export_choice")

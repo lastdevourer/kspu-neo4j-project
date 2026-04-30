@@ -20,7 +20,7 @@ from ui.formatters import (
     department_overview_dataframe,
     faculty_overview_dataframe,
     publication_sources_dataframe,
-    teachers_dataframe,
+    teachers_dataframe_admin,
 )
 
 
@@ -307,16 +307,16 @@ def _render_teachers_tab(service) -> None:
 
     with st.expander("Сервісні дії з викладачами", expanded=False):
         action_columns = st.columns([1.0, 1.0, 1.1], gap="medium")
-        if action_columns[0].button("Завантажити викладачів KSPU", use_container_width=True):
+        if action_columns[0].button("Завантажити викладачів KSU", use_container_width=True):
             service.seed_reference_data(FACULTIES, DEPARTMENTS)
             seed_teachers = load_teachers_seed()
             service.seed_teachers(seed_teachers)
-            st.session_state[FLASH_KEY] = f"Завантажено {len(seed_teachers)} викладачів KSPU."
+            st.session_state[FLASH_KEY] = f"Завантажено {len(seed_teachers)} викладачів KSU."
             st.rerun()
 
         action_columns[1].download_button(
             "Експорт усіх викладачів CSV",
-            _csv_bytes(teachers_dataframe(all_teachers) if all_teachers else pd.DataFrame(columns=["ID"])),
+            _csv_bytes(teachers_dataframe_admin(all_teachers) if all_teachers else pd.DataFrame(columns=["ID"])),
             file_name="teachers_export.csv",
             mime="text/csv",
             use_container_width=True,
@@ -522,7 +522,7 @@ def _render_teachers_tab(service) -> None:
 
         st.caption("Масові операції застосовуються лише до поточного відфільтрованого списку.")
 
-    teacher_frame = teachers_dataframe(filtered_teachers)
+    teacher_frame = teachers_dataframe_admin(filtered_teachers)
     if teacher_frame.empty:
         render_empty_state("Викладачів не знайдено", "Спробуйте змінити фільтри, завантажте seed-викладачів або створіть профіль вручну.")
     else:

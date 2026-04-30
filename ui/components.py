@@ -834,7 +834,7 @@ def render_sidebar(service: Neo4jService) -> None:
         st.markdown(
             """
             <div class="sidebar-brand">
-                <div class="sidebar-brand-kicker">KSPU</div>
+                <div class="sidebar-brand-kicker">KSU</div>
                 <div class="sidebar-brand-title">Академічна мережа</div>
             </div>
             """,
@@ -863,11 +863,11 @@ def render_sidebar(service: Neo4jService) -> None:
                 except Exception as exc:
                     st.error(f"Не вдалося заповнити довідник: {exc}")
 
-            if st.button("Завантажити викладачів KSPU", use_container_width=True):
+            if st.button("Завантажити викладачів KSU", use_container_width=True):
                 try:
                     service.seed_reference_data(FACULTIES, DEPARTMENTS)
                     teachers = load_teachers_seed()
                     service.seed_teachers(teachers)
-                    st.success(f"Завантажено {len(teachers)} викладачів KSPU.")
+                    st.success(f"Завантажено {len(teachers)} викладачів KSU.")
                 except Exception as exc:
                     st.error(f"Не вдалося завантажити викладачів: {exc}")

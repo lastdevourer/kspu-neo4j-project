@@ -53,7 +53,25 @@ def faculty_overview_dataframe(rows: list[dict]) -> pd.DataFrame:
     return renamed[["Код факультету", "Факультет", "Кафедри", "Викладачі", "Публікації"]]
 
 
-def teachers_dataframe(rows: list[dict]) -> pd.DataFrame:
+def teachers_dataframe_public(rows: list[dict]) -> pd.DataFrame:
+    df = _frame(rows)
+    if df.empty:
+        return df
+    renamed = df.rename(
+        columns={
+            "full_name": "ПІБ",
+            "position": "Посада",
+            "academic_degree": "Науковий ступінь",
+            "academic_title": "Вчене звання",
+            "department_name": "Кафедра",
+            "faculty_name": "Факультет",
+            "publications": "Публікації",
+        }
+    )
+    return renamed[["ПІБ", "Посада", "Науковий ступінь", "Вчене звання", "Кафедра", "Факультет", "Публікації"]]
+
+
+def teachers_dataframe_admin(rows: list[dict]) -> pd.DataFrame:
     df = _frame(rows)
     if df.empty:
         return df
@@ -72,7 +90,26 @@ def teachers_dataframe(rows: list[dict]) -> pd.DataFrame:
     return renamed[["ID", "ПІБ", "Посада", "Науковий ступінь", "Вчене звання", "Кафедра", "Факультет", "Публікації"]]
 
 
-def teacher_publications_dataframe(rows: list[dict]) -> pd.DataFrame:
+def teacher_publications_dataframe_public(rows: list[dict]) -> pd.DataFrame:
+    df = _frame(rows)
+    if df.empty:
+        return df
+    df["authors"] = df["authors"].apply(_join_authors)
+    renamed = df.rename(
+        columns={
+            "title": "Публікація",
+            "status": "Статус",
+            "year": "Рік",
+            "doi": "DOI",
+            "pub_type": "Тип",
+            "source": "Джерело",
+            "authors": "Автори",
+        }
+    )
+    return renamed[["Публікація", "Статус", "Рік", "DOI", "Тип", "Джерело", "Автори"]]
+
+
+def teacher_publications_dataframe_admin(rows: list[dict]) -> pd.DataFrame:
     df = _frame(rows)
     if df.empty:
         return df
@@ -92,8 +129,7 @@ def teacher_publications_dataframe(rows: list[dict]) -> pd.DataFrame:
             "authors": "Автори",
         }
     )
-    columns = ["ID", "Публікація", "Статус", "Рівень довіри", "Рік", "DOI", "Тип", "Джерело", "Автори"]
-    return renamed[columns]
+    return renamed[["ID", "Публікація", "Статус", "Рівень довіри", "Рік", "DOI", "Тип", "Джерело", "Автори"]]
 
 
 def coauthors_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -111,7 +147,27 @@ def coauthors_dataframe(rows: list[dict]) -> pd.DataFrame:
     return renamed[["Співавтор", "Спільні публікації", "Приклади публікацій"]]
 
 
-def publications_dataframe(rows: list[dict]) -> pd.DataFrame:
+def publications_dataframe_public(rows: list[dict]) -> pd.DataFrame:
+    df = _frame(rows)
+    if df.empty:
+        return df
+    df["authors"] = df["authors"].apply(_join_authors)
+    renamed = df.rename(
+        columns={
+            "title": "Назва",
+            "status": "Статус",
+            "year": "Рік",
+            "doi": "DOI",
+            "pub_type": "Тип",
+            "source": "Джерело",
+            "authors": "Автори",
+            "authors_count": "Кількість авторів",
+        }
+    )
+    return renamed[["Назва", "Статус", "Рік", "DOI", "Тип", "Джерело", "Кількість авторів", "Автори"]]
+
+
+def publications_dataframe_admin(rows: list[dict]) -> pd.DataFrame:
     df = _frame(rows)
     if df.empty:
         return df
@@ -132,8 +188,7 @@ def publications_dataframe(rows: list[dict]) -> pd.DataFrame:
             "authors_count": "Кількість авторів",
         }
     )
-    columns = ["ID", "Назва", "Статус", "Рівень довіри", "Рік", "DOI", "Тип", "Джерело", "Кількість авторів", "Автори"]
-    return renamed[columns]
+    return renamed[["ID", "Назва", "Статус", "Рівень довіри", "Рік", "DOI", "Тип", "Джерело", "Кількість авторів", "Автори"]]
 
 
 def graph_edges_dataframe(rows: list[dict]) -> pd.DataFrame:
@@ -209,12 +264,7 @@ def publication_sources_dataframe(rows: list[dict]) -> pd.DataFrame:
     df = _frame(rows)
     if df.empty:
         return df
-    renamed = df.rename(
-        columns={
-            "source": "Джерело",
-            "publications": "Публікації",
-        }
-    )
+    renamed = df.rename(columns={"source": "Джерело", "publications": "Публікації"})
     return renamed[["Джерело", "Публікації"]]
 
 

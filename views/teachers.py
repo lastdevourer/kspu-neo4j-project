@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from config import is_admin_mode
 from ui.components import (
     render_empty_state,
     render_fullscreen_dataframe_heading,
@@ -11,7 +12,13 @@ from ui.components import (
     render_summary_strip,
     require_service,
 )
-from ui.formatters import coauthors_dataframe, teacher_publications_dataframe, teachers_dataframe
+from ui.formatters import (
+    coauthors_dataframe,
+    teacher_publications_dataframe_admin,
+    teacher_publications_dataframe_public,
+    teachers_dataframe_admin,
+    teachers_dataframe_public,
+)
 
 
 STATUS_ORDER = [
@@ -206,7 +213,7 @@ def _render_publication_management(
             use_container_width=True,
         ):
             if not detach_confirm:
-                st.warning("Спочатку підтвердіть видалення зв'язку.")
+                st.warning("Спочатку підтвердьте видалення зв'язку.")
             elif service.delete_teacher_publication_link(teacher_id, publication_id):
                 st.session_state[TEACHER_FLASH_KEY] = "Зв'язок автора з публікацією видалено."
                 st.rerun()
@@ -220,7 +227,7 @@ def _render_publication_management(
             type="primary",
         ):
             if not delete_confirm:
-                st.warning("Спочатку підтвердіть повне видалення запису.")
+                st.warning("Спочатку підтвердьте повне видалення запису.")
             elif service.delete_publication(publication_id):
                 st.session_state[TEACHER_FLASH_KEY] = "Публікацію повністю видалено з бази."
                 st.rerun()
@@ -230,6 +237,7 @@ def _render_publication_management(
 
 def render() -> None:
     service = require_service()
+    admin_mode = is_admin_mode()
     render_header("Викладачі")
     _show_flash_message()
 
@@ -244,7 +252,7 @@ def render() -> None:
     selected_department_code = department_labels[selected_department_label]
 
     teacher_rows = service.get_teachers(search=search_value, department_code=selected_department_code)
-    teachers_table = teachers_dataframe(teacher_rows)
+    teachers_table = teachers_dataframe_admin(teacher_rows) if admin_mode else teachers_dataframe_public(teacher_rows)
 
     if teachers_table.empty:
         render_empty_state(
@@ -343,7 +351,7 @@ def render() -> None:
                 ("Google Scholar", _profile_status(str(profile.get("google_scholar") or "").strip())),
                 ("Scopus", _profile_status(str(profile.get("scopus") or "").strip())),
                 ("Web of Science", _profile_status(str(profile.get("web_of_science") or "").strip())),
-                ("Профіль KSPU", _profile_status(str(profile.get("profile_url") or "").strip())),
+                ("Профіль KSU", _profile_status(str(profile.get("profile_url") or "").strip())),
             ],
         )
         render_key_value_card(
@@ -370,7 +378,11 @@ def render() -> None:
             if publication_status_filter == "Усі статуси"
             else [row for row in publications if row.get("status") == publication_status_filter]
         )
-        publications_table = teacher_publications_dataframe(filtered_publications)
+        publications_table = (
+            teacher_publications_dataframe_admin(filtered_publications)
+            if admin_mode
+            else teacher_publications_dataframe_public(filtered_publications)
+        )
         if publications_table.empty:
             render_section_heading("Публікації викладача")
             render_empty_state(
@@ -385,7 +397,9 @@ def render() -> None:
                 caption="Розширений перегляд публікацій вибраного викладача.",
             )
             st.dataframe(publications_table, use_container_width=True, hide_index=True)
-        _render_publication_management(service, selected_teacher_id, publications, all_publications)
+
+        if admin_mode:
+            _render_publication_management(service, selected_teacher_id, publications, all_publications)
 
     with tabs[1]:
         coauthors_table = coauthors_dataframe(coauthors)

@@ -24,7 +24,7 @@ def _csv_bytes(frame):
 def render() -> None:
     service = require_service()
     render_header(
-        "Академічна мережа KSPU",
+        "Академічна мережа KSU",
         subtitle="Оперативний огляд викладачів, публікацій, співавторства та структури університету.",
     )
 
@@ -49,13 +49,13 @@ def render() -> None:
     secondary_columns[1].metric("Кафедри", format_number(counts["departments"]))
 
     if faculty_overview.empty and department_overview.empty:
-        render_empty_state("Дані відсутні", "Завантажте викладачів KSPU або відкрийте сторінку `Структура`, щоб заповнити базу.")
+        render_empty_state("Дані відсутні", "Завантажте викладачів KSU або відкрийте сторінку `Структура`, щоб заповнити базу.")
         return
 
     if counts["publications"] == 0:
         st.info("Структура вже заведена. Для наповнення бази відкрийте `Структура` і запустіть імпорт викладачів та публікацій.")
     else:
-        st.success("База заповнена. Можна переходити до аналітики, графа та модерації записів.")
+        st.success("База заповнена. Можна переходити до аналітики, графа та перегляду даних.")
 
     total_teachers = int(profile_coverage.get("teachers", 0) or 0)
     teachers_with_any_profile = int(profile_coverage.get("with_any_profile", 0) or 0)

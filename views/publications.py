@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from config import is_admin_mode
 from ui.components import (
     render_empty_state,
     render_fullscreen_dataframe_heading,
@@ -11,7 +12,7 @@ from ui.components import (
     render_summary_strip,
     require_service,
 )
-from ui.formatters import publications_dataframe
+from ui.formatters import publications_dataframe_admin, publications_dataframe_public
 
 
 STATUS_ORDER = [
@@ -96,12 +97,7 @@ def _render_review_shortcuts(service, publication_id: str, review_note: str, *, 
             st.rerun()
 
 
-def _render_bulk_workspace_actions(
-    service,
-    rows: list[dict[str, object]],
-    *,
-    key_prefix: str,
-) -> None:
+def _render_bulk_workspace_actions(service, rows: list[dict[str, object]], *, key_prefix: str) -> None:
     render_key_value_card(
         "Групова дія",
         [
@@ -354,6 +350,30 @@ def _render_publication_editor(
                 st.error("Не вдалося видалити публікацію. Спробуйте ще раз.")
 
 
+def _render_publication_details(selected_publication: dict[str, object]) -> None:
+    render_key_value_card(
+        "Коротка інформація",
+        [
+            ("Назва", str(selected_publication.get("title") or "")),
+            ("Рік", str(selected_publication.get("year") or "н/д")),
+            ("DOI", str(selected_publication.get("doi") or "Немає")),
+            ("Тип", str(selected_publication.get("pub_type") or "Невідомо")),
+            ("Джерело", str(selected_publication.get("source") or "Невідомо")),
+            ("Статус", str(selected_publication.get("status") or "Невідомо")),
+            ("Кількість авторів", str(selected_publication.get("authors_count") or 0)),
+        ],
+    )
+    render_key_value_card(
+        "Авторський склад",
+        [
+            (
+                "Автори",
+                ", ".join(str(author) for author in selected_publication.get("authors", []) if author) or "Немає даних",
+            ),
+        ],
+    )
+
+
 if hasattr(st, "dialog"):
     @st.dialog("Робоча панель публікацій", width="large")
     def _publication_workspace_dialog(service, rows: list[dict[str, object]], all_teachers: list[dict[str, object]]) -> None:
@@ -403,7 +423,7 @@ if hasattr(st, "dialog"):
 
         workspace = st.columns([1.22, 0.78], gap="large")
         with workspace[0]:
-            st.dataframe(publications_dataframe(visible_rows), use_container_width=True, hide_index=True, height=620)
+            st.dataframe(publications_dataframe_admin(visible_rows), use_container_width=True, hide_index=True, height=620)
 
         with workspace[1]:
             if len(selected_rows) == 1:
@@ -417,32 +437,79 @@ if hasattr(st, "dialog"):
                 )
 else:
     def _publication_workspace_dialog(service, rows: list[dict[str, object]], all_teachers: list[dict[str, object]]) -> None:
+        del service, rows, all_teachers
         st.info("Для цього середовища повна панель недоступна. Скористайтеся стандартним блоком деталей праворуч.")
 
 
 def render() -> None:
     service = require_service()
+    admin_mode = is_admin_mode()
     render_header("Публікації")
     _show_flash_message()
 
     years = service.get_publication_years()
     year_options = ["Усі роки"] + [str(year) for year in years]
 
-    filters = st.columns(3, gap="large")
-    selected_year = filters[0].selectbox("Фільтр за роком", year_options)
+    all_teachers = service.get_teachers()
+    teacher_name_to_department = {
+        str(row.get("full_name") or "").strip(): {
+            "department_code": str(row.get("department_code") or "").strip(),
+            "department_name": str(row.get("department_name") or "").strip(),
+        }
+        for row in all_teachers
+    }
+    department_options = {"Усі кафедри": ""}
+    for row in all_teachers:
+        department_code = str(row.get("department_code") or "").strip()
+        department_name = str(row.get("department_name") or "").strip()
+        if department_code and department_name:
+            department_options[f"{department_name} ({department_code})"] = department_code
+    teacher_options = {"Усі викладачі": ""}
+    for row in all_teachers:
+        teacher_options[str(row.get("full_name") or "").strip()] = str(row.get("full_name") or "").strip()
+
+    filter_rows_top = st.columns(3, gap="large")
+    selected_year = filter_rows_top[0].selectbox("Фільтр за роком", year_options)
     year_value = None if selected_year == "Усі роки" else int(selected_year)
+    search_query = filter_rows_top[1].text_input("Пошук за назвою або DOI", placeholder="Введіть назву, DOI або фрагмент джерела").strip().lower()
+    selected_teacher_name = filter_rows_top[2].selectbox("Фільтр за викладачем", list(teacher_options.keys()))
 
     publication_rows = service.get_publications(year=year_value)
-    all_teachers = service.get_teachers()
     status_counts = _status_counts(publication_rows)
     available_statuses = [status for status in STATUS_ORDER if status_counts[status] > 0]
-    selected_status = filters[1].selectbox("Статус робіт", ["Усі статуси"] + available_statuses)
-
     source_counts = _source_counts(publication_rows)
-    source_options = ["Усі джерела"] + sorted(source_counts.keys())
-    selected_source = filters[2].selectbox("Джерело", source_options)
+
+    filter_rows_bottom = st.columns(4, gap="large")
+    selected_department_label = filter_rows_bottom[0].selectbox("Фільтр за кафедрою", list(department_options.keys()))
+    selected_department_code = department_options[selected_department_label]
+    selected_status = filter_rows_bottom[1].selectbox("Статус робіт", ["Усі статуси"] + available_statuses)
+    selected_source = filter_rows_bottom[2].selectbox("Джерело", ["Усі джерела"] + sorted(source_counts.keys()))
+    only_coauthored = filter_rows_bottom[3].checkbox("Лише публікації зі співавторами")
 
     filtered_rows = publication_rows
+    if search_query:
+        filtered_rows = [
+            row
+            for row in filtered_rows
+            if search_query in str(row.get("title", "")).lower()
+            or search_query in str(row.get("doi", "")).lower()
+            or search_query in str(row.get("source", "")).lower()
+        ]
+    if selected_teacher_name != "Усі викладачі":
+        filtered_rows = [
+            row
+            for row in filtered_rows
+            if selected_teacher_name in [str(author).strip() for author in row.get("authors", [])]
+        ]
+    if selected_department_code:
+        filtered_rows = [
+            row
+            for row in filtered_rows
+            if any(
+                teacher_name_to_department.get(str(author).strip(), {}).get("department_code") == selected_department_code
+                for author in row.get("authors", [])
+            )
+        ]
     if selected_status != "Усі статуси":
         filtered_rows = [row for row in filtered_rows if row.get("status") == selected_status]
     if selected_source != "Усі джерела":
@@ -451,13 +518,19 @@ def render() -> None:
             for row in filtered_rows
             if (str(row.get("source") or "").strip() or "Невідомо") == selected_source
         ]
+    if only_coauthored:
+        filtered_rows = [row for row in filtered_rows if int(row.get("authors_count", 0) or 0) > 1]
 
-    publications_table = publications_dataframe(filtered_rows)
+    publications_table = (
+        publications_dataframe_admin(filtered_rows)
+        if admin_mode
+        else publications_dataframe_public(filtered_rows)
+    )
 
     if publications_table.empty:
         render_empty_state(
             "Публікацій не знайдено",
-            "Змініть рік, статус або джерело, щоб переглянути доступні роботи.",
+            "Змініть фільтри або послабте пошук, щоб переглянути доступні роботи.",
         )
         return
 
@@ -482,13 +555,12 @@ def render() -> None:
     secondary = st.columns(3, gap="medium")
     secondary[0].metric("Авторські входження", authorship_links)
     secondary[1].metric("Кандидати", filtered_status_counts["Кандидат"])
-    secondary[2].metric("Офіційно підтверджено", filtered_status_counts["Офіційно підтверджено"])
+    secondary[2].metric("Співавторські роботи", sum(1 for row in filtered_rows if int(row.get("authors_count", 0) or 0) > 1))
 
     publication_map = {_publication_option(row): row for row in filtered_rows}
 
     layout = st.columns([1.16, 0.94], gap="large")
     with layout[0]:
-        action_columns = st.columns([0.68, 0.32], gap="small")
         render_fullscreen_dataframe_heading(
             "Таблиця публікацій",
             publications_table,
@@ -496,9 +568,13 @@ def render() -> None:
             subtitle="Натисніть на заголовок, щоб відкрити повний перегляд таблиці.",
             caption="Повний зріз відфільтрованих публікацій.",
         )
-        if action_columns[0].button("Відкрити робочу панель", use_container_width=True, key="open_publication_workspace"):
-            _publication_workspace_dialog(service, filtered_rows, all_teachers)
-        action_columns[1].download_button(
+        controls = st.columns([0.64, 0.36], gap="small")
+        if admin_mode:
+            if controls[0].button("Відкрити робочу панель", use_container_width=True, key="open_publication_workspace"):
+                _publication_workspace_dialog(service, filtered_rows, all_teachers)
+        else:
+            controls[0].caption("Публічний режим: модерація та редагування приховані.")
+        controls[1].download_button(
             "Експорт поточного зрізу CSV",
             _csv_bytes(publications_table),
             file_name="publications_current_slice.csv",
@@ -511,4 +587,7 @@ def render() -> None:
         render_section_heading("Деталі публікації")
         selected_publication_label = st.selectbox("Обрати публікацію", list(publication_map.keys()))
         selected_publication = publication_map[selected_publication_label]
-        _render_publication_editor(service, selected_publication, all_teachers, key_prefix="publication")
+        if admin_mode:
+            _render_publication_editor(service, selected_publication, all_teachers, key_prefix="publication")
+        else:
+            _render_publication_details(selected_publication)

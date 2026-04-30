@@ -34,6 +34,14 @@ class PublicationImportConfig:
     auto_sync_include_scholar: bool = False
 
 
+def _read_streamlit_secret(key: str) -> str:
+    try:
+        value = st.secrets[key]
+    except Exception:
+        return ""
+    return str(value).strip()
+
+
 def _read_bool_setting(key: str, default: bool = False) -> bool:
     raw = _read_streamlit_secret(key) or os.getenv(key, "").strip()
     if not raw:
@@ -41,12 +49,8 @@ def _read_bool_setting(key: str, default: bool = False) -> bool:
     return raw.lower() in {"1", "true", "yes", "on"}
 
 
-def _read_streamlit_secret(key: str) -> str:
-    try:
-        value = st.secrets[key]
-    except Exception:
-        return ""
-    return str(value).strip()
+def is_admin_mode() -> bool:
+    return _read_bool_setting("ADMIN_MODE", default=False)
 
 
 def get_neo4j_config() -> Neo4jConfig | None:
@@ -126,11 +130,12 @@ def get_publication_import_config() -> PublicationImportConfig:
 
 def get_connection_help_text() -> str:
     return (
-        "Ð”Ð»Ñ Streamlit Cloud Ð´Ð¾Ð´Ð°Ð¹Ñ‚Ðµ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€Ð¸ Ð¿Ñ–Ð´ÐºÐ»ÑŽÑ‡ÐµÐ½Ð½Ñ Ð´Ð¾ Neo4j Aura Ñ‡ÐµÑ€ÐµÐ· `Secrets`.\n"
-        "Ð›Ð¾ÐºÐ°Ð»ÑŒÐ½Ð¾ Ð¼Ð¾Ð¶Ð½Ð° Ð²Ð¸ÐºÐ¾Ñ€Ð¸ÑÑ‚Ð¾Ð²ÑƒÐ²Ð°Ñ‚Ð¸ `st.secrets` Ð°Ð±Ð¾ `.env`:\n\n"
+        "Для Streamlit Cloud додайте параметри підключення до Neo4j Aura через `Secrets`.\n"
+        "Локально можна використовувати `st.secrets` або `.env`:\n\n"
         "`NEO4J_URI`\n"
         "`NEO4J_USER`\n"
         "`NEO4J_PASSWORD`\n"
-        "`NEO4J_DATABASE` (Ð½ÐµÐ¾Ð±Ð¾Ð²'ÑÐ·ÐºÐ¾Ð²Ð¾; ÑÐºÑ‰Ð¾ Ñ” Ð¿Ð¾Ð¼Ð¸Ð»ÐºÐ° Ð¼Ð°Ñ€ÑˆÑ€ÑƒÑ‚Ð¸Ð·Ð°Ñ†Ñ–Ñ—, ÐºÑ€Ð°Ñ‰Ðµ Ð¿Ñ€Ð¸Ð±Ñ€Ð°Ñ‚Ð¸ Ñ†ÐµÐ¹ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€ Ñ– Ð´Ð°Ñ‚Ð¸ Aura "
-        "Ð²Ð¸Ð±Ñ€Ð°Ñ‚Ð¸ Ð´Ð¾Ð¼Ð°ÑˆÐ½ÑŽ Ð±Ð°Ð·Ñƒ Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡Ð½Ð¾)"
+        "`NEO4J_DATABASE` (необов'язково; якщо є помилка маршрутизації, краще прибрати цей параметр і дати Aura "
+        "вибрати домашню базу автоматично)\n"
+        "`ADMIN_MODE` (`true` для внутрішнього режиму редагування, `false` для публічної витрини)"
     )
