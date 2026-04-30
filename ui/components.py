@@ -86,7 +86,7 @@ def apply_theme() -> None:
 
         .block-container {
             max-width: 1320px;
-            padding-top: 1.4rem;
+            padding-top: 3.9rem;
             padding-bottom: 2.4rem;
         }
 
@@ -583,7 +583,7 @@ def apply_theme() -> None:
 
         @media (max-width: 960px) {
             .block-container {
-                padding-top: 1rem;
+                padding-top: 2.6rem;
                 padding-bottom: 1.4rem;
             }
 
