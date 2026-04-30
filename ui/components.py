@@ -750,13 +750,10 @@ def render_summary_strip(title: str, value: str, caption: str = "") -> None:
 
 def render_key_value_card(title: str, items: list[tuple[str, str]]) -> None:
     rows = "".join(
-        f"""
-        <div class="kv-row">
-            <div class="kv-label">{escape(label)}</div>
-            <div class="kv-value">{escape(value or "—")}</div>
-        </div>
-        """
-        for label, value in items
+        [
+            f'<div class="kv-row"><div class="kv-label">{escape(label)}</div><div class="kv-value">{escape(value or "—")}</div></div>'
+            for label, value in items
+        ]
     )
     st.markdown(
         dedent(
