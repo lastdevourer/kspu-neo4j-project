@@ -781,49 +781,6 @@ else:
         components.html(html, height=height, scrolling=False)
 
 
-def render_fullscreen_dataframe_button(
-    title: str,
-    frame: pd.DataFrame,
-    *,
-    key: str,
-    caption: str = "",
-    label: str = "⤢",
-) -> None:
-    if frame.empty:
-        return
-    if st.button(label, key=key, type="tertiary", help="Відкрити на весь екран"):
-        _fullscreen_dataframe_dialog(title, frame, caption)
-
-
-def render_fullscreen_bar_chart_button(
-    title: str,
-    data: pd.DataFrame,
-    *,
-    key: str,
-    caption: str = "",
-    label: str = "⤢",
-) -> None:
-    if data.empty:
-        return
-    if st.button(label, key=key, type="tertiary", help="Відкрити на весь екран"):
-        _fullscreen_bar_chart_dialog(title, data, caption)
-
-
-def render_fullscreen_html_button(
-    title: str,
-    html: str,
-    *,
-    key: str,
-    height: int = 980,
-    caption: str = "",
-    label: str = "⤢",
-) -> None:
-    if not html.strip():
-        return
-    if st.button(label, key=key, type="tertiary", help="Відкрити на весь екран"):
-        _fullscreen_html_dialog(title, html, height, caption)
-
-
 @st.cache_resource(show_spinner=False)
 def _build_service(uri: str, user: str, password: str, database: str) -> Neo4jService:
     service = Neo4jService(uri=uri, user=user, password=password, database=database)
@@ -857,7 +814,7 @@ def render_sidebar(service: Neo4jService) -> None:
         st.markdown(
             """
             <div class="sidebar-brand">
-                <div class="sidebar-brand-kicker">KSPU / KhDU</div>
+                <div class="sidebar-brand-kicker">KSPU</div>
                 <div class="sidebar-brand-title">Академічна мережа</div>
             </div>
             """,
