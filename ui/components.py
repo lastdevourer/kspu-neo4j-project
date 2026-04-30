@@ -618,20 +618,14 @@ def render_header(title: str, subtitle: str = "", kicker: str = "") -> None:
     normalized_subtitle = re.sub(r"<[^>]+>", "", normalized_subtitle)
     normalized_kicker = re.sub(r"<[^>]+>", "", str(kicker or "").strip())
 
-    kicker_markup = f'<div class="hero-kicker">{escape(unescape(normalized_kicker))}</div>' if normalized_kicker else ""
-    subtitle_markup = f'<div class="hero-subtitle">{escape(unescape(normalized_subtitle))}</div>' if normalized_subtitle else ""
-    st.markdown(
-        dedent(
-            f"""
-            <div class="hero-card">
-                {kicker_markup}
-                <div class="hero-title">{escape(unescape(normalized_title))}</div>
-                {subtitle_markup}
-            </div>
-            """
-        ).strip(),
-        unsafe_allow_html=True,
-    )
+    content_lines = ['<div class="hero-card">']
+    if normalized_kicker:
+        content_lines.append(f'<div class="hero-kicker">{escape(unescape(normalized_kicker))}</div>')
+    content_lines.append(f'<div class="hero-title">{escape(unescape(normalized_title))}</div>')
+    if normalized_subtitle:
+        content_lines.append(f'<div class="hero-subtitle">{escape(unescape(normalized_subtitle))}</div>')
+    content_lines.append("</div>")
+    st.markdown("\n".join(content_lines), unsafe_allow_html=True)
 
 
 def render_info_card(title: str, body: str) -> None:
