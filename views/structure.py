@@ -387,6 +387,12 @@ def _render_teachers_tab(service) -> None:
     with summary[2]:
         render_summary_strip("Публікації у зрізі", str(total_publications), "сума робіт у поточному списку")
 
+    if filtered_teachers:
+        st.caption(
+            f"Без зовнішніх профілів у поточному зрізі: {teachers_without_profiles}. "
+            "Основну таблицю, експорт і масові дії зручно виконувати нижче після фільтрації."
+        )
+
     department_options = {f"{row['name']} ({row['code']})": str(row["code"]) for row in departments if row.get("code")}
     teacher_map = {"Новий викладач": None} | {
         _teacher_option(row): row for row in all_teachers if row.get("id")
@@ -514,23 +520,7 @@ def _render_teachers_tab(service) -> None:
                     st.session_state[FLASH_KEY] = f"Масово видалено викладачів: {deleted}."
                     st.rerun()
 
-        if filtered_teachers:
-            filtered_frame = teachers_dataframe(filtered_teachers)
-            render_fullscreen_dataframe_heading(
-                "Поточний склад викладачів",
-                filtered_frame,
-                key="structure_teachers_fullscreen",
-                caption="Повний перелік викладачів з активними фільтрами.",
-            )
-            st.download_button(
-                "Експорт поточного зрізу CSV",
-                _csv_bytes(filtered_frame),
-                file_name="teachers_filtered.csv",
-                mime="text/csv",
-                use_container_width=True,
-                key="download_filtered_teachers",
-            )
-        st.caption(f"Без профілів у поточному зрізі: {teachers_without_profiles}")
+        st.caption("Масові операції застосовуються лише до поточного відфільтрованого списку.")
 
     teacher_frame = teachers_dataframe(filtered_teachers)
     if teacher_frame.empty:
@@ -541,6 +531,14 @@ def _render_teachers_tab(service) -> None:
             teacher_frame,
             key="structure_teachers_table_fullscreen",
             caption="Розширений перегляд таблиці викладачів.",
+        )
+        st.download_button(
+            "Експорт поточного зрізу CSV",
+            _csv_bytes(teacher_frame),
+            file_name="teachers_filtered.csv",
+            mime="text/csv",
+            use_container_width=True,
+            key="download_filtered_teachers",
         )
         st.dataframe(teacher_frame, use_container_width=True, hide_index=True)
 
@@ -600,6 +598,12 @@ def _render_publications_tab(service) -> None:
         render_summary_strip("Зв'язки авторства", str(counts["authorship_links"]), "поточний контур авторів")
     with summary[2]:
         render_summary_strip("Джерела", str(len(publication_sources.index)), "активні типи джерел у базі")
+
+    if counts["publications"]:
+        st.caption(
+            "Для робочого сценарію достатньо тримати тут джерела, імпорт і очищення, "
+            "а детальну модерацію окремих записів вести на сторінках `Публікації` та `Центр даних`."
+        )
 
     if publication_sources.empty:
         render_empty_state("Публікаційний контур порожній", "Запустіть імпорт або додайте публікації вручну, щоб побачити джерела.")
