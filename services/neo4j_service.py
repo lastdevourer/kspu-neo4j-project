@@ -14,6 +14,7 @@ SCHEMA_STATEMENTS = [
     "CREATE CONSTRAINT publication_id_unique IF NOT EXISTS FOR (p:Publication) REQUIRE p.id IS UNIQUE",
     "CREATE CONSTRAINT system_state_key_unique IF NOT EXISTS FOR (s:SystemState) REQUIRE s.key IS UNIQUE",
     "CREATE CONSTRAINT audit_event_id_unique IF NOT EXISTS FOR (a:AuditEvent) REQUIRE a.id IS UNIQUE",
+    "CREATE CONSTRAINT import_run_id_unique IF NOT EXISTS FOR (r:ImportRun) REQUIRE r.id IS UNIQUE",
     "CREATE RANGE INDEX faculty_name_idx IF NOT EXISTS FOR (f:Faculty) ON (f.name)",
     "CREATE RANGE INDEX department_name_idx IF NOT EXISTS FOR (d:Department) ON (d.name)",
     "CREATE RANGE INDEX teacher_full_name_idx IF NOT EXISTS FOR (t:Teacher) ON (t.full_name)",
@@ -22,6 +23,7 @@ SCHEMA_STATEMENTS = [
     "CREATE RANGE INDEX publication_canonical_key_idx IF NOT EXISTS FOR (p:Publication) ON (p.canonical_key)",
     "CREATE RANGE INDEX publication_review_status_idx IF NOT EXISTS FOR (p:Publication) ON (p.review_status)",
     "CREATE RANGE INDEX audit_event_created_at_idx IF NOT EXISTS FOR (a:AuditEvent) ON (a.created_at)",
+    "CREATE RANGE INDEX import_run_started_at_idx IF NOT EXISTS FOR (r:ImportRun) ON (r.started_at)",
 ]
 
 
@@ -124,6 +126,120 @@ class Neo4jService:
                 "details": details.strip(),
                 "actor": actor.strip(),
             },
+        )
+
+    def create_import_run(
+        self,
+        *,
+        source: str,
+        include_scholar: bool,
+        teachers_planned: int,
+        actor: str = "streamlit_ui",
+    ) -> str:
+        run_id = f"import:{uuid4().hex}"
+        self.execute(
+            """
+            CREATE (r:ImportRun {
+                id: $id,
+                started_at: $started_at,
+                finished_at: '',
+                source: $source,
+                status: 'Виконується',
+                include_scholar: $include_scholar,
+                teachers_planned: $teachers_planned,
+                teachers_processed: 0,
+                teachers_with_publications: 0,
+                publications_found: 0,
+                authorships_found: 0,
+                warnings_count: 0,
+                provider_summary: '',
+                error_message: '',
+                actor: $actor
+            })
+            """,
+            {
+                "id": run_id,
+                "started_at": self._now_utc(),
+                "source": source.strip() or "Автоматичний імпорт",
+                "include_scholar": bool(include_scholar),
+                "teachers_planned": max(int(teachers_planned or 0), 0),
+                "actor": actor.strip() or "streamlit_ui",
+            },
+        )
+        return run_id
+
+    def complete_import_run(
+        self,
+        run_id: str,
+        *,
+        status: str,
+        teachers_processed: int = 0,
+        teachers_with_publications: int = 0,
+        publications_found: int = 0,
+        authorships_found: int = 0,
+        warnings_count: int = 0,
+        provider_summary: str = "",
+        error_message: str = "",
+    ) -> bool:
+        cleaned_run_id = run_id.strip()
+        if not cleaned_run_id:
+            return False
+
+        rows = self.run_query(
+            """
+            MATCH (r:ImportRun {id: $run_id})
+            SET
+                r.finished_at = $finished_at,
+                r.status = $status,
+                r.teachers_processed = $teachers_processed,
+                r.teachers_with_publications = $teachers_with_publications,
+                r.publications_found = $publications_found,
+                r.authorships_found = $authorships_found,
+                r.warnings_count = $warnings_count,
+                r.provider_summary = $provider_summary,
+                r.error_message = $error_message
+            RETURN true AS ok
+            LIMIT 1
+            """,
+            {
+                "run_id": cleaned_run_id,
+                "finished_at": self._now_utc(),
+                "status": status.strip() or "Завершено",
+                "teachers_processed": max(int(teachers_processed or 0), 0),
+                "teachers_with_publications": max(int(teachers_with_publications or 0), 0),
+                "publications_found": max(int(publications_found or 0), 0),
+                "authorships_found": max(int(authorships_found or 0), 0),
+                "warnings_count": max(int(warnings_count or 0), 0),
+                "provider_summary": provider_summary.strip(),
+                "error_message": error_message.strip(),
+            },
+        )
+        return bool(rows)
+
+    def get_import_runs(self, limit: int = 40) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (r:ImportRun)
+            RETURN
+                r.id AS id,
+                r.started_at AS started_at,
+                r.finished_at AS finished_at,
+                r.source AS source,
+                r.status AS status,
+                coalesce(r.include_scholar, false) AS include_scholar,
+                coalesce(r.teachers_planned, 0) AS teachers_planned,
+                coalesce(r.teachers_processed, 0) AS teachers_processed,
+                coalesce(r.teachers_with_publications, 0) AS teachers_with_publications,
+                coalesce(r.publications_found, 0) AS publications_found,
+                coalesce(r.authorships_found, 0) AS authorships_found,
+                coalesce(r.warnings_count, 0) AS warnings_count,
+                coalesce(r.provider_summary, '') AS provider_summary,
+                coalesce(r.error_message, '') AS error_message,
+                coalesce(r.actor, '') AS actor
+            ORDER BY r.started_at DESC
+            LIMIT $limit
+            """,
+            {"limit": max(int(limit or 1), 1)},
         )
 
     def prepare_database(self) -> None:
