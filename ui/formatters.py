@@ -278,8 +278,8 @@ def centrality_dataframe(rows: list[dict]) -> pd.DataFrame:
             "teacher": "Викладач",
             "connections": "Кількість зв'язків",
             "weighted_connections": "Зважені зв'язки",
-            "degree_centrality": "Degree centrality",
-            "betweenness_centrality": "Betweenness centrality",
+            "degree_centrality": "Ступенева центральність",
+            "betweenness_centrality": "Посередницька центральність",
         }
     )
     return renamed[
@@ -287,8 +287,8 @@ def centrality_dataframe(rows: list[dict]) -> pd.DataFrame:
             "Викладач",
             "Кількість зв'язків",
             "Зважені зв'язки",
-            "Degree centrality",
-            "Betweenness centrality",
+            "Ступенева центральність",
+            "Посередницька центральність",
         ]
     ]
 
