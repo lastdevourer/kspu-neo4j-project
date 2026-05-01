@@ -18,6 +18,9 @@ SCHEMA_STATEMENTS = [
     "CREATE RANGE INDEX department_name_idx IF NOT EXISTS FOR (d:Department) ON (d.name)",
     "CREATE RANGE INDEX teacher_full_name_idx IF NOT EXISTS FOR (t:Teacher) ON (t.full_name)",
     "CREATE RANGE INDEX publication_year_idx IF NOT EXISTS FOR (p:Publication) ON (p.year)",
+    "CREATE RANGE INDEX publication_doi_idx IF NOT EXISTS FOR (p:Publication) ON (p.doi)",
+    "CREATE RANGE INDEX publication_canonical_key_idx IF NOT EXISTS FOR (p:Publication) ON (p.canonical_key)",
+    "CREATE RANGE INDEX publication_review_status_idx IF NOT EXISTS FOR (p:Publication) ON (p.review_status)",
     "CREATE RANGE INDEX audit_event_created_at_idx IF NOT EXISTS FOR (a:AuditEvent) ON (a.created_at)",
 ]
 
@@ -1633,6 +1636,263 @@ class Neo4jService:
                 "scope": scope,
                 "year_from": year_from,
                 "year_to": year_to,
+            },
+        )
+
+    def get_publication_source_summary_analytics(
+        self,
+        *,
+        scope: str = "Усі записи",
+        year_from: int | None = None,
+        year_to: int | None = None,
+    ) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (p:Publication)
+            WITH
+                p,
+                [source IN split(coalesce(p.source, ""), ";") | trim(source)] AS source_names
+            WITH
+                p,
+                source_names,
+                CASE
+                    WHEN coalesce(p.review_status, "") <> "" THEN p.review_status
+                    WHEN any(source_name IN source_names WHERE source_name IN ["Scopus", "Web of Science"]) THEN "Офіційно підтверджено"
+                    WHEN coalesce(p.confidence, 0.0) >= 0.9 THEN "Підтверджено"
+                    WHEN coalesce(p.confidence, 0.0) >= 0.72 THEN "Кандидат"
+                    ELSE "Потребує перевірки"
+                END AS resolved_status
+            WHERE
+                (
+                    $scope = "Усі записи"
+                    OR ($scope = "Підтверджені" AND resolved_status IN ["Офіційно підтверджено", "Підтверджено"])
+                    OR ($scope = "Офіційні" AND resolved_status = "Офіційно підтверджено")
+                )
+                AND (
+                    $year_from IS NULL
+                    OR ($year_to IS NOT NULL AND p.year IS NOT NULL AND p.year >= $year_from AND p.year <= $year_to)
+                )
+            UNWIND CASE WHEN size(source_names) = 0 THEN ["Невідомо"] ELSE source_names END AS source_name
+            RETURN
+                source_name AS source,
+                count(DISTINCT p) AS publications
+            ORDER BY publications DESC, source
+            """,
+            {
+                "scope": scope,
+                "year_from": year_from,
+                "year_to": year_to,
+            },
+        )
+
+    def get_teachers_analytics(
+        self,
+        *,
+        scope: str = "Усі записи",
+        year_from: int | None = None,
+        year_to: int | None = None,
+        department_code: str = "",
+        faculty_code: str = "",
+    ) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (t:Teacher)
+            OPTIONAL MATCH (d:Department)-[:HAS_TEACHER]->(t)
+            OPTIONAL MATCH (f:Faculty)-[:HAS_DEPARTMENT]->(d)
+            WHERE
+                ($department_code = "" OR coalesce(d.code, d.department_id, t.department_code) = $department_code)
+                AND ($faculty_code = "" OR coalesce(f.code, f.faculty_id, t.faculty_code) = $faculty_code)
+            OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
+            WITH
+                t,
+                d,
+                f,
+                p,
+                [source IN split(coalesce(p.source, ""), ";") | trim(source)] AS source_names
+            WITH
+                t,
+                d,
+                f,
+                p,
+                CASE
+                    WHEN p IS NULL THEN ""
+                    WHEN coalesce(p.review_status, "") <> "" THEN p.review_status
+                    WHEN any(source_name IN source_names WHERE source_name IN ["Scopus", "Web of Science"]) THEN "Офіційно підтверджено"
+                    WHEN coalesce(p.confidence, 0.0) >= 0.9 THEN "Підтверджено"
+                    WHEN coalesce(p.confidence, 0.0) >= 0.72 THEN "Кандидат"
+                    ELSE "Потребує перевірки"
+                END AS resolved_status
+            RETURN
+                coalesce(t.id, t.teacher_id) AS id,
+                coalesce(t.full_name, t.name) AS full_name,
+                coalesce(t.position, "") AS position,
+                coalesce(t.academic_degree, "") AS academic_degree,
+                coalesce(t.academic_title, "") AS academic_title,
+                coalesce(t.orcid, "") AS orcid,
+                coalesce(t.google_scholar, "") AS google_scholar,
+                coalesce(t.scopus, "") AS scopus,
+                coalesce(t.web_of_science, "") AS web_of_science,
+                coalesce(t.profile_url, "") AS profile_url,
+                coalesce(d.code, d.department_id, t.department_code, t.department_id) AS department_code,
+                coalesce(d.name, t.department_name, "") AS department_name,
+                coalesce(f.code, f.faculty_id, t.faculty_code, t.faculty_id) AS faculty_code,
+                coalesce(f.name, "") AS faculty_name,
+                count(
+                    DISTINCT CASE
+                        WHEN p IS NOT NULL
+                             AND (
+                                 $scope = "Усі записи"
+                                 OR ($scope = "Підтверджені" AND resolved_status IN ["Офіційно підтверджено", "Підтверджено"])
+                                 OR ($scope = "Офіційні" AND resolved_status = "Офіційно підтверджено")
+                             )
+                             AND (
+                                 $year_from IS NULL
+                                 OR ($year_to IS NOT NULL AND p.year IS NOT NULL AND p.year >= $year_from AND p.year <= $year_to)
+                             )
+                        THEN p
+                    END
+                ) AS publications
+            ORDER BY full_name
+            """,
+            {
+                "scope": scope,
+                "year_from": year_from,
+                "year_to": year_to,
+                "department_code": department_code.strip(),
+                "faculty_code": faculty_code.strip(),
+            },
+        )
+
+    def get_department_overview_analytics(
+        self,
+        *,
+        scope: str = "Усі записи",
+        year_from: int | None = None,
+        year_to: int | None = None,
+        faculty_code: str = "",
+        department_code: str = "",
+    ) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (d:Department)
+            OPTIONAL MATCH (f:Faculty)-[:HAS_DEPARTMENT]->(d)
+            WHERE
+                ($department_code = "" OR coalesce(d.code, d.department_id) = $department_code)
+                AND ($faculty_code = "" OR coalesce(f.code, f.faculty_id, d.faculty_code, d.faculty_id) = $faculty_code)
+            OPTIONAL MATCH (d)-[:HAS_TEACHER]->(t:Teacher)
+            OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
+            WITH
+                d,
+                f,
+                t,
+                p,
+                [source IN split(coalesce(p.source, ""), ";") | trim(source)] AS source_names
+            WITH
+                d,
+                f,
+                t,
+                p,
+                CASE
+                    WHEN p IS NULL THEN ""
+                    WHEN coalesce(p.review_status, "") <> "" THEN p.review_status
+                    WHEN any(source_name IN source_names WHERE source_name IN ["Scopus", "Web of Science"]) THEN "Офіційно підтверджено"
+                    WHEN coalesce(p.confidence, 0.0) >= 0.9 THEN "Підтверджено"
+                    WHEN coalesce(p.confidence, 0.0) >= 0.72 THEN "Кандидат"
+                    ELSE "Потребує перевірки"
+                END AS resolved_status
+            RETURN
+                coalesce(d.code, d.department_id) AS code,
+                d.name AS name,
+                coalesce(f.code, f.faculty_id) AS faculty_code,
+                f.name AS faculty_name,
+                count(DISTINCT t) AS teachers,
+                count(
+                    DISTINCT CASE
+                        WHEN p IS NOT NULL
+                             AND (
+                                 $scope = "Усі записи"
+                                 OR ($scope = "Підтверджені" AND resolved_status IN ["Офіційно підтверджено", "Підтверджено"])
+                                 OR ($scope = "Офіційні" AND resolved_status = "Офіційно підтверджено")
+                             )
+                             AND (
+                                 $year_from IS NULL
+                                 OR ($year_to IS NOT NULL AND p.year IS NOT NULL AND p.year >= $year_from AND p.year <= $year_to)
+                             )
+                        THEN p
+                    END
+                ) AS publications
+            ORDER BY publications DESC, teachers DESC, name
+            """,
+            {
+                "scope": scope,
+                "year_from": year_from,
+                "year_to": year_to,
+                "faculty_code": faculty_code.strip(),
+                "department_code": department_code.strip(),
+            },
+        )
+
+    def get_faculty_overview_analytics(
+        self,
+        *,
+        scope: str = "Усі записи",
+        year_from: int | None = None,
+        year_to: int | None = None,
+        faculty_code: str = "",
+    ) -> list[dict[str, Any]]:
+        return self.run_query(
+            """
+            MATCH (f:Faculty)
+            WHERE ($faculty_code = "" OR coalesce(f.code, f.faculty_id) = $faculty_code)
+            OPTIONAL MATCH (f)-[:HAS_DEPARTMENT]->(d:Department)
+            OPTIONAL MATCH (d)-[:HAS_TEACHER]->(t:Teacher)
+            OPTIONAL MATCH (t)-[:AUTHORED]->(p:Publication)
+            WITH
+                f,
+                d,
+                t,
+                p,
+                [source IN split(coalesce(p.source, ""), ";") | trim(source)] AS source_names
+            WITH
+                f,
+                d,
+                t,
+                p,
+                CASE
+                    WHEN p IS NULL THEN ""
+                    WHEN coalesce(p.review_status, "") <> "" THEN p.review_status
+                    WHEN any(source_name IN source_names WHERE source_name IN ["Scopus", "Web of Science"]) THEN "Офіційно підтверджено"
+                    WHEN coalesce(p.confidence, 0.0) >= 0.9 THEN "Підтверджено"
+                    WHEN coalesce(p.confidence, 0.0) >= 0.72 THEN "Кандидат"
+                    ELSE "Потребує перевірки"
+                END AS resolved_status
+            RETURN
+                coalesce(f.code, f.faculty_id) AS code,
+                f.name AS name,
+                count(DISTINCT d) AS departments,
+                count(DISTINCT t) AS teachers,
+                count(
+                    DISTINCT CASE
+                        WHEN p IS NOT NULL
+                             AND (
+                                 $scope = "Усі записи"
+                                 OR ($scope = "Підтверджені" AND resolved_status IN ["Офіційно підтверджено", "Підтверджено"])
+                                 OR ($scope = "Офіційні" AND resolved_status = "Офіційно підтверджено")
+                             )
+                             AND (
+                                 $year_from IS NULL
+                                 OR ($year_to IS NOT NULL AND p.year IS NOT NULL AND p.year >= $year_from AND p.year <= $year_to)
+                             )
+                        THEN p
+                    END
+                ) AS publications
+            ORDER BY teachers DESC, publications DESC, name
+            """,
+            {
+                "scope": scope,
+                "year_from": year_from,
+                "year_to": year_to,
+                "faculty_code": faculty_code.strip(),
             },
         )
 
