@@ -3,8 +3,13 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
-from dotenv import load_dotenv
 import streamlit as st
+
+try:
+    from dotenv import load_dotenv
+except ModuleNotFoundError:  # pragma: no cover - optional on Streamlit Cloud
+    def load_dotenv() -> bool:
+        return False
 
 
 load_dotenv()
