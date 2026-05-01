@@ -3,17 +3,18 @@ from __future__ import annotations
 import re
 from textwrap import dedent
 from html import escape, unescape
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
-from config import get_connection_help_text, get_neo4j_config, get_publication_import_config
+from config import get_connection_help_text, get_neo4j_config
 from data.loaders import load_teachers_seed
 from data.seed_data import DEPARTMENTS, FACULTIES
-from services.neo4j_service import Neo4jService
-from services.publication_import import PublicationImportService
+
+if TYPE_CHECKING:
+    from services.neo4j_service import Neo4jService
 
 
 def setup_page(title: str) -> None:
@@ -803,6 +804,8 @@ else:
 
 @st.cache_resource(show_spinner=False)
 def _build_service(uri: str, user: str, password: str, database: str) -> Neo4jService:
+    from services.neo4j_service import Neo4jService
+
     service = Neo4jService(uri=uri, user=user, password=password, database=database)
     service.verify_connection()
     return service
@@ -817,6 +820,14 @@ def require_service() -> Neo4jService:
 
     try:
         return _build_service(config.uri, config.user, config.password, config.database)
+    except ModuleNotFoundError as exc:
+        st.error("Не вдалося запустити клієнт Neo4j у середовищі Streamlit Cloud.")
+        st.caption(
+            "Найімовірніше, залежність `neo4j` ще не встановилася або збірка середовища завершилася з помилкою. "
+            "Перевірте `Logs` і виконайте `Redeploy` після завершення встановлення залежностей."
+        )
+        st.code(str(exc))
+        st.stop()
     except Exception as exc:
         st.error(f"Не вдалося підключитися до Neo4j Aura: {exc}")
         if config.database:
