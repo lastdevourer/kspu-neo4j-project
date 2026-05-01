@@ -31,16 +31,6 @@ from utils.analytics import (
 )
 
 
-EXPORT_OPTIONS = {
-    "Топ викладачів": ("top_teachers.csv", "top_teachers"),
-    "Пари співавторів": ("top_coauthor_pairs.csv", "coauthor_pairs"),
-    "Centrality": ("centrality.csv", "centrality"),
-    "Джерела публікацій": ("publication_sources.csv", "sources"),
-    "Викладачі поточного контуру": ("scoped_teachers.csv", "scoped_teachers"),
-    "Аналітичний пакет": ("analytics_package.csv", "package"),
-}
-
-
 def _csv_bytes(frame: pd.DataFrame) -> bytes:
     return frame.to_csv(index=False).encode("utf-8-sig")
 
@@ -63,7 +53,7 @@ def _excel_bytes(sections: list[tuple[str, pd.DataFrame]]) -> bytes:
         if not wrote_sheet:
             pd.DataFrame([{"Стан": "Немає даних для експорту"}]).to_excel(
                 writer,
-                sheet_name="Summary",
+                sheet_name="Зведення",
                 index=False,
             )
     buffer.seek(0)
@@ -73,7 +63,7 @@ def _excel_bytes(sections: list[tuple[str, pd.DataFrame]]) -> bytes:
 EXPORT_OPTIONS = {
     "Топ викладачів": ("top_teachers.csv", "top_teachers", "csv"),
     "Пари співавторів": ("top_coauthor_pairs.csv", "coauthor_pairs", "csv"),
-    "Centrality": ("centrality.csv", "centrality", "csv"),
+    "Показники центральності": ("centrality.csv", "centrality", "csv"),
     "Джерела публікацій": ("publication_sources.csv", "sources", "csv"),
     "Викладачі поточного контуру": ("scoped_teachers.csv", "scoped_teachers", "csv"),
     "Аналітичний пакет XLSX": ("analytics_package.xlsx", "package_xlsx", "xlsx"),
@@ -145,6 +135,18 @@ def _report_package_frame(sections: list[tuple[str, pd.DataFrame]]) -> pd.DataFr
     if not frames:
         return pd.DataFrame(columns=["Розділ"])
     return pd.concat(frames, ignore_index=True, sort=False)
+
+
+def _department_comparison_frame(rows: list[dict]) -> pd.DataFrame:
+    frame = department_overview_dataframe(rows)
+    if frame.empty:
+        return frame
+    comparison = frame.copy()
+    comparison["Середнє на викладача"] = comparison.apply(
+        lambda row: round((float(row["Публікації"]) / float(row["Викладачі"])) if float(row["Викладачі"]) else 0.0, 2),
+        axis=1,
+    )
+    return comparison[["Кафедра", "Факультет", "Викладачі", "Публікації", "Середнє на викладача"]]
 
 
 def render() -> None:
@@ -252,11 +254,17 @@ def render() -> None:
         [
             ("Топ викладачів", top_teachers_export),
             ("Пари співавторів", top_pairs_export),
-            ("Centrality", centrality_export),
+            ("Показники центральності", centrality_export),
             ("Джерела публікацій", source_rows),
         ]
     )
     scoped_teachers_frame = teachers_dataframe_public(scoped_teacher_rows)
+    department_comparison_rows = service.get_department_overview_analytics(
+        scope=scope,
+        year_from=year_from,
+        year_to=year_to,
+    )
+    department_comparison = _department_comparison_frame(department_comparison_rows)
 
     render_section_heading("Експорт")
     export_choice = st.selectbox("Що завантажити", list(EXPORT_OPTIONS.keys()), key="analytics_export_choice")
@@ -279,13 +287,14 @@ def render() -> None:
         "scoped_teachers": scoped_teachers_frame if not scoped_teachers_frame.empty else pd.DataFrame(columns=["ПІБ"]),
     }
     package_sections = [
-        ("Summary", summary_export),
-        ("Top teachers", top_teachers_export),
-        ("Coauthor pairs", top_pairs_export),
-        ("Centrality", centrality_export),
-        ("Sources", source_rows),
-        ("Dynamics", yearly_counts),
-        ("Scoped teachers", scoped_teachers_frame),
+        ("Зведення", summary_export),
+        ("Топ викладачів", top_teachers_export),
+        ("Пари співавторів", top_pairs_export),
+        ("Показники центральності", centrality_export),
+        ("Джерела", source_rows),
+        ("Динаміка", yearly_counts),
+        ("Викладачі контуру", scoped_teachers_frame),
+        ("Порівняння кафедр", department_comparison),
     ]
     if export_format == "xlsx":
         try:
@@ -391,6 +400,21 @@ def render() -> None:
                 key="analytics_sources_table_fullscreen",
             )
             st.dataframe(source_rows, use_container_width=True, hide_index=True)
+
+    if department_comparison.empty:
+        render_section_heading("Порівняння кафедр")
+        render_empty_state(
+            "Порівняння кафедр поки недоступне",
+            "Коли в контурі буде більше зв'язаних даних, тут з'явиться порівняльний зріз кафедр.",
+        )
+    else:
+        render_fullscreen_dataframe_heading(
+            "Порівняння кафедр",
+            department_comparison,
+            key="analytics_department_comparison_fullscreen",
+            caption="Кафедри в поточному контурі з розрахунком середньої кількості публікацій на викладача.",
+        )
+        st.dataframe(department_comparison, use_container_width=True, hide_index=True)
 
     render_section_heading("Звіти", "Локальні зрізи для кафедри, факультету або окремого підрозділу.")
     departments = service.get_departments()
