@@ -9,6 +9,7 @@ from ui.components import (
     render_fullscreen_dataframe_heading,
     render_fullscreen_html_heading,
     render_header,
+    render_key_value_card,
     render_section_heading,
     require_service,
 )
@@ -204,6 +205,10 @@ def render() -> None:
 
         selected_teacher_label = st.selectbox("Оберіть викладача", list(teacher_labels.keys()))
         selected_teacher_id = teacher_labels[selected_teacher_label]
+        selected_teacher_profile = next(
+            (row for row in teacher_rows if str(row.get("id") or "").strip() == selected_teacher_id),
+            {},
+        )
         edges = service.get_teacher_focus_graph(selected_teacher_id, limit=edge_limit)
         if not edges:
             render_empty_state("Локальний граф порожній", "Для цього викладача ще не знайдено публікацій або співавторських зв'язків.")
@@ -216,6 +221,18 @@ def render() -> None:
         summary[0].metric("Обраний викладач", edges[0].get("focus_teacher_name", selected_teacher_label))
         summary[1].metric("Публікації у фокусі", publication_count)
         summary[2].metric("Співавтори поруч", coauthor_count)
+
+        render_key_value_card(
+            "Профіль викладача",
+            [
+                ("ПІБ", str(selected_teacher_profile.get("full_name") or edges[0].get("focus_teacher_name") or "")),
+                ("Кафедра", str(selected_teacher_profile.get("department_name") or "—")),
+                ("Посада", str(selected_teacher_profile.get("position") or "—")),
+                ("ORCID", str(selected_teacher_profile.get("orcid") or "—")),
+                ("Scopus", str(selected_teacher_profile.get("scopus") or "—")),
+                ("WoS", str(selected_teacher_profile.get("web_of_science") or "—")),
+            ],
+        )
 
         graph_html = build_bipartite_graph_html(edges, focus_teacher_id=selected_teacher_id)
         frame = graph_edges_dataframe(edges)
