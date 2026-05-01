@@ -47,6 +47,32 @@ def _csv_bytes(frame: pd.DataFrame) -> bytes:
     return frame.to_csv(index=False).encode("utf-8-sig")
 
 
+def _teacher_names(rows: list[dict]) -> set[str]:
+    return {str(row.get("full_name") or "").strip() for row in rows if str(row.get("full_name") or "").strip()}
+
+
+def _filter_publications_for_teachers(publications: list[dict], teachers: list[dict]) -> list[dict]:
+    scoped_names = _teacher_names(teachers)
+    if not scoped_names:
+        return []
+    filtered_rows: list[dict] = []
+    for publication in publications:
+        authors = {str(author).strip() for author in (publication.get("authors") or []) if str(author).strip()}
+        if authors & scoped_names:
+            filtered_rows.append(publication)
+    return filtered_rows
+
+
+def _department_label(row: dict) -> str:
+    faculty_name = str(row.get("faculty_name") or "").strip()
+    department_name = str(row.get("name") or "").strip()
+    return f"{department_name} — {faculty_name}" if faculty_name else department_name
+
+
+def _faculty_label(row: dict) -> str:
+    return str(row.get("name") or "").strip()
+
+
 def _scoped_teacher_rows(teachers: list[dict], publications: list[dict]) -> list[dict]:
     publication_counts = {row["teacher"]: row["publications"] for row in build_teacher_publication_rankings(publications, teachers, 10_000)}
     rows: list[dict] = []
@@ -236,27 +262,29 @@ def render() -> None:
             )
             st.dataframe(source_rows, use_container_width=True, hide_index=True)
 
-    render_section_heading("Звіти", "Швидкий експорт аналітичних зрізів для кафедри або факультету.")
+    render_section_heading("Звіти", "Локальні зрізи для кафедри, факультету або окремого підрозділу.")
     departments = service.get_departments()
     faculties = service.get_faculty_overview()
     report_department_tab, report_faculty_tab = st.tabs(["Звіт кафедри", "Звіт факультету"])
 
     with report_department_tab:
-        department_labels = {f"{row['name']} ({row['code']})": row["code"] for row in departments}
+        department_map = {_department_label(row): row for row in departments}
+        department_labels = {label: str(row.get("code") or "") for label, row in department_map.items()}
         if not department_labels:
             render_empty_state("Кафедри недоступні", "Спочатку потрібно заповнити довідник факультетів і кафедр.")
         else:
             selected_department_label = st.selectbox("Оберіть кафедру для звіту", list(department_labels.keys()))
             selected_department_code = department_labels[selected_department_label]
-            scoped_department_teachers = _scoped_teacher_rows(
-                service.get_teachers(department_code=selected_department_code),
-                scoped_publications,
-            )
+            raw_department_teachers = [
+                row for row in all_teachers if str(row.get("department_code") or "") == selected_department_code
+            ]
+            scoped_department_publications = _filter_publications_for_teachers(scoped_publications, raw_department_teachers)
+            scoped_department_teachers = _scoped_teacher_rows(raw_department_teachers, scoped_department_publications)
             teacher_report_frame = teachers_dataframe_public(scoped_department_teachers)
             department_overview_rows = [row for row in service.get_department_overview() if row.get("code") == selected_department_code]
             department_frame = department_overview_dataframe(department_overview_rows)
             teachers_in_scope = len(scoped_department_teachers)
-            publications_in_scope = sum(int(row.get("publications", 0) or 0) for row in scoped_department_teachers)
+            publications_in_scope = len(scoped_department_publications)
             profiles_ready = sum(
                 1
                 for row in scoped_department_teachers
@@ -306,16 +334,16 @@ def render() -> None:
                 )
 
     with report_faculty_tab:
-        faculty_labels = {f"{row['name']} ({row['code']})": row["code"] for row in faculties if row.get("code")}
+        faculty_map = {_faculty_label(row): row for row in faculties if row.get("code")}
+        faculty_labels = {label: str(row.get("code") or "") for label, row in faculty_map.items()}
         if not faculty_labels:
             render_empty_state("Факультети недоступні", "Спочатку потрібно заповнити структуру університету.")
         else:
             selected_faculty_label = st.selectbox("Оберіть факультет для звіту", list(faculty_labels.keys()))
             selected_faculty_code = faculty_labels[selected_faculty_label]
-            scoped_faculty_teachers = _scoped_teacher_rows(
-                [row for row in all_teachers if str(row.get("faculty_code") or "") == selected_faculty_code],
-                scoped_publications,
-            )
+            raw_faculty_teachers = [row for row in all_teachers if str(row.get("faculty_code") or "") == selected_faculty_code]
+            scoped_faculty_publications = _filter_publications_for_teachers(scoped_publications, raw_faculty_teachers)
+            scoped_faculty_teachers = _scoped_teacher_rows(raw_faculty_teachers, scoped_faculty_publications)
             faculty_teacher_frame = teachers_dataframe_public(scoped_faculty_teachers)
             faculty_frame = faculty_overview_dataframe([row for row in faculties if row.get("code") == selected_faculty_code])
             faculty_department_frame = department_overview_dataframe(
@@ -330,7 +358,7 @@ def render() -> None:
             )
             faculty_summary[2].metric(
                 "Публікації в контурі",
-                sum(int(row.get("publications", 0) or 0) for row in scoped_faculty_teachers),
+                len(scoped_faculty_publications),
             )
 
             faculty_columns = st.columns([1.12, 0.88], gap="large")
