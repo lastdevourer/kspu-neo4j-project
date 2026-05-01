@@ -318,6 +318,11 @@ def apply_theme() -> None:
             text-align: center;
         }
 
+        div[data-testid="stMetric"] > div {
+            align-items: center;
+            text-align: center;
+        }
+
         div[data-testid="stMetric"]::after {
             content: "";
             position: absolute;
@@ -335,11 +340,14 @@ def apply_theme() -> None:
             letter-spacing: 0.06em;
             line-height: 1.35;
             justify-content: center;
+            text-align: center;
         }
 
         div[data-testid="stMetricLabel"] p {
             line-height: 1.35;
             margin-bottom: 0;
+            text-align: center;
+            width: 100%;
         }
 
         div[data-testid="stMetricValue"] {
@@ -348,6 +356,14 @@ def apply_theme() -> None:
             font-family: "Space Grotesk", "Manrope", sans-serif;
             letter-spacing: -0.04em;
             justify-content: center;
+            text-align: center;
+            width: 100%;
+        }
+
+        div[data-testid="stMetricValue"] > div,
+        div[data-testid="stMetricValue"] p {
+            width: 100%;
+            text-align: center;
         }
 
         div.stButton > button {
