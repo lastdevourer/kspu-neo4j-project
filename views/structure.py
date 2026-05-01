@@ -17,8 +17,8 @@ from ui.components import (
     require_service,
 )
 from ui.formatters import (
-    department_overview_dataframe,
-    faculty_overview_dataframe,
+    department_overview_dataframe_admin,
+    faculty_overview_dataframe_admin,
     publication_sources_dataframe,
     teachers_dataframe_admin,
 )
@@ -129,8 +129,8 @@ def _render_faculty_department_tab(service) -> None:
             or department_search in str(row.get("code") or "").lower()
         ]
 
-    faculty_frame = faculty_overview_dataframe(filtered_faculty_rows)
-    department_frame = department_overview_dataframe(filtered_department_rows)
+    faculty_frame = faculty_overview_dataframe_admin(filtered_faculty_rows)
+    department_frame = department_overview_dataframe_admin(filtered_department_rows)
 
     summary = st.columns(3, gap="medium")
     with summary[0]:
