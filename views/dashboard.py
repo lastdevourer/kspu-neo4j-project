@@ -30,6 +30,7 @@ def render() -> None:
 
     counts = service.get_overview_counts()
     profile_coverage = service.get_profile_coverage()
+    total_teachers = int(profile_coverage.get("teachers") or counts.get("teachers") or 0)
     publication_sources = publication_sources_dataframe(service.get_publication_source_summary())
     faculty_overview_rows = service.get_faculty_overview()
     department_overview_rows = service.get_department_overview()
@@ -113,19 +114,20 @@ def render() -> None:
                 st.dataframe(top_departments, use_container_width=True, hide_index=True)
 
     with coverage_tab:
-        if total_teachers:
+        if total_teachers > 0:
+            safe_total = max(total_teachers, 1)
             coverage_columns = st.columns(5, gap="medium")
-            coverage_columns[0].metric("Будь-який профіль", f"{profile_coverage['with_any_profile']} / {total_teachers}")
-            coverage_columns[1].metric("ORCID", f"{profile_coverage['with_orcid']} / {total_teachers}")
-            coverage_columns[2].metric("Scholar", f"{profile_coverage['with_scholar']} / {total_teachers}")
-            coverage_columns[3].metric("Scopus", f"{profile_coverage['with_scopus']} / {total_teachers}")
-            coverage_columns[4].metric("WoS", f"{profile_coverage['with_wos']} / {total_teachers}")
+            coverage_columns[0].metric("Будь-який профіль", f"{profile_coverage['with_any_profile']} / {safe_total}")
+            coverage_columns[1].metric("ORCID", f"{profile_coverage['with_orcid']} / {safe_total}")
+            coverage_columns[2].metric("Scholar", f"{profile_coverage['with_scholar']} / {safe_total}")
+            coverage_columns[3].metric("Scopus", f"{profile_coverage['with_scopus']} / {safe_total}")
+            coverage_columns[4].metric("WoS", f"{profile_coverage['with_wos']} / {safe_total}")
 
             progress_columns = st.columns(4, gap="medium")
-            progress_columns[0].progress(profile_coverage["with_any_profile"] / total_teachers, text="Профілі загалом")
-            progress_columns[1].progress(profile_coverage["with_orcid"] / total_teachers, text="ORCID")
-            progress_columns[2].progress(profile_coverage["with_scopus"] / total_teachers, text="Scopus")
-            progress_columns[3].progress(profile_coverage["with_wos"] / total_teachers, text="Web of Science")
+            progress_columns[0].progress(profile_coverage["with_any_profile"] / safe_total, text="Профілі загалом")
+            progress_columns[1].progress(profile_coverage["with_orcid"] / safe_total, text="ORCID")
+            progress_columns[2].progress(profile_coverage["with_scopus"] / safe_total, text="Scopus")
+            progress_columns[3].progress(profile_coverage["with_wos"] / safe_total, text="Web of Science")
 
         if not publication_sources.empty:
             chart_source = publication_sources.set_index("Джерело")
