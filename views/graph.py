@@ -28,7 +28,9 @@ def _department_options(service) -> dict[str, str]:
     rows = service.get_departments()
     options = {"Усі кафедри": ""}
     for row in rows:
-        options[f"{row['name']} ({row['code']})"] = row["code"]
+        faculty_name = str(row.get("faculty_name") or "").strip()
+        label = f"{row['name']} — {faculty_name}" if faculty_name else str(row["name"])
+        options[label] = row["code"]
     return options
 
 
@@ -36,7 +38,24 @@ def _faculty_options(service) -> dict[str, str]:
     rows = service.get_faculty_overview()
     options = {"Усі факультети": ""}
     for row in rows:
-        options[f"{row['name']} ({row['code']})"] = row["code"]
+        options[str(row["name"])] = row["code"]
+    return options
+
+
+def _teacher_options(rows: list[dict[str, object]]) -> dict[str, str]:
+    options: dict[str, str] = {}
+    for row in rows:
+        name = str(row.get("full_name") or "").strip()
+        department_name = str(row.get("department_name") or "").strip()
+        if not name:
+            continue
+        label = f"{name} — {department_name}" if department_name else name
+        suffix = 2
+        candidate = label
+        while candidate in options:
+            candidate = f"{label} ({suffix})"
+            suffix += 1
+        options[candidate] = str(row.get("id") or "").strip()
     return options
 
 
@@ -92,7 +111,7 @@ def render() -> None:
 
     mode = st.radio(
         "Режим мережі",
-        ["Авторство", "Співавторство викладачів", "Зв'язки між кафедрами"],
+        ["Авторство", "Співавторство викладачів", "Профіль викладача", "Зв'язки між кафедрами"],
         horizontal=True,
     )
     controls = st.columns([1.15, 0.85], gap="large")
@@ -103,6 +122,8 @@ def render() -> None:
             st.caption("У цій проєкції вузли викладачів з'єднуються з вузлами публікацій. Це зручно для перевірки авторств і покриття записів.")
         elif mode == "Співавторство викладачів":
             st.caption("Тут показані прямі зв'язки між викладачами. Чим товстіше ребро, тим більше спільних робіт між парою.")
+        elif mode == "Профіль викладача":
+            st.caption("Цей режим будує локальну мережу навколо одного викладача: його публікації, найближчі співавтори та пов'язаний підрозділ.")
         else:
             st.caption("У цій проєкції видно співпрацю між кафедрами. Це один із найсильніших зрізів для демонстрації реальної мережевої взаємодії.")
 
@@ -164,6 +185,49 @@ def render() -> None:
             caption="Мережа співавторства викладачів",
             export_name="graph_coauthors.csv",
             empty_graph_text="Інтерактивна візуалізація недоступна, але табличний зріз зв'язків збережено.",
+        )
+        return
+
+    if mode == "Профіль викладача":
+        department_labels = _department_options(service)
+        selected_department_label = controls[0].selectbox("Кафедра", list(department_labels.keys()))
+        selected_department_code = department_labels[selected_department_label]
+        teacher_rows = service.get_teachers()
+        if selected_department_code:
+            teacher_rows = [
+                row for row in teacher_rows if str(row.get("department_code") or "").strip() == selected_department_code
+            ]
+        teacher_labels = _teacher_options(teacher_rows)
+        if not teacher_labels:
+            render_empty_state("Викладачі недоступні", "У вибраній кафедрі поки немає викладачів для побудови локального графа.")
+            return
+
+        selected_teacher_label = st.selectbox("Оберіть викладача", list(teacher_labels.keys()))
+        selected_teacher_id = teacher_labels[selected_teacher_label]
+        edges = service.get_teacher_focus_graph(selected_teacher_id, limit=edge_limit)
+        if not edges:
+            render_empty_state("Локальний граф порожній", "Для цього викладача ще не знайдено публікацій або співавторських зв'язків.")
+            return
+
+        publication_count = len({edge["publication_id"] for edge in edges})
+        teacher_count = len({edge["teacher_id"] for edge in edges})
+        coauthor_count = max(teacher_count - 1, 0)
+        summary = st.columns(3, gap="medium")
+        summary[0].metric("Обраний викладач", edges[0].get("focus_teacher_name", selected_teacher_label))
+        summary[1].metric("Публікації у фокусі", publication_count)
+        summary[2].metric("Співавтори поруч", coauthor_count)
+
+        graph_html = build_bipartite_graph_html(edges, focus_teacher_id=selected_teacher_id)
+        frame = graph_edges_dataframe(edges)
+        _render_graph_tabs(
+            title="Локальна мережа викладача",
+            html=graph_html,
+            frame=frame,
+            fullscreen_key="graph_teacher_focus_fullscreen",
+            table_fullscreen_key="graph_teacher_focus_table_fullscreen",
+            caption="Публікації та співавтори навколо обраного викладача.",
+            export_name="graph_teacher_focus.csv",
+            empty_graph_text="Інтерактивна візуалізація недоступна, але нижче можна переглянути табличний зріз локального графа.",
         )
         return
 
