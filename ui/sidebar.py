@@ -19,7 +19,7 @@ def render_sidebar(
             """
             <div class="sidebar-brand">
                 <div class="sidebar-brand-kicker">KSU</div>
-                <div class="sidebar-brand-title">Наукові публікації</div>
+                <div class="sidebar-brand-title">Наукова аналітика</div>
             </div>
             """,
             unsafe_allow_html=True,
