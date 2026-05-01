@@ -16,6 +16,7 @@ from ui.components import (
 from ui.formatters import (
     centrality_dataframe,
     department_overview_dataframe,
+    faculty_overview_dataframe,
     publication_sources_dataframe,
     top_coauthor_pairs_dataframe,
     top_teachers_dataframe,
@@ -251,7 +252,7 @@ def render() -> None:
                 service.get_teachers(department_code=selected_department_code),
                 scoped_publications,
             )
-            teacher_report_frame = teachers_dataframe(scoped_department_teachers)
+            teacher_report_frame = teachers_dataframe_public(scoped_department_teachers)
             department_overview_rows = [row for row in service.get_department_overview() if row.get("code") == selected_department_code]
             department_frame = department_overview_dataframe(department_overview_rows)
             teachers_in_scope = len(scoped_department_teachers)
@@ -315,7 +316,7 @@ def render() -> None:
                 [row for row in all_teachers if str(row.get("faculty_code") or "") == selected_faculty_code],
                 scoped_publications,
             )
-            faculty_teacher_frame = teachers_dataframe(scoped_faculty_teachers)
+            faculty_teacher_frame = teachers_dataframe_public(scoped_faculty_teachers)
             faculty_frame = faculty_overview_dataframe([row for row in faculties if row.get("code") == selected_faculty_code])
             faculty_department_frame = department_overview_dataframe(
                 [row for row in service.get_department_overview() if row.get("faculty_code") == selected_faculty_code]
