@@ -25,7 +25,6 @@ from ui.formatters import (
 from utils.analytics import (
     build_centrality_edges,
     build_diploma_summary,
-    build_publication_source_rows,
     calculate_centrality_rows,
     filter_publications_by_scope,
 )
@@ -67,24 +66,12 @@ def _load_analytics_snapshot(_service, scope: str, top_limit: int, year_range: t
             year_from=year_from,
             year_to=year_to,
         ),
+        "sources": _service.get_publication_source_summary_analytics(
+            scope=scope,
+            year_from=year_from,
+            year_to=year_to,
+        ),
     }
-
-
-def _teacher_names(rows: list[dict]) -> set[str]:
-    return {str(row.get("full_name") or "").strip() for row in rows if str(row.get("full_name") or "").strip()}
-
-
-def _filter_publications_for_teachers(publications: list[dict], teachers: list[dict]) -> list[dict]:
-    scoped_names = _teacher_names(teachers)
-    if not scoped_names:
-        return []
-    filtered_rows: list[dict] = []
-    for publication in publications:
-        authors = {str(author).strip() for author in (publication.get("authors") or []) if str(author).strip()}
-        if authors & scoped_names:
-            filtered_rows.append(publication)
-    return filtered_rows
-
 
 def _filter_publications_by_year_range(publications: list[dict], year_range: tuple[int, int] | None) -> list[dict]:
     if not year_range:
@@ -109,16 +96,6 @@ def _department_label(row: dict) -> str:
 
 def _faculty_label(row: dict) -> str:
     return str(row.get("name") or "").strip()
-
-
-def _scoped_teacher_rows(teachers: list[dict], publications: list[dict]) -> list[dict]:
-    publication_counts = {row["teacher"]: row["publications"] for row in build_teacher_publication_rankings(publications, teachers, 10_000)}
-    rows: list[dict] = []
-    for teacher in teachers:
-        row = dict(teacher)
-        row["publications"] = int(publication_counts.get(str(teacher.get("full_name") or "").strip(), 0))
-        rows.append(row)
-    return rows
 
 
 def _report_package_frame(sections: list[tuple[str, pd.DataFrame]]) -> pd.DataFrame:
@@ -155,17 +132,24 @@ def render() -> None:
         )
         st.caption("Публікації без вказаного року не входять у фільтр періоду.")
 
+    year_from = selected_year_range[0] if selected_year_range else None
+    year_to = selected_year_range[1] if selected_year_range else None
     all_teachers = service.get_teachers()
     analytics_snapshot = _load_analytics_snapshot(service, scope, top_limit, selected_year_range)
+    scoped_teacher_rows = service.get_teachers_analytics(
+        scope=scope,
+        year_from=year_from,
+        year_to=year_to,
+    )
     scoped_publications = filter_publications_by_scope(service.get_publications(), scope)
     scoped_publications = _filter_publications_by_year_range(scoped_publications, selected_year_range)
     top_teachers = analytics_snapshot["top_teachers"]
     top_pairs = analytics_snapshot["top_pairs"]
     centrality_rows = calculate_centrality_rows(build_centrality_edges(scoped_publications, all_teachers))[:top_limit]
     profile_coverage = service.get_profile_coverage()
-    source_rows = publication_sources_dataframe(build_publication_source_rows(scoped_publications))
+    source_rows = publication_sources_dataframe(analytics_snapshot["sources"])
     scoped_publication_count = len(scoped_publications)
-    teachers_with_publications = sum(1 for row in _scoped_teacher_rows(all_teachers, scoped_publications) if int(row.get("publications", 0) or 0) > 0)
+    teachers_with_publications = sum(1 for row in scoped_teacher_rows if int(row.get("publications", 0) or 0) > 0)
     average_publications = (scoped_publication_count / teachers_with_publications) if teachers_with_publications else 0.0
 
     highlights = st.columns(4, gap="medium")
@@ -236,7 +220,7 @@ def render() -> None:
             ("Джерела публікацій", source_rows),
         ]
     )
-    scoped_teachers_frame = teachers_dataframe_public(_scoped_teacher_rows(all_teachers, scoped_publications))
+    scoped_teachers_frame = teachers_dataframe_public(scoped_teacher_rows)
 
     render_section_heading("Експорт")
     export_choice = st.selectbox("Що завантажити", list(EXPORT_OPTIONS.keys()), key="analytics_export_choice")
@@ -353,16 +337,23 @@ def render() -> None:
         else:
             selected_department_label = st.selectbox("Оберіть кафедру для звіту", list(department_labels.keys()))
             selected_department_code = department_labels[selected_department_label]
-            raw_department_teachers = [
-                row for row in all_teachers if str(row.get("department_code") or "") == selected_department_code
-            ]
-            scoped_department_publications = _filter_publications_for_teachers(scoped_publications, raw_department_teachers)
-            scoped_department_teachers = _scoped_teacher_rows(raw_department_teachers, scoped_department_publications)
+            scoped_department_teachers = service.get_teachers_analytics(
+                scope=scope,
+                year_from=year_from,
+                year_to=year_to,
+                department_code=selected_department_code,
+            )
             teacher_report_frame = teachers_dataframe_public(scoped_department_teachers)
-            department_overview_rows = [row for row in service.get_department_overview() if row.get("code") == selected_department_code]
+            department_overview_rows = service.get_department_overview_analytics(
+                scope=scope,
+                year_from=year_from,
+                year_to=year_to,
+                department_code=selected_department_code,
+            )
             department_frame = department_overview_dataframe(department_overview_rows)
-            teachers_in_scope = len(scoped_department_teachers)
-            publications_in_scope = len(scoped_department_publications)
+            department_summary_row = department_overview_rows[0] if department_overview_rows else {}
+            teachers_in_scope = int(department_summary_row.get("teachers", len(scoped_department_teachers)) or 0)
+            publications_in_scope = int(department_summary_row.get("publications", 0) or 0)
             profiles_ready = sum(
                 1
                 for row in scoped_department_teachers
@@ -419,24 +410,38 @@ def render() -> None:
         else:
             selected_faculty_label = st.selectbox("Оберіть факультет для звіту", list(faculty_labels.keys()))
             selected_faculty_code = faculty_labels[selected_faculty_label]
-            raw_faculty_teachers = [row for row in all_teachers if str(row.get("faculty_code") or "") == selected_faculty_code]
-            scoped_faculty_publications = _filter_publications_for_teachers(scoped_publications, raw_faculty_teachers)
-            scoped_faculty_teachers = _scoped_teacher_rows(raw_faculty_teachers, scoped_faculty_publications)
-            faculty_teacher_frame = teachers_dataframe_public(scoped_faculty_teachers)
-            faculty_frame = faculty_overview_dataframe([row for row in faculties if row.get("code") == selected_faculty_code])
-            faculty_department_frame = department_overview_dataframe(
-                [row for row in service.get_department_overview() if row.get("faculty_code") == selected_faculty_code]
+            scoped_faculty_teachers = service.get_teachers_analytics(
+                scope=scope,
+                year_from=year_from,
+                year_to=year_to,
+                faculty_code=selected_faculty_code,
             )
+            faculty_teacher_frame = teachers_dataframe_public(scoped_faculty_teachers)
+            faculty_rows = service.get_faculty_overview_analytics(
+                scope=scope,
+                year_from=year_from,
+                year_to=year_to,
+                faculty_code=selected_faculty_code,
+            )
+            faculty_frame = faculty_overview_dataframe(faculty_rows)
+            faculty_department_rows = service.get_department_overview_analytics(
+                scope=scope,
+                year_from=year_from,
+                year_to=year_to,
+                faculty_code=selected_faculty_code,
+            )
+            faculty_department_frame = department_overview_dataframe(faculty_department_rows)
+            faculty_summary_row = faculty_rows[0] if faculty_rows else {}
 
             faculty_summary = st.columns(3, gap="medium")
-            faculty_summary[0].metric("Кафедри факультету", len(faculty_department_frame))
+            faculty_summary[0].metric("Кафедри факультету", int(faculty_summary_row.get("departments", len(faculty_department_frame)) or 0))
             faculty_summary[1].metric(
                 "Викладачі факультету",
-                len(scoped_faculty_teachers),
+                int(faculty_summary_row.get("teachers", len(scoped_faculty_teachers)) or 0),
             )
             faculty_summary[2].metric(
                 "Публікації в контурі",
-                len(scoped_faculty_publications),
+                int(faculty_summary_row.get("publications", 0) or 0),
             )
 
             faculty_columns = st.columns([1.12, 0.88], gap="large")
