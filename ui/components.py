@@ -839,7 +839,7 @@ def render_sidebar(service: Neo4jService) -> None:
             """
             <div class="sidebar-brand">
                 <div class="sidebar-brand-kicker">KSU</div>
-                <div class="sidebar-brand-title">Академічна мережа</div>
+                <div class="sidebar-brand-title">Академічна аналітика</div>
             </div>
             """,
             unsafe_allow_html=True,
