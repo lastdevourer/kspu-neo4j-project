@@ -1,21 +1,22 @@
 from __future__ import annotations
 
+from importlib import import_module
+
 import streamlit as st
 
 from config import is_admin_mode
 from ui.components import require_service, setup_page
 from ui.sidebar import render_sidebar
-from views import analytics, dashboard, data_center, graph, publications, structure, teachers
 
 
 PAGES: dict[str, dict[str, object]] = {
-    "dashboard": {"title": "Дашборд", "section": "Огляд", "render": dashboard.render},
-    "graph": {"title": "Граф", "section": "Огляд", "render": graph.render},
-    "analytics": {"title": "Аналітика", "section": "Огляд", "render": analytics.render},
-    "teachers": {"title": "Викладачі", "section": "Каталог", "render": teachers.render},
-    "publications": {"title": "Публікації", "section": "Каталог", "render": publications.render},
-    "structure": {"title": "Структура", "section": "Адміністрування", "render": structure.render},
-    "data-center": {"title": "Центр даних", "section": "Адміністрування", "render": data_center.render},
+    "dashboard": {"title": "Дашборд", "section": "Огляд", "module": "views.dashboard"},
+    "graph": {"title": "Граф", "section": "Огляд", "module": "views.graph"},
+    "analytics": {"title": "Аналітика", "section": "Огляд", "module": "views.analytics"},
+    "teachers": {"title": "Викладачі", "section": "Каталог", "module": "views.teachers"},
+    "publications": {"title": "Публікації", "section": "Каталог", "module": "views.publications"},
+    "structure": {"title": "Структура", "section": "Адміністрування", "module": "views.structure"},
+    "data-center": {"title": "Центр даних", "section": "Адміністрування", "module": "views.data_center"},
 }
 
 DEFAULT_PAGE = "dashboard"
@@ -46,6 +47,12 @@ def _resolve_current_page(visible_pages: dict[str, dict[str, object]]) -> str:
     return page
 
 
+def _render_page(page_meta: dict[str, object]) -> None:
+    module = import_module(str(page_meta["module"]))
+    render = getattr(module, "render")
+    render()
+
+
 setup_page("Академічна мережа KSU")
 service = require_service()
 visible_pages = _visible_pages()
@@ -57,5 +64,4 @@ if selected_page != current_page:
     st.query_params["page"] = selected_page
     st.rerun()
 
-page_render = visible_pages[current_page]["render"]
-page_render()
+_render_page(visible_pages[current_page])
