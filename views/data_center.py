@@ -12,7 +12,12 @@ from ui.components import (
     render_summary_strip,
     require_service,
 )
-from ui.formatters import audit_events_dataframe, duplicate_candidates_dataframe, publications_dataframe_admin
+from ui.formatters import (
+    audit_events_dataframe,
+    duplicate_candidates_dataframe,
+    import_runs_dataframe,
+    publications_dataframe_admin,
+)
 
 
 FLASH_KEY = "data_center_flash"
@@ -29,6 +34,7 @@ DATA_CENTER_EXPORT_OPTIONS = {
     "Викладачі без профілів": ("teachers_without_profiles.csv", "without_profiles"),
     "Викладачі без публікацій": ("teachers_without_publications.csv", "without_publications"),
     "Журнал аудиту": ("audit_log.csv", "audit"),
+    "Історія імпортів": ("import_runs.csv", "imports"),
     "Самоперевірка": ("selftest_results.csv", "selftest"),
 }
 
@@ -453,6 +459,52 @@ def _render_audit_tab(service) -> None:
         )
 
 
+def _render_import_runs_tab(service) -> None:
+    render_section_heading(
+        "Історія імпортів",
+        "Переглядайте останні запуски імпорту публікацій, їх покриття, попередження та помилки.",
+    )
+    rows = service.get_import_runs(limit=80)
+    if not rows:
+        render_empty_state("Імпорти ще не запускалися", "Після першого запуску автоматичного імпорту тут з'явиться журнал із підсумками.")
+        return
+
+    import_frame = import_runs_dataframe(rows)
+    top = st.columns([1.18, 0.82], gap="large")
+    with top[0]:
+        render_fullscreen_dataframe_heading(
+            "Історія імпортів",
+            import_frame,
+            key="data_center_import_runs_fullscreen",
+            caption="Повний журнал запусків імпорту публікацій.",
+        )
+        st.dataframe(import_frame, use_container_width=True, hide_index=True)
+        st.download_button(
+            "Експорт історії імпортів CSV",
+            _csv_bytes(import_frame),
+            file_name="import_runs.csv",
+            mime="text/csv",
+            use_container_width=True,
+        )
+    with top[1]:
+        completed = sum(1 for row in rows if str(row.get("status") or "").strip() == "Завершено")
+        failed = sum(1 for row in rows if str(row.get("status") or "").strip() == "Помилка")
+        warnings_total = sum(int(row.get("warnings_count", 0) or 0) for row in rows)
+        latest = rows[0]
+        render_key_value_card(
+            "Огляд запусків",
+            [
+                ("Успішні", str(completed)),
+                ("Проблемні", str(failed)),
+                ("Попередження", str(warnings_total)),
+                ("Останній статус", str(latest.get("status") or "")),
+            ],
+        )
+        latest_error = str(latest.get("error_message") or "").strip()
+        if latest_error:
+            st.warning(f"Остання помилка: {latest_error}")
+
+
 def _render_duplicate_candidates(service, all_publications: list[dict[str, object]]) -> None:
     render_section_heading(
         "Підозра на дублювання",
@@ -680,6 +732,7 @@ def render() -> None:
         if not any(str(row.get(key) or "").strip() for key in ("orcid", "google_scholar", "scopus", "web_of_science"))
     ]
     teachers_without_publications = [row for row in all_teachers if int(row.get("publications", 0) or 0) == 0]
+    import_runs = service.get_import_runs(limit=80)
 
     summary = st.columns(4, gap="medium")
     with summary[0]:
@@ -691,7 +744,9 @@ def render() -> None:
     with summary[3]:
         render_summary_strip("Усього публікацій", str(len(all_publications)))
 
-    moderation_tab, manual_tab, audit_tab, selftest_tab = st.tabs(["Модерація", "Ручне додавання", "Аудит", "Самоперевірка"])
+    moderation_tab, manual_tab, imports_tab, audit_tab, selftest_tab = st.tabs(
+        ["Модерація", "Ручне додавання", "Імпорти", "Аудит", "Самоперевірка"]
+    )
 
     with moderation_tab:
         render_section_heading("Проблемні записи", "Працюйте з кандидатами, сумнівними матчами та відхиленими роботами.")
@@ -719,13 +774,14 @@ def render() -> None:
 
         export_choice = st.selectbox(
             "Експорт з центру даних",
-            ["Проблемні записи", "Викладачі без профілів", "Викладачі без публікацій"],
+            ["Проблемні записи", "Викладачі без профілів", "Викладачі без публікацій", "Історія імпортів"],
             key="data_center_export_choice",
         )
         export_frames = {
             "problematic": publications_dataframe_admin(filtered_problematic) if filtered_problematic else pd.DataFrame(columns=["Назва"]),
             "without_profiles": _teacher_gap_frame(teachers_without_profiles) if teachers_without_profiles else pd.DataFrame(columns=["ПІБ"]),
             "without_publications": _teacher_gap_frame(teachers_without_publications) if teachers_without_publications else pd.DataFrame(columns=["ПІБ"]),
+            "imports": import_runs_dataframe(import_runs) if import_runs else pd.DataFrame(columns=["Початок"]),
         }
         export_file_name, export_key = DATA_CENTER_EXPORT_OPTIONS[export_choice]
         st.download_button(
@@ -796,6 +852,9 @@ def render() -> None:
 
     with manual_tab:
         _render_manual_add(service, all_teachers, departments)
+
+    with imports_tab:
+        _render_import_runs_tab(service)
 
     with audit_tab:
         _render_audit_tab(service)
