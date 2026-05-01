@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import streamlit as st
 
 from config import get_admin_password, is_admin_mode
-from services.neo4j_service import Neo4jService
+
+if TYPE_CHECKING:
+    from services.neo4j_service import Neo4jService
 
 
 def render_sidebar(
-    service: Neo4jService,
+    service: "Neo4jService",
     *,
     current_page: str,
     pages: dict[str, dict[str, object]],
