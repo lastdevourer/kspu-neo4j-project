@@ -5,7 +5,6 @@ from importlib import import_module
 import streamlit as st
 
 from config import is_admin_mode
-from ui.components import setup_page
 from ui.sidebar import render_sidebar
 
 
@@ -54,7 +53,6 @@ def _render_page(page_meta: dict[str, object]) -> None:
 
 
 def run() -> None:
-    setup_page("Академічна мережа KSU")
     visible_pages = _visible_pages()
     current_page = _resolve_current_page(visible_pages)
     selected_page = render_sidebar(current_page=current_page, pages=visible_pages)
