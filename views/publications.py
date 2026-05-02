@@ -444,7 +444,7 @@ else:
 def render() -> None:
     service = require_service()
     admin_mode = is_admin_mode()
-    render_header("Публікації")
+    render_header("Публікації", "Каталог наукових робіт з фільтрами, деталями записів і прив'язкою до викладачів.")
     _show_flash_message()
 
     years = service.get_publication_years()
