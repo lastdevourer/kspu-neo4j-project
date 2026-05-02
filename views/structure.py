@@ -588,6 +588,7 @@ def _render_publications_tab(service) -> None:
                         publications_found=len(bundle.publications),
                         authorships_found=len(bundle.authorships),
                         warnings_count=len(bundle.warnings),
+                        warning_details="\n".join(str(item).strip() for item in bundle.warnings if str(item).strip()),
                         provider_summary=provider_summary,
                     )
                     st.session_state[FLASH_KEY] = (
@@ -604,6 +605,7 @@ def _render_publications_tab(service) -> None:
                         publications_found=0,
                         authorships_found=0,
                         warnings_count=0,
+                        warning_details="",
                         provider_summary="",
                         error_message=f"{type(exc).__name__}: {exc}",
                     )
