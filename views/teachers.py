@@ -238,7 +238,7 @@ def _render_publication_management(
 def render() -> None:
     service = require_service()
     admin_mode = is_admin_mode()
-    render_header("Викладачі")
+    render_header("Викладачі", "Пошук, профілі, публікації та співавторські зв'язки викладачів університету.")
     _show_flash_message()
 
     departments = service.get_departments()
