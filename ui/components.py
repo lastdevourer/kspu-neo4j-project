@@ -679,6 +679,11 @@ def apply_theme() -> None:
             color: #f8feff;
         }
 
+        div.stButton > button[kind="secondary"] {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 254, 0.98));
+            color: var(--text-main);
+        }
+
         div[data-baseweb="select"] > div,
         div[data-baseweb="base-input"] > div,
         .stTextInput > div > div,
@@ -686,6 +691,42 @@ def apply_theme() -> None:
             background: rgba(255, 255, 255, 0.98);
             border-color: rgba(37, 99, 235, 0.12);
             box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
+        }
+
+        div[data-baseweb="tab-list"] {
+            gap: 0.45rem;
+            margin-bottom: 0.35rem;
+        }
+
+        button[role="tab"] {
+            border-radius: 14px !important;
+            padding: 0.55rem 0.9rem !important;
+            border: 1px solid rgba(37, 99, 235, 0.08) !important;
+            background: rgba(255, 255, 255, 0.58) !important;
+            color: var(--text-soft) !important;
+            transition: all 0.18s ease;
+        }
+
+        button[role="tab"][aria-selected="true"] {
+            background: rgba(255, 255, 255, 0.96) !important;
+            color: var(--text-main) !important;
+            border-color: rgba(14, 165, 233, 0.18) !important;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+        }
+
+        [data-baseweb="radio"] > div {
+            background: rgba(255, 255, 255, 0.72);
+            border-radius: 14px;
+            padding: 0.15rem 0.2rem;
+            border: 1px solid rgba(37, 99, 235, 0.08);
+        }
+
+        [data-testid="stProgressBar"] > div > div {
+            background: rgba(14, 165, 233, 0.14) !important;
+        }
+
+        [data-testid="stProgressBar"] div[role="progressbar"] {
+            background: linear-gradient(90deg, rgba(14, 165, 233, 0.92), rgba(45, 212, 191, 0.88)) !important;
         }
 
         [data-testid="stSidebar"] {
@@ -704,6 +745,27 @@ def apply_theme() -> None:
 
         [data-testid="stSidebarNavLink"][aria-current="page"] span {
             color: var(--text-main);
+        }
+
+        [data-testid="stDataFrame"] table,
+        [data-testid="stDataFrameResizable"] table {
+            background: rgba(255, 255, 255, 0.96);
+        }
+
+        [data-testid="stDataFrame"] th,
+        [data-testid="stDataFrameResizable"] th {
+            background: rgba(243, 248, 253, 0.96) !important;
+            color: var(--text-main) !important;
+        }
+
+        [data-testid="stDataFrame"] td,
+        [data-testid="stDataFrameResizable"] td {
+            color: var(--text-main) !important;
+        }
+
+        iframe {
+            border-radius: 22px;
+            background: rgba(255, 255, 255, 0.96);
         }
 
         [data-testid="stMarkdownContainer"] p code,
