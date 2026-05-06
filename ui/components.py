@@ -794,7 +794,7 @@ def apply_theme() -> None:
         .stCaption p,
         small,
         .stMarkdown p {
-            color: #0f2740 !important;
+            color: #17324d !important;
         }
 
         .summary-strip-caption,
@@ -999,6 +999,8 @@ def apply_theme() -> None:
             border: 1px solid rgba(37, 99, 235, 0.12);
             background: rgba(255, 255, 255, 0.98);
             box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+            scrollbar-color: rgba(37, 99, 235, 0.28) rgba(226, 236, 248, 0.9);
+            scrollbar-width: thin;
         }
 
         .adaptive-light-table-shell table {
@@ -1031,14 +1033,17 @@ def apply_theme() -> None:
             white-space: nowrap;
         }
 
+        .adaptive-light-table-shell td:nth-child(1),
+        .adaptive-light-table-shell td:nth-child(2),
+        .adaptive-light-table-shell th:nth-child(1),
+        .adaptive-light-table-shell th:nth-child(2) {
+            white-space: normal;
+            min-width: 180px;
+        }
+
         .adaptive-light-table-shell td {
             line-height: 1.4;
             color: var(--text-main);
-        }
-
-        .adaptive-light-table-shell td:first-child,
-        .adaptive-light-table-shell th:first-child {
-            min-width: 72px;
         }
 
         .adaptive-light-table-shell tbody tr:hover td {
@@ -1053,6 +1058,89 @@ def apply_theme() -> None:
         .adaptive-light-table-shell::-webkit-scrollbar-thumb {
             background: rgba(37, 99, 235, 0.25);
             border-radius: 999px;
+        }
+
+        .empty-state {
+            border: 1px dashed rgba(37, 99, 235, 0.12);
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        .empty-state-title,
+        .empty-state-body {
+            color: var(--text-main) !important;
+        }
+
+        .summary-strip-caption,
+        .section-heading-subtitle,
+        .sidebar-section-label,
+        .sidebar-theme-caption,
+        .sidebar-admin-hint,
+        [data-testid="stCaptionContainer"],
+        .stCaption {
+            color: #17324d !important;
+        }
+
+        [data-testid="stSidebar"] .stTextInput input,
+        [data-testid="stSidebar"] .stTextInput input::placeholder,
+        [data-testid="stSidebar"] div[data-baseweb="select"] *,
+        [data-testid="stSidebar"] div[data-baseweb="base-input"] *,
+        [data-testid="stSidebar"] svg {
+            color: var(--text-main) !important;
+            fill: var(--text-main) !important;
+        }
+
+        [data-testid="stSidebar"] .stTextInput > div > div,
+        [data-testid="stSidebar"] div[data-baseweb="select"] > div,
+        [data-testid="stSidebar"] div[data-baseweb="base-input"] > div {
+            background: rgba(255, 255, 255, 0.98) !important;
+            border: 1px solid rgba(37, 99, 235, 0.14) !important;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06) !important;
+        }
+
+        [data-testid="stSidebar"] div.stButton > button {
+            background: rgba(255, 255, 255, 0.98);
+            color: var(--text-main);
+            border: 1px solid rgba(37, 99, 235, 0.14);
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+        }
+
+        [data-testid="stSidebar"] div.stButton > button[kind="primary"] {
+            background: linear-gradient(135deg, #12b8d6, #1d9bf0);
+            color: white;
+            border-color: rgba(8, 145, 178, 0.24);
+        }
+
+        [data-testid="stSidebar"] div.stButton > button:hover {
+            border-color: rgba(14, 165, 233, 0.24);
+            box-shadow: 0 12px 24px rgba(14, 165, 233, 0.10);
+        }
+
+        [data-baseweb="tab-list"] button,
+        [role="tablist"] button {
+            color: var(--text-main) !important;
+            background: rgba(255, 255, 255, 0.92) !important;
+            border: 1px solid rgba(37, 99, 235, 0.10) !important;
+        }
+
+        [data-baseweb="tab-list"] button[aria-selected="true"],
+        [role="tablist"] button[aria-selected="true"] {
+            background: linear-gradient(135deg, rgba(18, 184, 214, 0.15), rgba(29, 155, 240, 0.12)) !important;
+            border-color: rgba(18, 184, 214, 0.22) !important;
+        }
+
+        .stSelectbox label,
+        .stTextInput label,
+        .stSlider label,
+        .stMultiSelect label,
+        .stCheckbox label,
+        .stRadio label {
+            color: var(--text-main) !important;
+        }
+
+        [data-testid="stMetricLabel"],
+        [data-testid="stMetricLabel"] p {
+            color: #35506b !important;
         }
 
         .light-chart-shell {
