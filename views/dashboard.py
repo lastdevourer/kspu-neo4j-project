@@ -3,8 +3,8 @@ from __future__ import annotations
 import streamlit as st
 
 from ui.components import (
-    render_adaptive_dataframe,
     render_adaptive_bar_chart,
+    render_adaptive_dataframe,
     render_empty_state,
     render_fullscreen_bar_chart_heading,
     render_fullscreen_dataframe_heading,
@@ -24,7 +24,7 @@ def _csv_bytes(frame):
 
 
 def _render_dashboard_table(frame) -> None:
-    render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=420)
+    render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=360)
 
 
 def render() -> None:
@@ -102,13 +102,13 @@ def render() -> None:
                         -(int(row.get("publications") or 0)),
                         str(row.get("name") or ""),
                     ),
-                )[:12]
+                )[:8]
                 top_departments = department_overview_dataframe(top_department_rows)
                 render_fullscreen_dataframe_heading(
                     "Кафедри",
                     top_departments,
                     key="dashboard_departments_fullscreen",
-                    caption="Поточний топ кафедр за викладачами та публікаціями.",
+                    caption="Поточний зріз кафедр за викладачами та публікаціями.",
                 )
                 st.download_button(
                     "Експорт кафедр CSV",
@@ -120,78 +120,57 @@ def render() -> None:
                 _render_dashboard_table(top_departments)
 
     with coverage_tab:
+        render_section_heading("Покриття профілів і джерел")
+        coverage_columns = st.columns(5, gap="medium")
+
         if total_teachers > 0:
             safe_total = max(total_teachers, 1)
-            coverage_columns = st.columns(5, gap="medium")
             coverage_columns[0].metric("Будь-який профіль", f"{profile_coverage['with_any_profile']} / {safe_total}")
             coverage_columns[1].metric("ORCID", f"{profile_coverage['with_orcid']} / {safe_total}")
             coverage_columns[2].metric("Scholar", f"{profile_coverage['with_scholar']} / {safe_total}")
             coverage_columns[3].metric("Scopus", f"{profile_coverage['with_scopus']} / {safe_total}")
             coverage_columns[4].metric("WoS", f"{profile_coverage['with_wos']} / {safe_total}")
 
-            progress_columns = st.columns(4, gap="medium")
-            progress_columns[0].progress(profile_coverage["with_any_profile"] / safe_total, text="Профілі загалом")
-            progress_columns[1].progress(profile_coverage["with_orcid"] / safe_total, text="ORCID")
-            progress_columns[2].progress(profile_coverage["with_scopus"] / safe_total, text="Scopus")
-            progress_columns[3].progress(profile_coverage["with_wos"] / safe_total, text="Web of Science")
-
-        if not publication_sources.empty:
-            chart_source = publication_sources.set_index("Джерело")
-            source_columns = st.columns([0.95, 1.05], gap="large")
-            with source_columns[0]:
+        source_columns = st.columns([1.05, 0.95], gap="large")
+        with source_columns[0]:
+            if publication_sources.empty:
+                render_empty_state("Джерела ще не накопичені", "Після завантаження публікацій тут з'явиться зведення за сервісами.")
+            else:
+                chart_source = publication_sources.set_index("Джерело")
                 render_fullscreen_bar_chart_heading(
-                    "Джерела знайдених публікацій",
+                    "Структура джерел",
                     chart_source,
                     key="dashboard_sources_chart_fullscreen",
                 )
-                render_adaptive_bar_chart(chart_source, use_container_width=True, height=250)
-            with source_columns[1]:
+                render_adaptive_bar_chart(chart_source, use_container_width=True, height=260)
+
+        with source_columns[1]:
+            if publication_sources.empty:
+                render_empty_state("Таблиця джерел порожня", "Спершу потрібно імпортувати публікації.")
+            else:
                 render_fullscreen_dataframe_heading(
-                    "Таблиця джерел публікацій",
+                    "Таблиця джерел",
                     publication_sources,
                     key="dashboard_sources_table_fullscreen",
                 )
-                st.download_button(
-                    "Експорт джерел CSV",
-                    _csv_bytes(publication_sources),
-                    file_name="dashboard_publication_sources.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                )
-                _render_dashboard_table(publication_sources)
-        else:
-            render_empty_state("Джерела ще не накопичені", "Після завантаження робіт тут буде видно, які сервіси дають найбільше покриття.")
+                render_adaptive_dataframe(publication_sources, use_container_width=True, hide_index=True, height=280)
 
     with distribution_tab:
-        if not faculty_overview.empty:
-            chart_source = faculty_overview[["Факультет", "Викладачі"]].set_index("Факультет")
-            split_columns = st.columns([0.95, 1.05], gap="large")
-            with split_columns[0]:
-                render_fullscreen_bar_chart_heading(
-                    "Розподіл викладачів за факультетами",
-                    chart_source,
-                    key="dashboard_faculty_chart_fullscreen",
-                )
-                render_adaptive_bar_chart(chart_source, use_container_width=True, height=300)
-            with split_columns[1]:
-                render_fullscreen_dataframe_heading(
-                    "Повний зріз факультетів",
-                    faculty_overview,
-                    key="dashboard_faculty_table_secondary_fullscreen",
-                )
-                _render_dashboard_table(faculty_overview)
+        render_section_heading("Розподіл і повний зріз")
+        full_columns = st.columns(2, gap="large")
 
-        if not department_overview.empty:
+        with full_columns[0]:
             render_fullscreen_dataframe_heading(
-                "Уся структура кафедр",
+                "Повний список факультетів",
+                faculty_overview,
+                key="dashboard_faculties_fullscreen_full",
+            )
+            _render_dashboard_table(faculty_overview)
+
+        with full_columns[1]:
+            render_fullscreen_dataframe_heading(
+                "Повний список кафедр",
                 department_overview,
-                key="dashboard_full_department_table_fullscreen",
+                key="dashboard_departments_fullscreen_full",
             )
-            st.download_button(
-                "Експорт повної структури кафедр CSV",
-                _csv_bytes(department_overview),
-                file_name="dashboard_department_structure.csv",
-                mime="text/csv",
-                use_container_width=True,
-            )
-            _render_dashboard_table(department_overview)
+            render_adaptive_dataframe(department_overview, use_container_width=True, hide_index=True, height=360)
