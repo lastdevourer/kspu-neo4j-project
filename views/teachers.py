@@ -282,7 +282,7 @@ def render() -> None:
         render_summary_strip("Кафедри у вибірці", str(departments_count))
 
     teacher_labels = {f"{row['full_name']} | {row['department_name']}": row["id"] for row in teacher_rows}
-    layout = st.columns([1.18, 0.94], gap="large")
+    layout = st.columns([1.22, 0.92], gap="large")
 
     with layout[0]:
         render_fullscreen_dataframe_heading(
@@ -298,7 +298,7 @@ def render() -> None:
             mime="text/csv",
             use_container_width=True,
         )
-        render_adaptive_dataframe(teachers_table, use_container_width=True, hide_index=True, height=520)
+        render_adaptive_dataframe(teachers_table, use_container_width=True, hide_index=True, height=420)
 
     with layout[1]:
         render_section_heading("Картка викладача")
@@ -334,36 +334,43 @@ def render() -> None:
         )
         counters[3].metric("Кандидати", status_counts["Кандидат"])
 
-        render_key_value_card(
-            "Паспорт викладача",
-            [
-                ("ПІБ", str(profile.get("full_name") or "")),
-                ("Кафедра", str(profile.get("department_name") or "")),
-                ("Факультет", str(profile.get("faculty_name") or "")),
-                ("Посада", str(profile.get("position") or "")),
-                ("Науковий ступінь", str(profile.get("academic_degree") or "")),
-                ("Вчене звання", str(profile.get("academic_title") or "")),
-            ],
-        )
-        render_key_value_card(
-            "Зовнішні профілі",
-            [
-                ("ORCID", _profile_status(str(profile.get("orcid") or "").strip())),
-                ("Google Scholar", _profile_status(str(profile.get("google_scholar") or "").strip())),
-                ("Scopus", _profile_status(str(profile.get("scopus") or "").strip())),
-                ("Web of Science", _profile_status(str(profile.get("web_of_science") or "").strip())),
-                ("Профіль KSU", _profile_status(str(profile.get("profile_url") or "").strip())),
-            ],
-        )
-        render_key_value_card(
-            "Статуси робіт",
-            [
-                ("Офіційно підтверджено", str(status_counts["Офіційно підтверджено"])),
-                ("Підтверджено", str(status_counts["Підтверджено"])),
-                ("Кандидат", str(status_counts["Кандидат"])),
-                ("Потребує перевірки", str(status_counts["Потребує перевірки"])),
-            ],
-        )
+        profile_tabs = st.tabs(["Паспорт", "Профілі", "Статуси"])
+
+        with profile_tabs[0]:
+            render_key_value_card(
+                "Паспорт викладача",
+                [
+                    ("ПІБ", str(profile.get("full_name") or "")),
+                    ("Кафедра", str(profile.get("department_name") or "")),
+                    ("Факультет", str(profile.get("faculty_name") or "")),
+                    ("Посада", str(profile.get("position") or "")),
+                    ("Науковий ступінь", str(profile.get("academic_degree") or "")),
+                    ("Вчене звання", str(profile.get("academic_title") or "")),
+                ],
+            )
+
+        with profile_tabs[1]:
+            render_key_value_card(
+                "Зовнішні профілі",
+                [
+                    ("ORCID", _profile_status(str(profile.get("orcid") or "").strip())),
+                    ("Google Scholar", _profile_status(str(profile.get("google_scholar") or "").strip())),
+                    ("Scopus", _profile_status(str(profile.get("scopus") or "").strip())),
+                    ("Web of Science", _profile_status(str(profile.get("web_of_science") or "").strip())),
+                    ("Профіль KSU", _profile_status(str(profile.get("profile_url") or "").strip())),
+                ],
+            )
+
+        with profile_tabs[2]:
+            render_key_value_card(
+                "Статуси робіт",
+                [
+                    ("Офіційно підтверджено", str(status_counts["Офіційно підтверджено"])),
+                    ("Підтверджено", str(status_counts["Підтверджено"])),
+                    ("Кандидат", str(status_counts["Кандидат"])),
+                    ("Потребує перевірки", str(status_counts["Потребує перевірки"])),
+                ],
+            )
 
     tabs = st.tabs(["Публікації викладача", "Співавтори"])
 
@@ -397,7 +404,7 @@ def render() -> None:
                 key=f"teacher_publications_fullscreen_{selected_teacher_id}",
                 caption="Розширений перегляд публікацій вибраного викладача.",
             )
-            render_adaptive_dataframe(publications_table, use_container_width=True, hide_index=True, height=420)
+            render_adaptive_dataframe(publications_table, use_container_width=True, hide_index=True, height=360)
 
         if admin_mode:
             _render_publication_management(service, selected_teacher_id, publications, all_publications)
