@@ -674,8 +674,8 @@ def apply_theme() -> None:
             --line-soft: rgba(37, 99, 235, 0.12);
             --line-strong: rgba(14, 165, 233, 0.18);
             --text-main: #10233d;
-            --text-soft: #4a6483;
-            --text-muted: #6d83a0;
+            --text-soft: #35506e;
+            --text-muted: #4f6985;
             --shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
         }
 
@@ -760,6 +760,15 @@ def apply_theme() -> None:
         [data-testid="stSidebar"] .stMarkdown p,
         [data-testid="stSidebar"] label p {
             color: var(--text-main) !important;
+        }
+
+        .hero-subtitle,
+        .section-heading-subtitle,
+        .summary-strip-caption,
+        .kv-label,
+        .stCaption,
+        .stCaption p {
+            color: var(--text-soft) !important;
         }
 
         [data-testid="stSidebar"] .stTextInput input,
@@ -880,6 +889,47 @@ def apply_theme() -> None:
         [data-testid="stTable"] td {
             color: var(--text-main);
             background: rgba(255, 255, 255, 0.98);
+        }
+
+        .adaptive-light-table-shell {
+            overflow: auto;
+            border-radius: 24px;
+            border: 1px solid rgba(37, 99, 235, 0.12);
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+        }
+
+        .adaptive-light-table-shell table {
+            width: max-content;
+            min-width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background: rgba(255, 255, 255, 0.98);
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+
+        .adaptive-light-table-shell thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: rgba(243, 248, 253, 0.98);
+            color: var(--text-main);
+            font-weight: 800;
+            text-align: left;
+            border-bottom: 1px solid rgba(37, 99, 235, 0.10);
+        }
+
+        .adaptive-light-table-shell th,
+        .adaptive-light-table-shell td {
+            padding: 0.78rem 0.88rem;
+            border-bottom: 1px solid rgba(37, 99, 235, 0.08);
+            vertical-align: top;
+            white-space: nowrap;
+        }
+
+        .adaptive-light-table-shell tbody tr:hover td {
+            background: rgba(14, 165, 233, 0.04);
         }
 
         [data-testid="stMarkdownContainer"] p code,
@@ -1066,6 +1116,41 @@ def render_key_value_card(title: str, items: list[tuple[str, str]]) -> None:
             <div class="kv-card">
                 <div class="kv-title">{escape(title)}</div>
                 {rows}
+            </div>
+            """
+        ).strip(),
+        unsafe_allow_html=True,
+    )
+
+
+def render_adaptive_dataframe(
+    frame: pd.DataFrame,
+    *,
+    use_container_width: bool = True,
+    hide_index: bool = True,
+    height: int | None = None,
+) -> None:
+    if get_ui_theme() != "light":
+        st.dataframe(
+            frame,
+            use_container_width=use_container_width,
+            hide_index=hide_index,
+            height=height,
+        )
+        return
+
+    table_html = frame.to_html(
+        index=not hide_index,
+        classes="adaptive-light-table",
+        border=0,
+        escape=True,
+    )
+    height_style = f"max-height: {height}px;" if height else ""
+    st.markdown(
+        dedent(
+            f"""
+            <div class="adaptive-light-table-shell" style="{height_style}">
+                {table_html}
             </div>
             """
         ).strip(),
