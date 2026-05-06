@@ -6,61 +6,93 @@ except Exception:  # pragma: no cover - handled by UI fallback
     Network = None
 
 
-def _base_network(height: str = "720px") -> Network | None:
+def _palette(theme: str) -> dict[str, str]:
+    if theme == "light":
+        return {
+            "bg": "#f7fbff",
+            "font": "#10233d",
+            "teacher": "#0ea5e9",
+            "teacher_alt": "#14b8a6",
+            "teacher_focus": "#f59e0b",
+            "publication": "#2563eb",
+            "department": "#0f766e",
+            "department_alt": "#0369a1",
+            "edge": "#7a8ea8",
+            "edge_accent": "#d97706",
+            "shadow": "rgba(148, 163, 184, 0.28)",
+        }
+    return {
+        "bg": "#081526",
+        "font": "#e5eefb",
+        "teacher": "#2dd4bf",
+        "teacher_alt": "#7dd3fc",
+        "teacher_focus": "#f59e0b",
+        "publication": "#38bdf8",
+        "department": "#2dd4bf",
+        "department_alt": "#38bdf8",
+        "edge": "#5b728f",
+        "edge_accent": "#f59e0b",
+        "shadow": "rgba(15, 23, 42, 0.55)",
+    }
+
+
+def _base_network(height: str = "720px", theme: str = "dark") -> Network | None:
     if Network is None:
         return None
+    colors = _palette(theme)
     net = Network(
         height=height,
         width="100%",
-        bgcolor="#081526",
-        font_color="#e5eefb",
+        bgcolor=colors["bg"],
+        font_color=colors["font"],
         directed=False,
     )
     net.barnes_hut(gravity=-22000, central_gravity=0.22, spring_length=160, spring_strength=0.035, damping=0.88)
     net.set_options(
-        """
-        const options = {
-          "nodes": {
-            "font": { "size": 14, "face": "Manrope", "color": "#e5eefb" },
+        f"""
+        const options = {{
+          "nodes": {{
+            "font": {{ "size": 14, "face": "Manrope", "color": "{colors['font']}" }},
             "borderWidth": 2,
-            "shadow": { "enabled": true, "color": "rgba(15, 23, 42, 0.55)", "size": 16, "x": 0, "y": 8 }
-          },
-          "edges": {
+            "shadow": {{ "enabled": true, "color": "{colors['shadow']}", "size": 16, "x": 0, "y": 8 }}
+          }},
+          "edges": {{
             "smooth": false,
-            "color": { "inherit": false },
+            "color": {{ "inherit": false }},
             "selectionWidth": 2.6,
             "hoverWidth": 2.2
-          },
-          "layout": { "improvedLayout": true },
-          "configure": { "enabled": false },
-          "interaction": {
+          }},
+          "layout": {{ "improvedLayout": true }},
+          "configure": {{ "enabled": false }},
+          "interaction": {{
             "hover": true,
             "tooltipDelay": 120,
             "navigationButtons": true,
             "keyboard": true
-          },
-          "physics": {
+          }},
+          "physics": {{
             "enabled": true,
-            "barnesHut": {
+            "barnesHut": {{
               "gravitationalConstant": -22000,
               "centralGravity": 0.22,
               "springLength": 160,
               "springConstant": 0.035,
               "damping": 0.88
-            },
+            }},
             "minVelocity": 0.75
-          }
-        }
+          }}
+        }}
         """
     )
     return net
 
 
-def build_bipartite_graph_html(edges: list[dict], focus_teacher_id: str = "") -> str | None:
-    net = _base_network()
+def build_bipartite_graph_html(edges: list[dict], focus_teacher_id: str = "", theme: str = "dark") -> str | None:
+    net = _base_network(theme=theme)
     if net is None or not edges:
         return None
 
+    colors = _palette(theme)
     teacher_nodes: set[str] = set()
     publication_nodes: set[str] = set()
     normalized_focus_teacher_id = focus_teacher_id.strip()
@@ -77,7 +109,7 @@ def build_bipartite_graph_html(edges: list[dict], focus_teacher_id: str = "") ->
                 label=edge["teacher_name"],
                 title=f"Викладач: {edge['teacher_name']}<br>Кафедра: {edge['department_name']}",
                 group="teacher",
-                color="#f59e0b" if is_focus_teacher else "#2dd4bf",
+                color=colors["teacher_focus"] if is_focus_teacher else colors["teacher"],
                 shape="dot",
                 size=26 if is_focus_teacher else 20,
             )
@@ -90,21 +122,22 @@ def build_bipartite_graph_html(edges: list[dict], focus_teacher_id: str = "") ->
                 label=edge["publication_title"][:48],
                 title=f"Публікація: {edge['publication_title']}<br>Рік: {year_value}",
                 group="publication",
-                color="#38bdf8",
+                color=colors["publication"],
                 shape="square",
                 size=17,
             )
 
-        net.add_edge(teacher_node, publication_node, color="#5b728f", width=1.2)
+        net.add_edge(teacher_node, publication_node, color=colors["edge"], width=1.2)
 
     return net.generate_html()
 
 
-def build_coauthor_graph_html(edges: list[dict]) -> str | None:
-    net = _base_network()
+def build_coauthor_graph_html(edges: list[dict], theme: str = "dark") -> str | None:
+    net = _base_network(theme=theme)
     if net is None or not edges:
         return None
 
+    colors = _palette(theme)
     seen_nodes: set[str] = set()
     for edge in edges:
         source_id = f"teacher::{edge['source_id']}"
@@ -115,7 +148,7 @@ def build_coauthor_graph_html(edges: list[dict]) -> str | None:
                 source_id,
                 label=edge["source_name"],
                 title=f"Викладач: {edge['source_name']}<br>Кафедра: {edge['source_department']}",
-                color="#2dd4bf",
+                color=colors["teacher"],
                 shape="dot",
                 size=18 + min(int(edge.get("weight", 1)), 8),
             )
@@ -125,7 +158,7 @@ def build_coauthor_graph_html(edges: list[dict]) -> str | None:
                 target_id,
                 label=edge["target_name"],
                 title=f"Викладач: {edge['target_name']}<br>Кафедра: {edge['target_department']}",
-                color="#7dd3fc",
+                color=colors["teacher_alt"],
                 shape="dot",
                 size=18 + min(int(edge.get("weight", 1)), 8),
             )
@@ -134,7 +167,7 @@ def build_coauthor_graph_html(edges: list[dict]) -> str | None:
         net.add_edge(
             source_id,
             target_id,
-            color="#f59e0b",
+            color=colors["edge_accent"],
             width=max(1.6, min(float(edge.get("weight", 1)) * 1.4, 8.0)),
             title=f"Спільні публікації: {edge.get('weight', 1)}<br>{titles}",
         )
@@ -142,11 +175,12 @@ def build_coauthor_graph_html(edges: list[dict]) -> str | None:
     return net.generate_html()
 
 
-def build_department_graph_html(edges: list[dict]) -> str | None:
-    net = _base_network()
+def build_department_graph_html(edges: list[dict], theme: str = "dark") -> str | None:
+    net = _base_network(theme=theme)
     if net is None or not edges:
         return None
 
+    colors = _palette(theme)
     seen_nodes: set[str] = set()
     for edge in edges:
         source_id = f"department::{edge['source_id']}"
@@ -157,7 +191,7 @@ def build_department_graph_html(edges: list[dict]) -> str | None:
                 source_id,
                 label=edge["source_name"],
                 title=f"Кафедра: {edge['source_name']}<br>Факультет: {edge['source_faculty']}",
-                color="#2dd4bf",
+                color=colors["department"],
                 shape="box",
                 size=24,
             )
@@ -167,7 +201,7 @@ def build_department_graph_html(edges: list[dict]) -> str | None:
                 target_id,
                 label=edge["target_name"],
                 title=f"Кафедра: {edge['target_name']}<br>Факультет: {edge['target_faculty']}",
-                color="#38bdf8",
+                color=colors["department_alt"],
                 shape="box",
                 size=24,
             )
@@ -176,7 +210,7 @@ def build_department_graph_html(edges: list[dict]) -> str | None:
         net.add_edge(
             source_id,
             target_id,
-            color="#f59e0b",
+            color=colors["edge_accent"],
             width=max(2.0, min(float(edge.get("weight", 1)) * 1.5, 9.0)),
             title=f"Спільні публікації: {edge.get('weight', 1)}<br>{titles}",
         )
