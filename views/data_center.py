@@ -5,6 +5,7 @@ import streamlit as st
 
 from ui.components import (
     render_empty_state,
+    render_adaptive_dataframe,
     render_fullscreen_dataframe_heading,
     render_header,
     render_key_value_card,
@@ -444,7 +445,7 @@ def _render_audit_tab(service) -> None:
             key="data_center_audit_fullscreen",
             caption="Повний журнал змін і модераційних дій.",
         )
-        st.dataframe(audit_frame, use_container_width=True, hide_index=True)
+        render_adaptive_dataframe(audit_frame, use_container_width=True, hide_index=True)
         st.download_button(
             "Експорт аудиту CSV",
             _csv_bytes(audit_frame),
@@ -485,7 +486,7 @@ def _render_import_runs_tab(service) -> None:
             key="data_center_import_runs_fullscreen",
             caption="Повний журнал запусків імпорту публікацій.",
         )
-        st.dataframe(import_frame, use_container_width=True, hide_index=True)
+        render_adaptive_dataframe(import_frame, use_container_width=True, hide_index=True)
         st.download_button(
             "Експорт історії імпортів CSV",
             _csv_bytes(import_frame),
@@ -575,7 +576,7 @@ def _render_duplicate_candidates(service, all_publications: list[dict[str, objec
             key="data_center_duplicates_fullscreen",
             caption="Розширений перегляд підозрілих дублів публікацій.",
         )
-        st.dataframe(duplicate_frame, use_container_width=True, hide_index=True)
+        render_adaptive_dataframe(duplicate_frame, use_container_width=True, hide_index=True)
     with top[1]:
         render_key_value_card(
             "Огляд дублювання",
@@ -854,7 +855,7 @@ def render() -> None:
                     key="data_center_problematic_fullscreen",
                     caption="Повний список кандидатів, сумнівних і відхилених записів.",
                 )
-                st.dataframe(problem_frame, use_container_width=True, hide_index=True)
+                render_adaptive_dataframe(problem_frame, use_container_width=True, hide_index=True)
                 _render_bulk_actions(service, filtered_problematic)
             else:
                 render_empty_state(
@@ -883,7 +884,7 @@ def render() -> None:
                     key="data_center_no_profiles_fullscreen",
                     caption="Перелік викладачів, яким ще бракує зовнішніх ідентифікаторів.",
                 )
-                st.dataframe(without_profiles_frame, use_container_width=True, hide_index=True)
+                render_adaptive_dataframe(without_profiles_frame, use_container_width=True, hide_index=True)
 
         with teacher_sections[1]:
             without_publications_frame = _teacher_gap_frame(teachers_without_publications)
@@ -897,7 +898,7 @@ def render() -> None:
                     key="data_center_no_publications_fullscreen",
                     caption="Перелік викладачів, для яких ще не знайдено публікацій.",
                 )
-                st.dataframe(without_publications_frame, use_container_width=True, hide_index=True)
+                render_adaptive_dataframe(without_publications_frame, use_container_width=True, hide_index=True)
 
         _render_duplicate_candidates(service, all_publications)
 
