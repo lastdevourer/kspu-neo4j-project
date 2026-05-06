@@ -9,6 +9,11 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
+try:
+    import altair as alt
+except ModuleNotFoundError:  # pragma: no cover
+    alt = None
+
 from config import get_connection_help_text, get_neo4j_config, get_ui_theme
 from data.loaders import load_teachers_seed
 from data.seed_data import DEPARTMENTS, FACULTIES
@@ -747,11 +752,26 @@ def apply_theme() -> None:
 
         div[data-baseweb="select"] > div,
         div[data-baseweb="base-input"] > div,
+        div[data-baseweb="textarea"] > div,
         .stTextInput > div > div,
-        .stNumberInput > div > div {
+        .stNumberInput > div > div,
+        .stTextArea > div > div {
             background: rgba(255, 255, 255, 0.98);
             border-color: rgba(37, 99, 235, 0.12);
             box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
+        }
+
+        .stTextInput input,
+        .stTextArea textarea,
+        .stNumberInput input,
+        div[data-baseweb="select"] input {
+            color: var(--text-main) !important;
+        }
+
+        .stTextInput input::placeholder,
+        .stTextArea textarea::placeholder {
+            color: #64748b !important;
+            opacity: 1 !important;
         }
 
         label[data-testid="stWidgetLabel"] p,
@@ -768,13 +788,21 @@ def apply_theme() -> None:
         .summary-strip-caption,
         .kv-label,
         .empty-state-body,
+        [data-testid="stMetricLabel"] p,
+        [data-testid="stMetricLabel"] label,
         .stCaption,
         .stCaption p {
-            color: var(--text-soft) !important;
+            color: #486381 !important;
         }
 
         .empty-state-title {
             color: var(--text-main) !important;
+        }
+
+        .empty-state {
+            border: 1px dashed rgba(37, 99, 235, 0.14) !important;
+            background: rgba(255, 255, 255, 0.92) !important;
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.05) !important;
         }
 
         [data-testid="stSidebar"] .stTextInput input,
@@ -783,7 +811,8 @@ def apply_theme() -> None:
         }
 
         [data-testid="stSidebar"] .stTextInput > div > div,
-        [data-testid="stSidebar"] div[data-baseweb="select"] > div {
+        [data-testid="stSidebar"] div[data-baseweb="select"] > div,
+        [data-testid="stSidebar"] div[data-baseweb="textarea"] > div {
             background: rgba(255, 255, 255, 0.96) !important;
             border: 1px solid rgba(37, 99, 235, 0.14) !important;
             box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05) !important;
@@ -830,6 +859,10 @@ def apply_theme() -> None:
         [data-baseweb="radio"] label span {
             color: var(--text-main) !important;
             font-weight: 700;
+        }
+
+        [role="radiogroup"] label {
+            color: var(--text-main) !important;
         }
 
         [data-baseweb="radio"] input:checked + div,
@@ -974,6 +1007,18 @@ def apply_theme() -> None:
 
         .adaptive-light-table-shell tbody tr:hover td {
             background: rgba(14, 165, 233, 0.04);
+        }
+
+        .light-chart-shell {
+            border-radius: 24px;
+            border: 1px solid rgba(37, 99, 235, 0.12);
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+            padding: 0.6rem 0.8rem 0.2rem;
+        }
+
+        .light-chart-shell [data-testid="stVegaLiteChart"] {
+            background: transparent !important;
         }
 
         [data-testid="stMarkdownContainer"] p code,
@@ -1207,22 +1252,79 @@ def render_adaptive_dataframe(
                 {table_html}
             </div>
             """
-        ).strip(),
+    ).strip(),
         unsafe_allow_html=True,
     )
+
+
+def render_adaptive_bar_chart(
+    data: pd.DataFrame,
+    *,
+    use_container_width: bool = True,
+    height: int = 280,
+) -> None:
+    if get_ui_theme() != "light" or alt is None:
+        st.bar_chart(data, use_container_width=use_container_width, height=height)
+        return
+
+    chart_frame = data.copy()
+    if chart_frame.index.name:
+        x_label = str(chart_frame.index.name)
+    else:
+        x_label = "Категорія"
+    y_label = str(chart_frame.columns[0]) if len(chart_frame.columns) == 1 else "Значення"
+
+    chart_frame = chart_frame.reset_index()
+    chart_frame.columns = [x_label] + [str(col) for col in chart_frame.columns[1:]]
+
+    if len(chart_frame.columns) == 2:
+        x_field, y_field = chart_frame.columns
+        chart = (
+            alt.Chart(chart_frame)
+            .mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5, color="#0ea5e9")
+            .encode(
+                x=alt.X(f"{x_field}:N", sort=None, axis=alt.Axis(labelAngle=-45, labelColor="#24415f", titleColor="#24415f")),
+                y=alt.Y(f"{y_field}:Q", axis=alt.Axis(labelColor="#24415f", titleColor="#24415f")),
+                tooltip=[x_field, y_field],
+            )
+            .properties(height=height, background="transparent")
+            .configure_view(strokeOpacity=0)
+            .configure_axis(gridColor="#d7e6f5", domainColor="#bfd5ea", tickColor="#bfd5ea")
+        )
+    else:
+        value_fields = [col for col in chart_frame.columns if col != x_label]
+        melted = chart_frame.melt(id_vars=[x_label], value_vars=value_fields, var_name="Серія", value_name="Значення")
+        chart = (
+            alt.Chart(melted)
+            .mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5)
+            .encode(
+                x=alt.X(f"{x_label}:N", sort=None, axis=alt.Axis(labelAngle=-45, labelColor="#24415f", titleColor="#24415f")),
+                y=alt.Y("Значення:Q", axis=alt.Axis(labelColor="#24415f", titleColor="#24415f")),
+                color=alt.Color("Серія:N", scale=alt.Scale(range=["#0ea5e9", "#2dd4bf", "#f59e0b", "#1d4ed8"])),
+                tooltip=[x_label, "Серія", "Значення"],
+            )
+            .properties(height=height, background="transparent")
+            .configure_view(strokeOpacity=0)
+            .configure_axis(gridColor="#d7e6f5", domainColor="#bfd5ea", tickColor="#bfd5ea")
+            .configure_legend(labelColor="#24415f", titleColor="#24415f")
+        )
+
+    st.markdown('<div class="light-chart-shell">', unsafe_allow_html=True)
+    st.altair_chart(chart, use_container_width=use_container_width)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 if hasattr(st, "dialog"):
     @st.dialog("Перегляд на весь екран", width="large")
     def _fullscreen_dataframe_dialog(title: str, frame: pd.DataFrame, caption: str = "") -> None:
         render_section_heading(title, caption)
-        st.dataframe(frame, use_container_width=True, hide_index=True, height=760)
+        render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=760)
 
 
     @st.dialog("Перегляд на весь екран", width="large")
     def _fullscreen_bar_chart_dialog(title: str, data: pd.DataFrame, caption: str = "") -> None:
         render_section_heading(title, caption)
-        st.bar_chart(data, use_container_width=True, height=760)
+        render_adaptive_bar_chart(data, use_container_width=True, height=760)
 
 
     @st.dialog("Перегляд на весь екран", width="large")
@@ -1232,12 +1334,12 @@ if hasattr(st, "dialog"):
 else:
     def _fullscreen_dataframe_dialog(title: str, frame: pd.DataFrame, caption: str = "") -> None:
         st.info("Повноекранний перегляд недоступний у цьому середовищі.")
-        st.dataframe(frame, use_container_width=True, hide_index=True)
+        render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=760)
 
 
     def _fullscreen_bar_chart_dialog(title: str, data: pd.DataFrame, caption: str = "") -> None:
         st.info("Повноекранний перегляд недоступний у цьому середовищі.")
-        st.bar_chart(data, use_container_width=True)
+        render_adaptive_bar_chart(data, use_container_width=True, height=760)
 
 
     def _fullscreen_html_dialog(title: str, html: str, height: int, caption: str = "") -> None:
