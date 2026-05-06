@@ -5,6 +5,7 @@ import streamlit as st
 from config import is_admin_mode
 from ui.components import (
     render_empty_state,
+    render_adaptive_dataframe,
     render_fullscreen_dataframe_heading,
     render_header,
     render_key_value_card,
@@ -297,7 +298,7 @@ def render() -> None:
             mime="text/csv",
             use_container_width=True,
         )
-        st.dataframe(teachers_table, use_container_width=True, hide_index=True)
+        render_adaptive_dataframe(teachers_table, use_container_width=True, hide_index=True)
 
     with layout[1]:
         render_section_heading("Картка викладача")
@@ -396,7 +397,7 @@ def render() -> None:
                 key=f"teacher_publications_fullscreen_{selected_teacher_id}",
                 caption="Розширений перегляд публікацій вибраного викладача.",
             )
-            st.dataframe(publications_table, use_container_width=True, hide_index=True)
+            render_adaptive_dataframe(publications_table, use_container_width=True, hide_index=True)
 
         if admin_mode:
             _render_publication_management(service, selected_teacher_id, publications, all_publications)
@@ -416,4 +417,4 @@ def render() -> None:
                 key=f"teacher_coauthors_fullscreen_{selected_teacher_id}",
                 caption="Повний список співавторів вибраного викладача.",
             )
-            st.dataframe(coauthors_table, use_container_width=True, hide_index=True)
+            render_adaptive_dataframe(coauthors_table, use_container_width=True, hide_index=True)
