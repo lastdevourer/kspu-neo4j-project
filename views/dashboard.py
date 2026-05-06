@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import streamlit as st
 
-from config import get_ui_theme
 from ui.components import (
+    render_adaptive_dataframe,
     render_empty_state,
     render_fullscreen_bar_chart_heading,
     render_fullscreen_dataframe_heading,
@@ -24,9 +24,7 @@ def _csv_bytes(frame):
 
 def _render_dashboard_table(frame) -> None:
     if get_ui_theme() == "light":
-        st.table(frame)
-    else:
-        st.dataframe(frame, use_container_width=True, hide_index=True)
+        render_adaptive_dataframe(frame, use_container_width=True, hide_index=True)
 
 
 def render() -> None:
