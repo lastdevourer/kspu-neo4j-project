@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
+from config import get_ui_theme
 from ui.components import (
     render_empty_state,
     render_fullscreen_bar_chart_heading,
@@ -19,6 +20,13 @@ def format_number(value: int) -> str:
 
 def _csv_bytes(frame):
     return frame.to_csv(index=False).encode("utf-8-sig")
+
+
+def _render_dashboard_table(frame) -> None:
+    if get_ui_theme() == "light":
+        st.table(frame)
+    else:
+        st.dataframe(frame, use_container_width=True, hide_index=True)
 
 
 def render() -> None:
@@ -82,7 +90,7 @@ def render() -> None:
                     mime="text/csv",
                     use_container_width=True,
                 )
-                st.dataframe(faculty_overview, use_container_width=True, hide_index=True)
+                _render_dashboard_table(faculty_overview)
 
         with overview_columns[1]:
             if department_overview.empty:
@@ -111,7 +119,7 @@ def render() -> None:
                     mime="text/csv",
                     use_container_width=True,
                 )
-                st.dataframe(top_departments, use_container_width=True, hide_index=True)
+                _render_dashboard_table(top_departments)
 
     with coverage_tab:
         if total_teachers > 0:
@@ -152,7 +160,7 @@ def render() -> None:
                     mime="text/csv",
                     use_container_width=True,
                 )
-                st.dataframe(publication_sources, use_container_width=True, hide_index=True)
+                _render_dashboard_table(publication_sources)
         else:
             render_empty_state("Джерела ще не накопичені", "Після завантаження робіт тут буде видно, які сервіси дають найбільше покриття.")
 
@@ -173,7 +181,7 @@ def render() -> None:
                     faculty_overview,
                     key="dashboard_faculty_table_secondary_fullscreen",
                 )
-                st.dataframe(faculty_overview, use_container_width=True, hide_index=True)
+                _render_dashboard_table(faculty_overview)
 
         if not department_overview.empty:
             render_fullscreen_dataframe_heading(
@@ -188,4 +196,4 @@ def render() -> None:
                 mime="text/csv",
                 use_container_width=True,
             )
-            st.dataframe(department_overview, use_container_width=True, hide_index=True)
+            _render_dashboard_table(department_overview)
