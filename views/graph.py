@@ -104,7 +104,7 @@ def _render_graph_tabs(
                 mime="text/csv",
                 use_container_width=True,
             )
-            render_adaptive_dataframe(frame, use_container_width=True, hide_index=True)
+            render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=420)
 
 
 def render() -> None:
@@ -115,11 +115,20 @@ def render() -> None:
         subtitle="Досліджуйте зв'язки між авторством, співавторством, кафедрами та окремими викладачами.",
     )
 
-    mode = st.radio(
-        "Режим мережі",
-        ["Авторство", "Співавторство викладачів", "Профіль викладача", "Зв'язки між кафедрами"],
-        horizontal=True,
-    )
+    mode_options = ["Авторство", "Співавторство викладачів", "Профіль викладача", "Зв'язки між кафедрами"]
+    if hasattr(st, "segmented_control"):
+        mode = st.segmented_control(
+            "Режим мережі",
+            mode_options,
+            default=mode_options[0],
+            selection_mode="single",
+        )
+    else:
+        mode = st.radio(
+            "Режим мережі",
+            mode_options,
+            horizontal=True,
+        )
     controls = st.columns([1.15, 0.85], gap="large")
     edge_limit = controls[1].slider("Ліміт зв'язків", min_value=20, max_value=240, value=120, step=10)
 
