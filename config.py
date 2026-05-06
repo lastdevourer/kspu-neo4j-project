@@ -75,14 +75,14 @@ def get_default_ui_theme() -> str:
 
 
 def get_ui_theme() -> str:
-    if "ui_theme" in st.session_state:
-        theme = normalize_ui_theme(str(st.session_state.get("ui_theme", "")))
-        st.session_state["ui_theme"] = theme
-        return theme
-
     query_theme = str(st.query_params.get("theme", "") or "")
     if query_theme:
         theme = normalize_ui_theme(query_theme)
+        st.session_state["ui_theme"] = theme
+        return theme
+
+    if "ui_theme" in st.session_state:
+        theme = normalize_ui_theme(str(st.session_state.get("ui_theme", "")))
         st.session_state["ui_theme"] = theme
         return theme
 
