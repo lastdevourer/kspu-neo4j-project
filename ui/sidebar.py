@@ -25,22 +25,21 @@ def render_sidebar(
             unsafe_allow_html=True,
         )
 
-        theme_options = {
-            "Темна": "dark",
-            "Світла": "light",
-        }
         current_theme = get_ui_theme()
-        inverse_theme_options = {value: key for key, value in theme_options.items()}
-        selected_theme_label = st.selectbox(
-            "Тема інтерфейсу",
-            list(theme_options.keys()),
-            index=list(theme_options.keys()).index(inverse_theme_options[current_theme]),
-            key="sidebar_theme_choice",
-        )
-        selected_theme = theme_options[selected_theme_label]
-        if selected_theme != current_theme:
-            st.session_state["ui_theme"] = selected_theme
-            st.query_params["theme"] = selected_theme
+        st.markdown("**Тема інтерфейсу**")
+        theme_cols = st.columns([0.78, 0.22], gap="small")
+        theme_label = "Світла тема" if current_theme == "light" else "Темна тема"
+        theme_icon = "☀️" if current_theme == "dark" else "🌙"
+        theme_cols[0].caption(f"Зараз: {theme_label}")
+        if theme_cols[1].button(
+            theme_icon,
+            key="sidebar_theme_toggle",
+            use_container_width=True,
+            help="Перемкнути тему інтерфейсу",
+        ):
+            next_theme = "light" if current_theme == "dark" else "dark"
+            st.session_state["ui_theme"] = next_theme
+            st.query_params["theme"] = next_theme
             st.rerun()
 
         for section_name in section_order:
