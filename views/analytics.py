@@ -224,7 +224,7 @@ def render() -> None:
         else pd.DataFrame(columns=["Рік", "Публікації"])
     )
     if not yearly_counts.empty:
-        render_section_heading("Динаміка публікацій")
+        render_section_heading("Динаміка публікацій", "Розподіл знайдених робіт за роками в поточному контурі даних.")
         trend_columns = st.columns([1.05, 0.95], gap="large")
         with trend_columns[0]:
             chart_frame = yearly_counts.set_index("Рік")
