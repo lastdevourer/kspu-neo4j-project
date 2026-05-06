@@ -9,7 +9,7 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
-from config import get_connection_help_text, get_neo4j_config, is_presentation_mode
+from config import get_connection_help_text, get_neo4j_config, get_ui_theme
 from data.loaders import load_teachers_seed
 from data.seed_data import DEPARTMENTS, FACULTIES
 
@@ -21,14 +21,14 @@ def setup_page(title: str) -> None:
     st.set_page_config(
         page_title=title,
         layout="wide",
-        page_icon=":material/account_tree:",
+        page_icon="🎓",
         initial_sidebar_state="expanded",
     )
     apply_theme()
 
 
 def apply_theme() -> None:
-    base_css = """
+    dark_theme_css = """
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap');
 
@@ -87,8 +87,17 @@ def apply_theme() -> None:
 
         .block-container {
             max-width: 1320px;
-            padding-top: 4.4rem;
-            padding-bottom: 2.4rem;
+            padding-top: 4.8rem;
+            padding-bottom: 2.7rem;
+        }
+
+        div[data-testid="stVerticalBlock"] > div:has(> .section-heading),
+        div[data-testid="stVerticalBlock"] > div:has(> .hero-card),
+        div[data-testid="stVerticalBlock"] > div:has(> .info-card),
+        div[data-testid="stVerticalBlock"] > div:has(> .summary-strip),
+        div[data-testid="stVerticalBlock"] > div:has(> .kv-card),
+        div[data-testid="stVerticalBlock"] > div:has(> .empty-state) {
+            margin-bottom: 0.55rem;
         }
 
         h1, h2, h3 {
@@ -114,10 +123,11 @@ def apply_theme() -> None:
                 linear-gradient(135deg, rgba(18, 38, 63, 0.94), rgba(8, 24, 43, 0.96)),
                 radial-gradient(circle at top right, rgba(56, 189, 248, 0.22), transparent 32%);
             border-radius: 30px;
-            padding: 1.55rem 1.8rem;
+            padding: 1.7rem 1.9rem;
             box-shadow: var(--shadow);
-            margin-bottom: 1.1rem;
+            margin-bottom: 1rem;
             isolation: isolate;
+            text-align: center;
         }
 
         .hero-card::before {
@@ -161,6 +171,7 @@ def apply_theme() -> None:
             line-height: 1.72;
             color: var(--text-soft);
             max-width: 920px;
+            margin: 0 auto;
         }
 
         .info-card {
@@ -168,10 +179,11 @@ def apply_theme() -> None:
             border-radius: 24px;
             background:
                 linear-gradient(180deg, rgba(10, 25, 47, 0.88), rgba(8, 22, 41, 0.92));
-            padding: 1.15rem 1.2rem;
+            padding: 1.18rem 1.22rem;
             box-shadow: var(--shadow);
             backdrop-filter: blur(16px);
-            margin-bottom: 0.9rem;
+            margin-bottom: 0.82rem;
+            text-align: center;
         }
 
         .info-card h3 {
@@ -185,7 +197,8 @@ def apply_theme() -> None:
         }
 
         .section-heading {
-            margin: 0.05rem 0 0.7rem;
+            margin: 0.12rem 0 0.9rem;
+            text-align: center;
         }
 
         .section-heading-title {
@@ -201,14 +214,18 @@ def apply_theme() -> None:
             color: var(--text-soft);
             font-size: 0.95rem;
             line-height: 1.65;
+            max-width: 860px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .empty-state {
             border: 1px dashed rgba(148, 163, 184, 0.18);
             border-radius: 24px;
             background: rgba(8, 22, 41, 0.72);
-            padding: 1.2rem 1.2rem;
+            padding: 1.2rem 1.25rem;
             box-shadow: var(--shadow);
+            text-align: center;
         }
 
         .empty-state-title {
@@ -230,7 +247,7 @@ def apply_theme() -> None:
             background: linear-gradient(180deg, rgba(10, 25, 47, 0.78), rgba(8, 22, 41, 0.92));
             padding: 1rem 1.05rem;
             box-shadow: var(--shadow);
-            margin-bottom: 0.9rem;
+            margin-bottom: 0.82rem;
             text-align: center;
         }
 
@@ -268,6 +285,7 @@ def apply_theme() -> None:
             padding: 1.1rem 1.2rem;
             box-shadow: var(--shadow);
             backdrop-filter: blur(16px);
+            margin-bottom: 0.82rem;
         }
 
         .kv-title {
@@ -475,9 +493,37 @@ def apply_theme() -> None:
             background: rgba(8, 22, 41, 0.84);
         }
 
+        [data-testid="stDataFrame"] [role="columnheader"] {
+            justify-content: center;
+            text-align: center;
+            font-weight: 800;
+        }
+
+        [data-testid="stDataFrame"] [role="gridcell"] {
+            align-items: center;
+            line-height: 1.45;
+        }
+
+        [data-testid="stDataFrame"] [role="row"] {
+            min-height: 2.7rem;
+        }
+
+        [data-testid="stDataFrame"] [role="row"]:hover {
+            background: rgba(56, 189, 248, 0.05);
+        }
+
         [data-testid="stTable"] {
             border-radius: 24px;
             overflow: hidden;
+        }
+
+        [data-testid="stTable"] th {
+            text-align: center;
+            font-weight: 800;
+        }
+
+        [data-testid="stTable"] td {
+            vertical-align: middle;
         }
 
         [data-testid="stAlert"] {
@@ -496,6 +542,7 @@ def apply_theme() -> None:
             border: 1px solid var(--line-soft);
             border-radius: 20px;
             background: rgba(9, 24, 43, 0.74);
+            margin-bottom: 0.9rem;
         }
 
         [data-testid="stExpander"] details summary p {
@@ -512,6 +559,10 @@ def apply_theme() -> None:
                 linear-gradient(180deg, rgba(8, 22, 41, 0.97), rgba(7, 19, 35, 0.98)) !important;
             box-shadow: 0 28px 100px rgba(2, 8, 23, 0.52) !important;
             backdrop-filter: blur(18px);
+        }
+
+        div[data-baseweb="tab-list"] {
+            margin-bottom: 0.55rem;
         }
 
         div[role="dialog"] [data-testid="stVerticalBlock"] {
@@ -571,7 +622,7 @@ def apply_theme() -> None:
         }
 
         .sidebar-section-label {
-            margin: 1rem 0 0.55rem;
+            margin: 1rem 0 0.48rem;
             color: var(--text-soft);
             text-transform: uppercase;
             letter-spacing: 0.08em;
@@ -612,7 +663,7 @@ def apply_theme() -> None:
         </style>
         """
 
-    light_override_css = """
+    light_theme_css = """
         <style>
         :root {
             --bg-main: #f4f8fc;
@@ -649,6 +700,7 @@ def apply_theme() -> None:
             background:
                 linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(240, 248, 255, 0.98)),
                 radial-gradient(circle at top right, rgba(14, 165, 233, 0.08), transparent 34%);
+            box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
         }
 
         .hero-kicker {
@@ -734,6 +786,11 @@ def apply_theme() -> None:
             border-right: 1px solid rgba(37, 99, 235, 0.08);
         }
 
+        .sidebar-brand {
+            margin-bottom: 0.95rem;
+            padding-bottom: 0.82rem;
+        }
+
         [data-testid="stSidebarNavLink"] {
             background: rgba(255, 255, 255, 0.4);
         }
@@ -763,6 +820,10 @@ def apply_theme() -> None:
             color: var(--text-main) !important;
         }
 
+        [data-testid="stDataFrame"] [role="row"]:hover {
+            background: rgba(14, 165, 233, 0.04);
+        }
+
         iframe {
             border-radius: 22px;
             background: rgba(255, 255, 255, 0.96);
@@ -782,9 +843,9 @@ def apply_theme() -> None:
         </style>
         """
 
-    style = base_css
-    if is_presentation_mode():
-        style += light_override_css
+    style = dark_theme_css
+    if get_ui_theme() == "light":
+        style += light_theme_css
     st.markdown(style, unsafe_allow_html=True)
 
 
