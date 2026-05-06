@@ -6,6 +6,7 @@ import streamlit as st
 
 from ui.components import (
     render_empty_state,
+    render_adaptive_dataframe,
     render_fullscreen_bar_chart_heading,
     render_fullscreen_dataframe_heading,
     render_header,
@@ -238,7 +239,7 @@ def render() -> None:
                 yearly_counts,
                 key="analytics_yearly_table_fullscreen",
             )
-            st.dataframe(yearly_counts, use_container_width=True, hide_index=True)
+            render_adaptive_dataframe(yearly_counts, use_container_width=True, hide_index=True)
 
     top_teachers_export = top_teachers_dataframe(top_teachers)
     top_pairs_export = top_coauthor_pairs_dataframe(top_pairs)
@@ -338,7 +339,7 @@ def render() -> None:
                 key="analytics_top_teachers_fullscreen",
                 caption="Топ викладачів",
             )
-            st.dataframe(top_teachers_table, use_container_width=True, hide_index=True)
+            render_adaptive_dataframe(top_teachers_table, use_container_width=True, hide_index=True)
 
     with top_columns[1]:
         top_pairs_table = top_coauthor_pairs_dataframe(top_pairs)
@@ -354,7 +355,7 @@ def render() -> None:
                 top_pairs_table,
                 key="analytics_top_pairs_fullscreen",
             )
-            st.dataframe(top_pairs_table, use_container_width=True, hide_index=True)
+            render_adaptive_dataframe(top_pairs_table, use_container_width=True, hide_index=True)
 
     centrality_table = centrality_dataframe(centrality_rows)
     if centrality_table.empty:
@@ -369,7 +370,7 @@ def render() -> None:
             centrality_table,
             key="analytics_centrality_fullscreen",
         )
-        st.dataframe(centrality_table, use_container_width=True, hide_index=True)
+        render_adaptive_dataframe(centrality_table, use_container_width=True, hide_index=True)
 
     if source_rows.empty:
         render_section_heading("Структура джерел")
@@ -393,7 +394,7 @@ def render() -> None:
                 source_rows,
                 key="analytics_sources_table_fullscreen",
             )
-            st.dataframe(source_rows, use_container_width=True, hide_index=True)
+            render_adaptive_dataframe(source_rows, use_container_width=True, hide_index=True)
 
     if department_comparison.empty:
         render_section_heading("Порівняння кафедр")
@@ -408,7 +409,7 @@ def render() -> None:
             key="analytics_department_comparison_fullscreen",
             caption="Кафедри в поточному контурі з розрахунком середньої кількості публікацій на викладача.",
         )
-        st.dataframe(department_comparison, use_container_width=True, hide_index=True)
+        render_adaptive_dataframe(department_comparison, use_container_width=True, hide_index=True)
 
     render_section_heading("Звіти", "Локальні зрізи для кафедри, факультету або окремого підрозділу.")
     departments = service.get_departments()
@@ -465,7 +466,7 @@ def render() -> None:
                         teacher_report_frame,
                         key="analytics_department_teachers_fullscreen",
                     )
-                    st.dataframe(teacher_report_frame, use_container_width=True, hide_index=True)
+                    render_adaptive_dataframe(teacher_report_frame, use_container_width=True, hide_index=True)
             with report_columns[1]:
                 if not department_frame.empty:
                     render_fullscreen_dataframe_heading(
@@ -473,7 +474,7 @@ def render() -> None:
                         department_frame,
                         key="analytics_department_overview_fullscreen",
                     )
-                    st.dataframe(department_frame, use_container_width=True, hide_index=True)
+                    render_adaptive_dataframe(department_frame, use_container_width=True, hide_index=True)
                 report_csv = _report_package_frame(
                     [
                         ("Огляд кафедри", department_frame),
@@ -544,7 +545,7 @@ def render() -> None:
                         faculty_teacher_frame,
                         key="analytics_faculty_teachers_fullscreen",
                     )
-                    st.dataframe(faculty_teacher_frame, use_container_width=True, hide_index=True)
+                    render_adaptive_dataframe(faculty_teacher_frame, use_container_width=True, hide_index=True)
             with faculty_columns[1]:
                 if not faculty_frame.empty:
                     render_fullscreen_dataframe_heading(
@@ -552,14 +553,14 @@ def render() -> None:
                         faculty_frame,
                         key="analytics_faculty_overview_fullscreen",
                     )
-                    st.dataframe(faculty_frame, use_container_width=True, hide_index=True)
+                    render_adaptive_dataframe(faculty_frame, use_container_width=True, hide_index=True)
                 if not faculty_department_frame.empty:
                     render_fullscreen_dataframe_heading(
                         "Звіт факультету: кафедри",
                         faculty_department_frame,
                         key="analytics_faculty_departments_fullscreen",
                     )
-                    st.dataframe(faculty_department_frame, use_container_width=True, hide_index=True)
+                    render_adaptive_dataframe(faculty_department_frame, use_container_width=True, hide_index=True)
                 faculty_report_csv = _report_package_frame(
                     [
                         ("Огляд факультету", faculty_frame),
