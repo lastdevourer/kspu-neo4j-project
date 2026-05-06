@@ -43,7 +43,7 @@ def render() -> None:
     faculty_overview = faculty_overview_dataframe(faculty_overview_rows)
     department_overview = department_overview_dataframe(department_overview_rows)
 
-    render_section_heading("Ключові показники")
+    render_section_heading("Ключові показники", "Оперативний зріз структури, викладачів, публікацій і співавторства.")
 
     primary_columns = st.columns(4, gap="medium")
     primary_columns[0].metric("Викладачі", format_number(counts["teachers"]))
