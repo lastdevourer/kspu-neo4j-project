@@ -4,7 +4,7 @@ from importlib import import_module
 
 import streamlit as st
 
-from config import is_admin_mode
+from config import get_ui_theme, is_admin_mode
 from ui.sidebar import render_sidebar
 
 
@@ -43,6 +43,7 @@ def _resolve_current_page(visible_pages: dict[str, dict[str, object]]) -> str:
 
     st.session_state["current_page"] = page
     st.query_params["page"] = page
+    st.query_params["theme"] = get_ui_theme()
     return page
 
 
@@ -60,6 +61,7 @@ def run() -> None:
     if selected_page != current_page:
         st.session_state["current_page"] = selected_page
         st.query_params["page"] = selected_page
+        st.query_params["theme"] = get_ui_theme()
         st.rerun()
 
     _render_page(visible_pages[current_page])
