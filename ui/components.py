@@ -791,8 +791,17 @@ def apply_theme() -> None:
         [data-testid="stMetricLabel"] p,
         [data-testid="stMetricLabel"] label,
         .stCaption,
+        .stCaption p,
+        small,
+        .stMarkdown p {
+            color: #10233d !important;
+        }
+
+        .summary-strip-caption,
+        .empty-state-body,
+        .kv-label,
         .stCaption p {
-            color: #486381 !important;
+            font-weight: 600;
         }
 
         .empty-state-title {
@@ -848,8 +857,8 @@ def apply_theme() -> None:
         }
 
         [data-baseweb="radio"] label {
-            background: rgba(255, 255, 255, 0.82);
-            border: 1px solid rgba(37, 99, 235, 0.08);
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(37, 99, 235, 0.16);
             border-radius: 999px;
             padding: 0.38rem 0.8rem;
             color: var(--text-main) !important;
@@ -863,6 +872,13 @@ def apply_theme() -> None:
 
         [role="radiogroup"] label {
             color: var(--text-main) !important;
+        }
+
+        [role="radiogroup"] label p,
+        [role="radiogroup"] label span,
+        [role="radiogroup"] div {
+            color: var(--text-main) !important;
+            opacity: 1 !important;
         }
 
         [data-baseweb="radio"] input:checked + div,
@@ -1007,6 +1023,16 @@ def apply_theme() -> None:
 
         .adaptive-light-table-shell tbody tr:hover td {
             background: rgba(14, 165, 233, 0.04);
+        }
+
+        .adaptive-light-table-shell::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        .adaptive-light-table-shell::-webkit-scrollbar-thumb {
+            background: rgba(37, 99, 235, 0.25);
+            border-radius: 999px;
         }
 
         .light-chart-shell {
