@@ -715,6 +715,7 @@ def apply_theme() -> None:
         div[data-testid="stMetric"],
         [data-testid="stDataFrame"],
         [data-testid="stAlert"],
+        .empty-state,
         [data-testid="stExpander"] {
             background: rgba(255, 255, 255, 0.94) !important;
         }
@@ -766,9 +767,14 @@ def apply_theme() -> None:
         .section-heading-subtitle,
         .summary-strip-caption,
         .kv-label,
+        .empty-state-body,
         .stCaption,
         .stCaption p {
             color: var(--text-soft) !important;
+        }
+
+        .empty-state-title {
+            color: var(--text-main) !important;
         }
 
         [data-testid="stSidebar"] .stTextInput input,
@@ -805,10 +811,32 @@ def apply_theme() -> None:
         }
 
         [data-baseweb="radio"] > div {
-            background: rgba(255, 255, 255, 0.72);
+            background: rgba(255, 255, 255, 0.88);
             border-radius: 14px;
-            padding: 0.15rem 0.2rem;
+            padding: 0.2rem 0.24rem;
+            border: 1px solid rgba(37, 99, 235, 0.10);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+        }
+
+        [data-baseweb="radio"] label {
+            background: rgba(255, 255, 255, 0.82);
             border: 1px solid rgba(37, 99, 235, 0.08);
+            border-radius: 999px;
+            padding: 0.38rem 0.8rem;
+            color: var(--text-main) !important;
+        }
+
+        [data-baseweb="radio"] label p,
+        [data-baseweb="radio"] label span {
+            color: var(--text-main) !important;
+            font-weight: 700;
+        }
+
+        [data-baseweb="radio"] input:checked + div,
+        [data-baseweb="radio"] label:has(input:checked) {
+            background: rgba(14, 165, 233, 0.10) !important;
+            border-color: rgba(14, 165, 233, 0.22) !important;
+            box-shadow: 0 8px 18px rgba(14, 165, 233, 0.10);
         }
 
         [data-testid="stProgressBar"] > div > div {
@@ -817,6 +845,10 @@ def apply_theme() -> None:
 
         [data-testid="stProgressBar"] div[role="progressbar"] {
             background: linear-gradient(90deg, rgba(14, 165, 233, 0.92), rgba(45, 212, 191, 0.88)) !important;
+        }
+
+        [data-baseweb="slider"] [role="slider"] {
+            box-shadow: 0 0 0 6px rgba(14, 165, 233, 0.12);
         }
 
         [data-testid="stSidebar"] {
@@ -928,6 +960,18 @@ def apply_theme() -> None:
             white-space: nowrap;
         }
 
+        .adaptive-light-table-shell td:first-child,
+        .adaptive-light-table-shell th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.99);
+        }
+
+        .adaptive-light-table-shell thead th:first-child {
+            background: rgba(243, 248, 253, 0.99);
+        }
+
         .adaptive-light-table-shell tbody tr:hover td {
             background: rgba(14, 165, 233, 0.04);
         }
@@ -947,6 +991,16 @@ def apply_theme() -> None:
         div[role="dialog"] iframe {
             background: rgba(255, 255, 255, 0.99);
             border: 1px solid rgba(37, 99, 235, 0.10);
+        }
+
+        [data-testid="stException"] {
+            background: rgba(254, 242, 242, 0.98) !important;
+            border: 1px solid rgba(239, 68, 68, 0.18) !important;
+            border-radius: 24px !important;
+        }
+
+        [data-testid="stException"] * {
+            color: #7f1d1d !important;
         }
         </style>
         """
