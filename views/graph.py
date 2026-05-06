@@ -115,7 +115,7 @@ def render() -> None:
         subtitle="Досліджуйте зв'язки між авторством, співавторством, кафедрами та окремими викладачами.",
     )
     mode_options = ["Авторство", "Співавторство викладачів", "Профіль викладача", "З'язки між кафедрами"]
-    mode = st.selectbox("Режим мережі", mode_options, index=0)
+    mode = st.selectbox("Тип мережі", mode_options, index=0, help="Оберіть проєкцію графа для поточного аналізу.")
     controls = st.columns([1.15, 0.85], gap="large")
     edge_limit = controls[1].slider("Ліміт зв'язків", min_value=20, max_value=240, value=120, step=10)
 
