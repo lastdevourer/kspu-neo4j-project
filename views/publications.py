@@ -5,6 +5,7 @@ import streamlit as st
 from config import is_admin_mode
 from ui.components import (
     render_empty_state,
+    render_adaptive_dataframe,
     render_fullscreen_dataframe_heading,
     render_header,
     render_key_value_card,
@@ -423,7 +424,7 @@ if hasattr(st, "dialog"):
 
         workspace = st.columns([1.22, 0.78], gap="large")
         with workspace[0]:
-            st.dataframe(publications_dataframe_admin(visible_rows), use_container_width=True, hide_index=True, height=620)
+            render_adaptive_dataframe(publications_dataframe_admin(visible_rows), use_container_width=True, hide_index=True, height=620)
 
         with workspace[1]:
             if len(selected_rows) == 1:
@@ -581,7 +582,7 @@ def render() -> None:
             mime="text/csv",
             use_container_width=True,
         )
-        st.dataframe(publications_table, use_container_width=True, hide_index=True)
+        render_adaptive_dataframe(publications_table, use_container_width=True, hide_index=True)
 
     with layout[1]:
         render_section_heading("Деталі публікації")
