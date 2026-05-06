@@ -824,9 +824,21 @@ def apply_theme() -> None:
             background: rgba(14, 165, 233, 0.04);
         }
 
+        [data-testid="stDataFrame"] canvas,
+        [data-testid="stDataFrameResizable"] canvas {
+            filter: invert(1) hue-rotate(180deg) saturate(0.92) contrast(0.98);
+        }
+
+        [data-testid="stDataFrame"] [data-testid="stElementToolbar"],
+        [data-testid="stDataFrameResizable"] [data-testid="stElementToolbar"] {
+            background: transparent !important;
+        }
+
         iframe {
             border-radius: 22px;
-            background: rgba(255, 255, 255, 0.96);
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid rgba(37, 99, 235, 0.10);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
         }
 
         [data-testid="stMarkdownContainer"] p code,
@@ -839,6 +851,11 @@ def apply_theme() -> None:
         div[role="dialog"] {
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(243, 248, 253, 0.98)) !important;
             box-shadow: 0 24px 80px rgba(15, 23, 42, 0.12) !important;
+        }
+
+        div[role="dialog"] iframe {
+            background: rgba(255, 255, 255, 0.99);
+            border: 1px solid rgba(37, 99, 235, 0.10);
         }
         </style>
         """
@@ -1084,47 +1101,3 @@ def require_service() -> Neo4jService:
         else:
             st.caption("Перевірте `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` і права доступу до Neo4j Aura.")
         st.stop()
-
-
-def render_sidebar(service: Neo4jService) -> None:
-    with st.sidebar:
-        st.markdown(
-            """
-            <div class="sidebar-brand">
-                <div class="sidebar-brand-kicker">KSU</div>
-                <div class="sidebar-brand-title">Академічна аналітика</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        with st.expander("Керування базою", expanded=False):
-            if st.button("Перевірити підключення", use_container_width=True):
-                try:
-                    service.verify_connection()
-                    st.success("Підключення до Neo4j Aura активне.")
-                except Exception as exc:
-                    st.error(f"Помилка підключення: {exc}")
-
-            if st.button("Створити схему та індекси", use_container_width=True):
-                try:
-                    service.prepare_database()
-                    st.success("Обмеження та індекси створено.")
-                except Exception as exc:
-                    st.error(f"Не вдалося підготувати схему: {exc}")
-
-            if st.button("Заповнити факультети та кафедри", use_container_width=True):
-                try:
-                    service.seed_reference_data(FACULTIES, DEPARTMENTS)
-                    st.success("Довідник факультетів і кафедр оновлено.")
-                except Exception as exc:
-                    st.error(f"Не вдалося заповнити довідник: {exc}")
-
-            if st.button("Завантажити викладачів KSU", use_container_width=True):
-                try:
-                    service.seed_reference_data(FACULTIES, DEPARTMENTS)
-                    teachers = load_teachers_seed()
-                    service.seed_teachers(teachers)
-                    st.success(f"Завантажено {len(teachers)} викладачів KSU.")
-                except Exception as exc:
-                    st.error(f"Не вдалося завантажити викладачів: {exc}")
