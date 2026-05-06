@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from config import get_admin_password, is_admin_mode, is_presentation_mode
+from config import get_admin_password, get_ui_theme, is_admin_mode
 
 
 def render_sidebar(
@@ -25,11 +25,21 @@ def render_sidebar(
             unsafe_allow_html=True,
         )
 
-        st.toggle(
-            "Презентаційний світлий режим",
-            value=is_presentation_mode(),
-            key="presentation_mode",
+        theme_options = {"Темна": "dark", "Світла": "light"}
+        current_theme = get_ui_theme()
+        theme_values = list(theme_options.values())
+        selected_theme_label = st.radio(
+            "Тема інтерфейсу",
+            list(theme_options.keys()),
+            index=theme_values.index(current_theme),
+            horizontal=True,
+            key="sidebar_theme_choice",
         )
+        selected_theme = theme_options[selected_theme_label]
+        if selected_theme != current_theme:
+            st.session_state["ui_theme"] = selected_theme
+            st.query_params["theme"] = selected_theme
+            st.rerun()
 
         for section_name in section_order:
             section_pages = [
@@ -68,6 +78,7 @@ def render_sidebar(
                     if current_page in {"structure", "data-center"}:
                         st.session_state["current_page"] = "dashboard"
                         st.query_params["page"] = "dashboard"
+                        st.query_params["theme"] = get_ui_theme()
                     st.rerun()
             else:
                 entered_password = st.text_input(
