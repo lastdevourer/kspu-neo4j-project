@@ -25,14 +25,16 @@ def render_sidebar(
             unsafe_allow_html=True,
         )
 
-        theme_options = {"Темна": "dark", "Світла": "light"}
+        theme_options = {
+            "Темна": "dark",
+            "Світла": "light",
+        }
         current_theme = get_ui_theme()
-        theme_values = list(theme_options.values())
-        selected_theme_label = st.radio(
+        inverse_theme_options = {value: key for key, value in theme_options.items()}
+        selected_theme_label = st.selectbox(
             "Тема інтерфейсу",
             list(theme_options.keys()),
-            index=theme_values.index(current_theme),
-            horizontal=True,
+            index=list(theme_options.keys()).index(inverse_theme_options[current_theme]),
             key="sidebar_theme_choice",
         )
         selected_theme = theme_options[selected_theme_label]
