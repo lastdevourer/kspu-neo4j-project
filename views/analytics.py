@@ -7,6 +7,7 @@ import streamlit as st
 from ui.components import (
     render_empty_state,
     render_adaptive_dataframe,
+    render_adaptive_bar_chart,
     render_fullscreen_bar_chart_heading,
     render_fullscreen_dataframe_heading,
     render_header,
@@ -232,7 +233,7 @@ def render() -> None:
                 chart_frame,
                 key="analytics_yearly_chart_fullscreen",
             )
-            st.bar_chart(chart_frame, use_container_width=True, height=260)
+            render_adaptive_bar_chart(chart_frame, use_container_width=True, height=260)
         with trend_columns[1]:
             render_fullscreen_dataframe_heading(
                 "Таблиця динаміки",
@@ -387,7 +388,7 @@ def render() -> None:
                 chart_source,
                 key="analytics_sources_chart_fullscreen",
             )
-            st.bar_chart(chart_source, use_container_width=True, height=280)
+            render_adaptive_bar_chart(chart_source, use_container_width=True, height=280)
         with source_columns[1]:
             render_fullscreen_dataframe_heading(
                 "Таблиця джерел",
