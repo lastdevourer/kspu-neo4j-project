@@ -10,6 +10,7 @@ from services.publication_import import PublicationImportService
 from ui.components import (
     render_empty_state,
     render_adaptive_dataframe,
+    render_adaptive_bar_chart,
     render_fullscreen_bar_chart_heading,
     render_fullscreen_dataframe_heading,
     render_header,
@@ -648,7 +649,7 @@ def _render_publications_tab(service) -> None:
                 key="structure_publication_sources_chart_fullscreen",
                 caption="Графік покриття публікацій за джерелами.",
             )
-            st.bar_chart(publication_sources.set_index("Джерело"), use_container_width=True, height=280)
+            render_adaptive_bar_chart(publication_sources.set_index("Джерело"), use_container_width=True, height=280)
         with source_columns[1]:
             render_fullscreen_dataframe_heading(
                 "Джерела публікацій",
