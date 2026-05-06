@@ -133,13 +133,12 @@ def teacher_publications_dataframe_public(rows: list[dict]) -> pd.DataFrame:
             "title": "Публікація",
             "status": "Статус",
             "year": "Рік",
-            "doi": "DOI",
             "pub_type": "Тип",
             "source": "Джерело",
             "authors": "Автори",
         }
     )
-    return renamed[["Публікація", "Статус", "Рік", "DOI", "Тип", "Джерело", "Автори"]]
+    return renamed[["Публікація", "Статус", "Рік", "Тип", "Джерело", "Автори"]]
 
 
 def teacher_publications_dataframe_admin(rows: list[dict]) -> pd.DataFrame:
@@ -190,14 +189,12 @@ def publications_dataframe_public(rows: list[dict]) -> pd.DataFrame:
             "title": "Назва",
             "status": "Статус",
             "year": "Рік",
-            "doi": "DOI",
             "pub_type": "Тип",
             "source": "Джерело",
             "authors": "Автори",
-            "authors_count": "Кількість авторів",
         }
     )
-    return renamed[["Назва", "Статус", "Рік", "DOI", "Тип", "Джерело", "Кількість авторів", "Автори"]]
+    return renamed[["Назва", "Статус", "Рік", "Тип", "Джерело", "Автори"]]
 
 
 def publications_dataframe_admin(rows: list[dict]) -> pd.DataFrame:
