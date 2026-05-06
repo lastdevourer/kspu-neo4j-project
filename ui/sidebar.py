@@ -27,12 +27,12 @@ def render_sidebar(
 
         current_theme = get_ui_theme()
         st.markdown("**Тема інтерфейсу**")
-        theme_cols = st.columns([0.78, 0.22], gap="small")
+        theme_cols = st.columns([0.66, 0.34], gap="small")
         theme_label = "Світла тема" if current_theme == "light" else "Темна тема"
-        theme_icon = "☀️" if current_theme == "dark" else "🌙"
+        theme_button_label = "☀️ Світла" if current_theme == "dark" else "🌙 Темна"
         theme_cols[0].caption(f"Зараз: {theme_label}")
         if theme_cols[1].button(
-            theme_icon,
+            theme_button_label,
             key="sidebar_theme_toggle",
             use_container_width=True,
             help="Перемкнути тему інтерфейсу",
