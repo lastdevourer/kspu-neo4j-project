@@ -719,11 +719,18 @@ def apply_theme() -> None:
             background: rgba(255, 255, 255, 0.94) !important;
         }
 
-        div.stButton > button {
+        div.stButton > button,
+        div.stDownloadButton > button {
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(245, 249, 254, 0.98));
             color: var(--text-main);
             border-color: rgba(37, 99, 235, 0.16);
             box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        div.stButton > button:hover,
+        div.stDownloadButton > button:hover {
+            border-color: rgba(14, 165, 233, 0.28);
+            box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
         }
 
         div.stButton > button[kind="primary"] {
@@ -731,7 +738,8 @@ def apply_theme() -> None:
             color: #f8feff;
         }
 
-        div.stButton > button[kind="secondary"] {
+        div.stButton > button[kind="secondary"],
+        div.stDownloadButton > button[kind="secondary"] {
             background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(247, 250, 254, 0.98));
             color: var(--text-main);
         }
@@ -743,6 +751,27 @@ def apply_theme() -> None:
             background: rgba(255, 255, 255, 0.98);
             border-color: rgba(37, 99, 235, 0.12);
             box-shadow: 0 10px 20px rgba(15, 23, 42, 0.04);
+        }
+
+        label[data-testid="stWidgetLabel"] p,
+        .sidebar-brand-kicker,
+        .sidebar-brand-title,
+        .sidebar-section-label,
+        [data-testid="stSidebar"] .stMarkdown p,
+        [data-testid="stSidebar"] label p {
+            color: var(--text-main) !important;
+        }
+
+        [data-testid="stSidebar"] .stTextInput input,
+        [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] * {
+            color: var(--text-main) !important;
+        }
+
+        [data-testid="stSidebar"] .stTextInput > div > div,
+        [data-testid="stSidebar"] div[data-baseweb="select"] > div {
+            background: rgba(255, 255, 255, 0.96) !important;
+            border: 1px solid rgba(37, 99, 235, 0.14) !important;
+            box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05) !important;
         }
 
         div[data-baseweb="tab-list"] {
@@ -824,10 +853,6 @@ def apply_theme() -> None:
             background: rgba(14, 165, 233, 0.04);
         }
 
-        [data-testid="stDataFrame"] canvas,
-        [data-testid="stDataFrameResizable"] canvas {
-            filter: invert(1) hue-rotate(180deg) saturate(0.92) contrast(0.98);
-        }
 
         [data-testid="stDataFrame"] [data-testid="stElementToolbar"],
         [data-testid="stDataFrameResizable"] [data-testid="stElementToolbar"] {
@@ -839,6 +864,22 @@ def apply_theme() -> None:
             background: rgba(255, 255, 255, 0.98);
             border: 1px solid rgba(37, 99, 235, 0.10);
             box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+        }
+
+        [data-testid="stTable"] table {
+            background: rgba(255, 255, 255, 0.98);
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        [data-testid="stTable"] th {
+            background: rgba(243, 248, 253, 0.96);
+            color: var(--text-main);
+        }
+
+        [data-testid="stTable"] td {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.98);
         }
 
         [data-testid="stMarkdownContainer"] p code,
