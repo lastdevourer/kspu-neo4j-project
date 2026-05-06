@@ -298,7 +298,7 @@ def render() -> None:
             mime="text/csv",
             use_container_width=True,
         )
-        render_adaptive_dataframe(teachers_table, use_container_width=True, hide_index=True)
+        render_adaptive_dataframe(teachers_table, use_container_width=True, hide_index=True, height=520)
 
     with layout[1]:
         render_section_heading("Картка викладача")
@@ -397,7 +397,7 @@ def render() -> None:
                 key=f"teacher_publications_fullscreen_{selected_teacher_id}",
                 caption="Розширений перегляд публікацій вибраного викладача.",
             )
-            render_adaptive_dataframe(publications_table, use_container_width=True, hide_index=True)
+            render_adaptive_dataframe(publications_table, use_container_width=True, hide_index=True, height=420)
 
         if admin_mode:
             _render_publication_management(service, selected_teacher_id, publications, all_publications)
@@ -417,4 +417,4 @@ def render() -> None:
                 key=f"teacher_coauthors_fullscreen_{selected_teacher_id}",
                 caption="Повний список співавторів вибраного викладача.",
             )
-            render_adaptive_dataframe(coauthors_table, use_container_width=True, hide_index=True)
+            render_adaptive_dataframe(coauthors_table, use_container_width=True, hide_index=True, height=360)
