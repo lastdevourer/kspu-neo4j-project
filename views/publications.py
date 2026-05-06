@@ -424,7 +424,7 @@ if hasattr(st, "dialog"):
 
         workspace = st.columns([1.22, 0.78], gap="large")
         with workspace[0]:
-            render_adaptive_dataframe(publications_dataframe_admin(visible_rows), use_container_width=True, hide_index=True, height=620)
+            render_adaptive_dataframe(publications_dataframe_admin(visible_rows), use_container_width=True, hide_index=True, height=520)
 
         with workspace[1]:
             if len(selected_rows) == 1:
@@ -582,7 +582,7 @@ def render() -> None:
             mime="text/csv",
             use_container_width=True,
         )
-        render_adaptive_dataframe(publications_table, use_container_width=True, hide_index=True)
+        render_adaptive_dataframe(publications_table, use_container_width=True, hide_index=True, height=520)
 
     with layout[1]:
         render_section_heading("Деталі публікації")
