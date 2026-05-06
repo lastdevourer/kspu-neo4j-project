@@ -4,13 +4,13 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
+from config import get_ui_theme
 from ui.components import (
     render_empty_state,
     render_fullscreen_dataframe_heading,
     render_fullscreen_html_heading,
     render_header,
     render_key_value_card,
-    render_section_heading,
     require_service,
 )
 from ui.formatters import coauthor_graph_dataframe, department_collaboration_dataframe, graph_edges_dataframe
@@ -108,7 +108,11 @@ def _render_graph_tabs(
 
 def render() -> None:
     service = require_service()
-    render_header("Мережева аналітика", subtitle="Досліджуйте зв'язки між авторством, співавторством, кафедрами та окремими викладачами.")
+    ui_theme = get_ui_theme()
+    render_header(
+        "Мережева аналітика",
+        subtitle="Досліджуйте зв'язки між авторством, співавторством, кафедрами та окремими викладачами.",
+    )
 
     mode = st.radio(
         "Режим мережі",
@@ -143,7 +147,7 @@ def render() -> None:
         summary[1].metric("Вузли публікацій", publication_count)
         summary[2].metric("Зв'язки графа", len(edges))
 
-        graph_html = build_bipartite_graph_html(edges)
+        graph_html = build_bipartite_graph_html(edges, theme=ui_theme)
         frame = graph_edges_dataframe(edges)
         _render_graph_tabs(
             title="Інтерактивна мережа авторства",
@@ -175,7 +179,7 @@ def render() -> None:
         summary[1].metric("Пари співавторів", len(edges))
         summary[2].metric("Сумарні спільні роботи", total_weight)
 
-        graph_html = build_coauthor_graph_html(edges)
+        graph_html = build_coauthor_graph_html(edges, theme=ui_theme)
         frame = coauthor_graph_dataframe(edges)
         _render_graph_tabs(
             title="Інтерактивна мережа співавторства",
@@ -234,7 +238,7 @@ def render() -> None:
             ],
         )
 
-        graph_html = build_bipartite_graph_html(edges, focus_teacher_id=selected_teacher_id)
+        graph_html = build_bipartite_graph_html(edges, focus_teacher_id=selected_teacher_id, theme=ui_theme)
         frame = graph_edges_dataframe(edges)
         _render_graph_tabs(
             title="Локальна мережа викладача",
@@ -265,7 +269,7 @@ def render() -> None:
     summary[1].metric("Міжкафедральні зв'язки", len(edges))
     summary[2].metric("Спільні роботи", total_weight)
 
-    graph_html = build_department_graph_html(edges)
+    graph_html = build_department_graph_html(edges, theme=ui_theme)
     frame = department_collaboration_dataframe(edges)
     _render_graph_tabs(
         title="Інтерактивна міжкафедральна мережа",
