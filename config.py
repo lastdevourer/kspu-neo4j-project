@@ -14,6 +14,9 @@ except ModuleNotFoundError:  # pragma: no cover - optional on Streamlit Cloud
 
 load_dotenv()
 
+UI_THEMES = {"dark", "light"}
+DEFAULT_UI_THEME = "dark"
+
 
 @dataclass(frozen=True)
 class Neo4jConfig:
@@ -54,6 +57,40 @@ def _read_bool_setting(key: str, default: bool = False) -> bool:
     return raw.lower() in {"1", "true", "yes", "on"}
 
 
+def normalize_ui_theme(value: str) -> str:
+    cleaned = str(value or "").strip().lower()
+    return cleaned if cleaned in UI_THEMES else DEFAULT_UI_THEME
+
+
+def get_default_ui_theme() -> str:
+    raw = (
+        _read_streamlit_secret("DEFAULT_UI_THEME")
+        or os.getenv("DEFAULT_UI_THEME", "").strip()
+        or _read_streamlit_secret("PRESENTATION_MODE")
+        or os.getenv("PRESENTATION_MODE", "").strip()
+    )
+    if str(raw).strip().lower() in {"1", "true", "yes", "on"}:
+        return "light"
+    return normalize_ui_theme(raw)
+
+
+def get_ui_theme() -> str:
+    if "ui_theme" in st.session_state:
+        theme = normalize_ui_theme(str(st.session_state.get("ui_theme", "")))
+        st.session_state["ui_theme"] = theme
+        return theme
+
+    query_theme = str(st.query_params.get("theme", "") or "")
+    if query_theme:
+        theme = normalize_ui_theme(query_theme)
+        st.session_state["ui_theme"] = theme
+        return theme
+
+    theme = get_default_ui_theme()
+    st.session_state["ui_theme"] = theme
+    return theme
+
+
 def is_admin_mode() -> bool:
     if bool(st.session_state.get("admin_unlocked", False)):
         return True
@@ -62,12 +99,6 @@ def is_admin_mode() -> bool:
 
 def get_admin_password() -> str:
     return _read_streamlit_secret("ADMIN_PASSWORD") or os.getenv("ADMIN_PASSWORD", "").strip()
-
-
-def is_presentation_mode() -> bool:
-    if "presentation_mode" in st.session_state:
-        return bool(st.session_state.get("presentation_mode", False))
-    return _read_bool_setting("PRESENTATION_MODE", default=False)
 
 
 def get_neo4j_config() -> Neo4jConfig | None:
@@ -155,5 +186,6 @@ def get_connection_help_text() -> str:
         "`NEO4J_DATABASE` (необов'язково; якщо є помилка маршрутизації, краще прибрати цей параметр і дати Aura "
         "вибрати домашню базу автоматично)\n"
         "`ADMIN_PASSWORD` (пароль для розблокування режиму керування всередині тієї ж app)\n"
+        "`DEFAULT_UI_THEME` (`dark` або `light`; якщо не задано, використовується темна тема)\n"
         "`ADMIN_MODE` (`true` лише якщо хочете примусово тримати адмінрежим увімкненим для всіх відвідувачів)"
     )
