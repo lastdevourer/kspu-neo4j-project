@@ -9,6 +9,7 @@ from data.seed_data import DEPARTMENTS, FACULTIES
 from services.publication_import import PublicationImportService
 from ui.components import (
     render_empty_state,
+    render_adaptive_dataframe,
     render_fullscreen_bar_chart_heading,
     render_fullscreen_dataframe_heading,
     render_header,
@@ -160,7 +161,7 @@ def _render_faculty_department_tab(service) -> None:
                 use_container_width=True,
                 key="download_filtered_faculties",
             )
-            st.dataframe(faculty_frame, use_container_width=True, hide_index=True)
+            render_adaptive_dataframe(faculty_frame, use_container_width=True, hide_index=True)
 
     with tables[1]:
         if department_frame.empty:
@@ -181,7 +182,7 @@ def _render_faculty_department_tab(service) -> None:
                 use_container_width=True,
                 key="download_filtered_departments",
             )
-            st.dataframe(department_frame, use_container_width=True, hide_index=True)
+            render_adaptive_dataframe(department_frame, use_container_width=True, hide_index=True)
 
     edit_columns = st.columns(2, gap="large")
     faculty_edit_map = {"Новий факультет": None} | {
@@ -540,7 +541,7 @@ def _render_teachers_tab(service) -> None:
             use_container_width=True,
             key="download_filtered_teachers",
         )
-        st.dataframe(teacher_frame, use_container_width=True, hide_index=True)
+        render_adaptive_dataframe(teacher_frame, use_container_width=True, hide_index=True)
 
 
 def _render_publications_tab(service) -> None:
@@ -655,7 +656,7 @@ def _render_publications_tab(service) -> None:
                 key="structure_publication_sources_fullscreen",
                 caption="Таблиця зведення по джерелах імпорту.",
             )
-            st.dataframe(publication_sources, use_container_width=True, hide_index=True)
+            render_adaptive_dataframe(publication_sources, use_container_width=True, hide_index=True)
             st.download_button(
                 "Експорт джерел CSV",
                 _csv_bytes(publication_sources),
