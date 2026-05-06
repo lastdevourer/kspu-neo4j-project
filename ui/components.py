@@ -679,8 +679,8 @@ def apply_theme() -> None:
             --line-soft: rgba(37, 99, 235, 0.12);
             --line-strong: rgba(14, 165, 233, 0.18);
             --text-main: #10233d;
-            --text-soft: #35506e;
-            --text-muted: #4f6985;
+            --text-soft: #1f3d5b;
+            --text-muted: #294867;
             --shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
         }
 
@@ -794,7 +794,7 @@ def apply_theme() -> None:
         .stCaption p,
         small,
         .stMarkdown p {
-            color: #10233d !important;
+            color: #0f2740 !important;
         }
 
         .summary-strip-caption,
@@ -802,6 +802,16 @@ def apply_theme() -> None:
         .kv-label,
         .stCaption p {
             font-weight: 600;
+        }
+
+        .summary-strip-title,
+        .kv-title,
+        .sidebar-section-label,
+        .sidebar-brand-title,
+        .sidebar-brand-kicker,
+        label[data-testid="stWidgetLabel"] p,
+        [data-testid="stMetricLabel"] {
+            color: #10233d !important;
         }
 
         .empty-state-title {
@@ -817,6 +827,17 @@ def apply_theme() -> None:
         [data-testid="stSidebar"] .stTextInput input,
         [data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] * {
             color: var(--text-main) !important;
+        }
+
+        [data-testid="stSidebar"] button[title*="password"],
+        [data-testid="stSidebar"] button[aria-label*="password"],
+        [data-testid="stSidebar"] button[aria-label*="Password"] {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: #35516f !important;
+            min-height: auto !important;
+            padding: 0.2rem 0.35rem !important;
         }
 
         [data-testid="stSidebar"] .stTextInput > div > div,
@@ -988,6 +1009,7 @@ def apply_theme() -> None:
             background: rgba(255, 255, 255, 0.98);
             color: var(--text-main);
             font-size: 0.95rem;
+            table-layout: auto;
         }
 
         .adaptive-light-table-shell thead th {
@@ -1009,16 +1031,14 @@ def apply_theme() -> None:
             white-space: nowrap;
         }
 
-        .adaptive-light-table-shell td:first-child,
-        .adaptive-light-table-shell th:first-child {
-            position: sticky;
-            left: 0;
-            z-index: 1;
-            background: rgba(255, 255, 255, 0.99);
+        .adaptive-light-table-shell td {
+            line-height: 1.4;
+            color: var(--text-main);
         }
 
-        .adaptive-light-table-shell thead th:first-child {
-            background: rgba(243, 248, 253, 0.99);
+        .adaptive-light-table-shell td:first-child,
+        .adaptive-light-table-shell th:first-child {
+            min-width: 72px;
         }
 
         .adaptive-light-table-shell tbody tr:hover td {
