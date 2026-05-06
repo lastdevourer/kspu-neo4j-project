@@ -23,8 +23,7 @@ def _csv_bytes(frame):
 
 
 def _render_dashboard_table(frame) -> None:
-    if get_ui_theme() == "light":
-        render_adaptive_dataframe(frame, use_container_width=True, hide_index=True)
+    render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=420)
 
 
 def render() -> None:
