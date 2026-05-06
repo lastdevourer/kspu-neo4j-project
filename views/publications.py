@@ -582,7 +582,7 @@ def render() -> None:
             mime="text/csv",
             use_container_width=True,
         )
-        render_adaptive_dataframe(publications_table, use_container_width=True, hide_index=True, height=520)
+        render_adaptive_dataframe(publications_table, use_container_width=True, hide_index=True, height=340)
 
     with layout[1]:
         render_section_heading("Деталі публікації")
