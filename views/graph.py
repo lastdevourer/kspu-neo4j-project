@@ -7,6 +7,7 @@ import streamlit.components.v1 as components
 from config import get_ui_theme
 from ui.components import (
     render_empty_state,
+    render_adaptive_dataframe,
     render_fullscreen_dataframe_heading,
     render_fullscreen_html_heading,
     render_header,
@@ -103,7 +104,7 @@ def _render_graph_tabs(
                 mime="text/csv",
                 use_container_width=True,
             )
-            st.dataframe(frame, use_container_width=True, hide_index=True)
+            render_adaptive_dataframe(frame, use_container_width=True, hide_index=True)
 
 
 def render() -> None:
