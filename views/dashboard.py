@@ -4,6 +4,7 @@ import streamlit as st
 
 from ui.components import (
     render_adaptive_dataframe,
+    render_adaptive_bar_chart,
     render_empty_state,
     render_fullscreen_bar_chart_heading,
     render_fullscreen_dataframe_heading,
@@ -143,7 +144,7 @@ def render() -> None:
                     chart_source,
                     key="dashboard_sources_chart_fullscreen",
                 )
-                st.bar_chart(chart_source, use_container_width=True, height=250)
+                render_adaptive_bar_chart(chart_source, use_container_width=True, height=250)
             with source_columns[1]:
                 render_fullscreen_dataframe_heading(
                     "Таблиця джерел публікацій",
@@ -171,7 +172,7 @@ def render() -> None:
                     chart_source,
                     key="dashboard_faculty_chart_fullscreen",
                 )
-                st.bar_chart(chart_source, use_container_width=True, height=300)
+                render_adaptive_bar_chart(chart_source, use_container_width=True, height=300)
             with split_columns[1]:
                 render_fullscreen_dataframe_heading(
                     "Повний зріз факультетів",
