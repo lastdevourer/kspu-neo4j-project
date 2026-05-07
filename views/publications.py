@@ -6,6 +6,7 @@ from config import is_admin_mode
 from ui.components import (
     render_empty_state,
     render_adaptive_dataframe,
+    render_download_link,
     render_fullscreen_dataframe_heading,
     render_header,
     render_key_value_card,
@@ -57,7 +58,7 @@ def _show_flash_message() -> None:
 
 def _build_publications_preview_frame(frame, *, admin_mode: bool):
     preview_columns = (
-        ["Назва", "Рік", "Джерело"]
+        ["Назва", "Рік", "Тип", "Джерело", "Кількість авторів"]
         if not admin_mode
         else ["Назва", "Статус", "Рік", "Джерело"]
     )
@@ -434,7 +435,13 @@ if hasattr(st, "dialog"):
 
         workspace = st.columns([1.22, 0.78], gap="large")
         with workspace[0]:
-            render_adaptive_dataframe(publications_dataframe_admin(visible_rows), use_container_width=True, hide_index=True, height=520)
+            render_adaptive_dataframe(
+                publications_dataframe_admin(visible_rows),
+                use_container_width=True,
+                hide_index=True,
+                height=420,
+                compact=True,
+            )
 
         with workspace[1]:
             if len(selected_rows) == 1:
@@ -495,7 +502,11 @@ def render() -> None:
     selected_department_code = department_options[selected_department_label]
     selected_status = filter_rows_bottom[1].selectbox("Статус робіт", ["Усі статуси"] + available_statuses)
     selected_source = filter_rows_bottom[2].selectbox("Джерело", ["Усі джерела"] + sorted(source_counts.keys()))
-    only_coauthored = filter_rows_bottom[3].checkbox("Лише публікації зі співавторами")
+    coauthor_mode = filter_rows_bottom[3].selectbox(
+        "Показувати",
+        ["Усі публікації", "Лише публікації зі співавторами"],
+    )
+    only_coauthored = coauthor_mode == "Лише публікації зі співавторами"
 
     filtered_rows = publication_rows
     if search_query:
@@ -585,15 +596,15 @@ def render() -> None:
                 _publication_workspace_dialog(service, filtered_rows, all_teachers)
         else:
             controls[0].caption("Публічний режим: модерація та редагування приховані.")
-        controls[1].download_button(
-            "Експорт поточного зрізу CSV",
-            _csv_bytes(publications_table),
-            file_name="publications_current_slice.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
+        with controls[1]:
+            render_download_link(
+                "Експорт поточного зрізу CSV",
+                _csv_bytes(publications_table),
+                file_name="publications_current_slice.csv",
+                mime="text/csv",
+            )
         publications_preview = _build_publications_preview_frame(publications_table, admin_mode=admin_mode)
-        render_adaptive_dataframe(publications_preview, use_container_width=True, hide_index=True, height=300)
+        render_adaptive_dataframe(publications_preview, use_container_width=True, hide_index=True, height=260, compact=True)
 
     with layout[1]:
         render_section_heading("Деталі публікації")
