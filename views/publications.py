@@ -6,6 +6,7 @@ from config import is_admin_mode
 from ui.components import (
     render_empty_state,
     render_adaptive_dataframe,
+    render_control_spacer,
     render_fullscreen_dataframe_heading,
     render_header,
     render_key_value_card,
@@ -594,18 +595,24 @@ def render() -> None:
         )
         controls = st.columns([0.56, 0.44], gap="small", vertical_alignment="bottom")
         if admin_mode:
+            with controls[0]:
+                render_control_spacer("Робоча панель")
             if controls[0].button("Відкрити робочу панель", use_container_width=True, key="open_publication_workspace"):
                 _publication_workspace_dialog(service, filtered_rows, all_teachers)
         else:
-            controls[0].caption("Публічний режим: модерація та редагування приховані.")
-        controls[1].download_button(
-            "Експорт поточного зрізу CSV",
-            _csv_bytes(publications_table),
-            file_name="publications_current_slice.csv",
-            mime="text/csv",
-            use_container_width=True,
-            key="publications_current_slice_download",
-        )
+            with controls[0]:
+                render_control_spacer("Режим")
+                st.caption("Публічний режим: модерація та редагування приховані.")
+        with controls[1]:
+            render_control_spacer("Експорт")
+            st.download_button(
+                "Експорт поточного зрізу CSV",
+                _csv_bytes(publications_table),
+                file_name="publications_current_slice.csv",
+                mime="text/csv",
+                use_container_width=True,
+                key="publications_current_slice_download",
+            )
         publications_preview = _build_publications_preview_frame(publications_table, admin_mode=admin_mode)
         render_adaptive_dataframe(publications_preview, use_container_width=True, hide_index=True, height=320, compact=True)
 
