@@ -219,6 +219,15 @@ def apply_theme() -> None:
             margin-right: auto;
         }
 
+        .control-spacer-label {
+            min-height: 1.25rem;
+            margin-bottom: 0.38rem;
+            color: var(--text-soft);
+            font-size: 0.92rem;
+            font-weight: 700;
+            line-height: 1.25;
+        }
+
         .empty-state {
             border: 1px dashed rgba(148, 163, 184, 0.18);
             border-radius: 24px;
@@ -593,6 +602,15 @@ def apply_theme() -> None:
                 linear-gradient(180deg, rgba(8, 22, 41, 0.97), rgba(7, 19, 35, 0.98)) !important;
             box-shadow: 0 28px 100px rgba(2, 8, 23, 0.52) !important;
             backdrop-filter: blur(18px);
+        }
+
+        div[data-testid="stDialog"] {
+            background: transparent !important;
+        }
+
+        div[data-testid="stDialogOverlay"] {
+            background: rgba(2, 8, 23, 0.68) !important;
+            backdrop-filter: blur(10px) saturate(1.08);
         }
 
         div[data-baseweb="tab-list"] {
@@ -1895,6 +1913,11 @@ def render_key_value_card(title: str, items: list[tuple[str, str]]) -> None:
         ).strip(),
         unsafe_allow_html=True,
     )
+
+
+def render_control_spacer(label: str = "") -> None:
+    text = escape(label) if label else "&nbsp;"
+    st.markdown(f'<div class="control-spacer-label">{text}</div>', unsafe_allow_html=True)
 
 
 def render_adaptive_dataframe(
