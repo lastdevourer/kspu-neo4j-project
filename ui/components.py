@@ -1369,6 +1369,61 @@ def apply_theme() -> None:
             color: var(--text-main) !important;
         }
 
+        /* Dropdown popovers / listboxes */
+        div[data-baseweb="popover"] {
+            background: rgba(255, 255, 255, 0.98) !important;
+            border: 1px solid rgba(37, 99, 235, 0.14) !important;
+            border-radius: 18px !important;
+            box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12) !important;
+        }
+
+        div[data-baseweb="popover"] * {
+            color: var(--text-main) !important;
+        }
+
+        div[role="listbox"],
+        ul[role="listbox"] {
+            background: rgba(255, 255, 255, 0.98) !important;
+            color: var(--text-main) !important;
+            border-radius: 16px !important;
+        }
+
+        div[role="option"],
+        li[role="option"] {
+            background: transparent !important;
+            color: var(--text-main) !important;
+            border-radius: 12px !important;
+        }
+
+        div[role="option"]:hover,
+        li[role="option"]:hover {
+            background: rgba(14, 165, 233, 0.08) !important;
+            color: var(--text-main) !important;
+        }
+
+        div[role="option"][aria-selected="true"],
+        li[role="option"][aria-selected="true"] {
+            background: rgba(14, 165, 233, 0.14) !important;
+            color: var(--text-main) !important;
+            font-weight: 600 !important;
+        }
+
+        div[role="listbox"]::-webkit-scrollbar,
+        ul[role="listbox"]::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        div[role="listbox"]::-webkit-scrollbar-thumb,
+        ul[role="listbox"]::-webkit-scrollbar-thumb {
+            background: rgba(37, 99, 235, 0.18);
+            border-radius: 999px;
+        }
+
+        div[role="listbox"]::-webkit-scrollbar-track,
+        ul[role="listbox"]::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.04);
+        }
+
         [data-baseweb="slider"] > div {
             background: transparent !important;
         }
@@ -1385,6 +1440,37 @@ def apply_theme() -> None:
 
         .stSlider [role="slider"] {
             box-shadow: none !important;
+        }
+
+        /* Checkboxes */
+        [data-testid="stCheckbox"] label,
+        [data-testid="stCheckbox"] p,
+        [data-testid="stCheckbox"] span {
+            color: var(--text-main) !important;
+            opacity: 1 !important;
+        }
+
+        [data-testid="stCheckbox"] [data-baseweb="checkbox"] {
+            background: transparent !important;
+        }
+
+        [data-testid="stCheckbox"] [data-baseweb="checkbox"] > div {
+            background: rgba(255, 255, 255, 0.98) !important;
+            border: 1px solid rgba(37, 99, 235, 0.20) !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04) !important;
+        }
+
+        [data-testid="stCheckbox"] [data-baseweb="checkbox"] svg {
+            fill: #0f6e92 !important;
+            color: #0f6e92 !important;
+        }
+
+        [data-testid="stCheckbox"][aria-disabled="true"] label,
+        [data-testid="stCheckbox"][aria-disabled="true"] p,
+        [data-testid="stCheckbox"][aria-disabled="true"] span {
+            color: var(--text-soft) !important;
+            opacity: 0.88 !important;
         }
 
         details,
@@ -1471,6 +1557,19 @@ def apply_theme() -> None:
         .stMarkdown strong,
         .stMarkdown b {
             color: #0f2747 !important;
+        }
+
+        [data-baseweb="radio"] label,
+        [data-baseweb="radio"] span,
+        [data-baseweb="radio"] div {
+            color: var(--text-main) !important;
+        }
+
+        [data-baseweb="tag"] {
+            background: rgba(14, 165, 233, 0.10) !important;
+            border: 1px solid rgba(14, 165, 233, 0.14) !important;
+            color: var(--text-main) !important;
+            border-radius: 999px !important;
         }
 
         [data-testid="stSidebar"] input,
