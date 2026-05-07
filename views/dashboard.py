@@ -30,8 +30,8 @@ def _render_dashboard_table(frame) -> None:
 def render() -> None:
     service = require_service()
     render_header(
-        "ÐÐºÐ°Ð´ÐµÐ¼Ñ–Ñ‡Ð½Ð° Ð°Ð½Ð°Ð»Ñ–Ñ‚Ð¸ÐºÐ° KSU",
-        subtitle="ÐžÐ³Ð»ÑÐ´ ÑÑ‚Ñ€ÑƒÐºÑ‚ÑƒÑ€Ð¸ ÑƒÐ½Ñ–Ð²ÐµÑ€ÑÐ¸Ñ‚ÐµÑ‚Ñƒ, Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–Ð², Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ð¹ Ñ– ÑÐ¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð° Ð² Ð¾Ð´Ð½Ð¾Ð¼Ñƒ Ð¿Ñ€Ð¾ÑÑ‚Ð¾Ñ€Ñ–.",
+        "Академічна аналітика KSU",
+        subtitle="Огляд структури університету, викладачів, публікацій і співавторства в одному просторі.",
     )
 
     counts = service.get_overview_counts()
@@ -43,29 +43,29 @@ def render() -> None:
     faculty_overview = faculty_overview_dataframe(faculty_overview_rows)
     department_overview = department_overview_dataframe(department_overview_rows)
 
-    render_section_heading("ÐšÐ»ÑŽÑ‡Ð¾Ð²Ñ– Ð¿Ð¾ÐºÐ°Ð·Ð½Ð¸ÐºÐ¸", "ÐžÐ¿ÐµÑ€Ð°Ñ‚Ð¸Ð²Ð½Ð¸Ð¹ Ð·Ñ€Ñ–Ð· ÑÑ‚Ñ€ÑƒÐºÑ‚ÑƒÑ€Ð¸, Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–Ð², Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ð¹ Ñ– ÑÐ¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð°.")
+    render_section_heading("Ключові показники", "Оперативний зріз структури, викладачів, публікацій і співавторства.")
 
     primary_columns = st.columns(4, gap="medium")
-    primary_columns[0].metric("Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–", format_number(counts["teachers"]))
-    primary_columns[1].metric("ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—", format_number(counts["publications"]))
-    primary_columns[2].metric("ÐÐ²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð°", format_number(counts["authorship_links"]))
-    primary_columns[3].metric("Ð¡Ð¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€Ð¸", format_number(counts["coauthor_pairs"]))
+    primary_columns[0].metric("Викладачі", format_number(counts["teachers"]))
+    primary_columns[1].metric("Публікації", format_number(counts["publications"]))
+    primary_columns[2].metric("Авторства", format_number(counts["authorship_links"]))
+    primary_columns[3].metric("Співавтори", format_number(counts["coauthor_pairs"]))
 
     secondary_columns = st.columns(2, gap="medium")
-    secondary_columns[0].metric("Ð¤Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚Ð¸", format_number(counts["faculties"]))
-    secondary_columns[1].metric("ÐšÐ°Ñ„ÐµÐ´Ñ€Ð¸", format_number(counts["departments"]))
+    secondary_columns[0].metric("Факультети", format_number(counts["faculties"]))
+    secondary_columns[1].metric("Кафедри", format_number(counts["departments"]))
 
     if faculty_overview.empty and department_overview.empty:
-        render_empty_state("Ð”Ð°Ð½Ñ– Ð²Ñ–Ð´ÑÑƒÑ‚Ð½Ñ–", "Ð—Ð°Ð²Ð°Ð½Ñ‚Ð°Ð¶Ñ‚Ðµ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–Ð² KSU Ð°Ð±Ð¾ Ð²Ñ–Ð´ÐºÑ€Ð¸Ð¹Ñ‚Ðµ ÑÑ‚Ð¾Ñ€Ñ–Ð½ÐºÑƒ `Ð¡Ñ‚Ñ€ÑƒÐºÑ‚ÑƒÑ€Ð°`, Ñ‰Ð¾Ð± Ð·Ð°Ð¿Ð¾Ð²Ð½Ð¸Ñ‚Ð¸ Ð±Ð°Ð·Ñƒ.")
+        render_empty_state("Дані відсутні", "Завантажте викладачів KSU або відкрийте сторінку `Структура`, щоб заповнити базу.")
         return
 
     if counts["publications"] == 0:
-        st.info("Ð¡Ñ‚Ñ€ÑƒÐºÑ‚ÑƒÑ€Ð° Ð²Ð¶Ðµ Ð·Ð°Ð²ÐµÐ´ÐµÐ½Ð°. Ð”Ð»Ñ Ð½Ð°Ð¿Ð¾Ð²Ð½ÐµÐ½Ð½Ñ Ð±Ð°Ð·Ð¸ Ð²Ñ–Ð´ÐºÑ€Ð¸Ð¹Ñ‚Ðµ `Ð¡Ñ‚Ñ€ÑƒÐºÑ‚ÑƒÑ€Ð°` Ñ– Ð·Ð°Ð¿ÑƒÑÑ‚Ñ–Ñ‚ÑŒ Ñ–Ð¼Ð¿Ð¾Ñ€Ñ‚ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–Ð² Ñ‚Ð° Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ð¹.")
+        st.info("Структура вже заведена. Для наповнення бази відкрийте `Структура` і запустіть імпорт викладачів та публікацій.")
     else:
-        st.success("Ð‘Ð°Ð·Ð° Ð·Ð°Ð¿Ð¾Ð²Ð½ÐµÐ½Ð°. ÐœÐ¾Ð¶Ð½Ð° Ð¿ÐµÑ€ÐµÑ…Ð¾Ð´Ð¸Ñ‚Ð¸ Ð´Ð¾ Ð°Ð½Ð°Ð»Ñ–Ñ‚Ð¸ÐºÐ¸, Ð³Ñ€Ð°Ñ„Ð° Ñ‚Ð° Ð¿ÐµÑ€ÐµÐ³Ð»ÑÐ´Ñƒ Ð´Ð°Ð½Ð¸Ñ….")
+        st.success("База заповнена. Можна переходити до аналітики, графа та перегляду даних.")
 
     structure_tab, coverage_tab, distribution_tab = st.tabs(
-        ["Ð¡Ñ‚Ñ€ÑƒÐºÑ‚ÑƒÑ€Ð° Ð·Ð°Ñ€Ð°Ð·", "ÐŸÐ¾ÐºÑ€Ð¸Ñ‚Ñ‚Ñ Ñ‚Ð° Ð´Ð¶ÐµÑ€ÐµÐ»Ð°", "Ð Ð¾Ð·Ð¿Ð¾Ð´Ñ–Ð» Ñ– Ð¿Ð¾Ð²Ð½Ð¸Ð¹ Ð·Ñ€Ñ–Ð·"]
+        ["Структура зараз", "Покриття та джерела", "Розподіл і повний зріз"]
     )
 
     with structure_tab:
@@ -73,16 +73,16 @@ def render() -> None:
 
         with overview_columns[0]:
             render_fullscreen_dataframe_heading(
-                "Ð¤Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚Ð¸",
+                "Факультети",
                 faculty_overview,
                 key="dashboard_faculties_fullscreen",
-                caption="ÐŸÐ¾Ð²Ð½Ð° Ñ‚Ð°Ð±Ð»Ð¸Ñ†Ñ Ñ„Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚Ñ–Ð², ÐºÐ°Ñ„ÐµÐ´Ñ€, Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–Ð² Ñ– Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ð¹.",
+                caption="Повна таблиця факультетів, кафедр, викладачів і публікацій.",
             )
             if faculty_overview.empty:
-                render_empty_state("ÐÐµÐ¼Ð°Ñ” Ð´Ð°Ð½Ð¸Ñ…", "Ð¤Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚Ð½Ð¸Ð¹ Ð·Ñ€Ñ–Ð· Ð·'ÑÐ²Ð¸Ñ‚ÑŒÑÑ Ð¿Ñ–ÑÐ»Ñ Ñ–Ð¼Ð¿Ð¾Ñ€Ñ‚Ñƒ ÑÑ‚Ñ€ÑƒÐºÑ‚ÑƒÑ€Ð¸.")
+                render_empty_state("Немає даних", "Факультетний зріз з'явиться після імпорту структури.")
             else:
                 st.download_button(
-                    "Ð•ÐºÑÐ¿Ð¾Ñ€Ñ‚ Ñ„Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚Ñ–Ð² CSV",
+                    "Експорт факультетів CSV",
                     _csv_bytes(faculty_overview),
                     file_name="dashboard_faculties.csv",
                     mime="text/csv",
@@ -92,8 +92,8 @@ def render() -> None:
 
         with overview_columns[1]:
             if department_overview.empty:
-                render_section_heading("ÐšÐ°Ñ„ÐµÐ´Ñ€Ð¸")
-                render_empty_state("ÐÐµÐ¼Ð°Ñ” Ð´Ð°Ð½Ð¸Ñ…", "Ð¢Ð°Ð±Ð»Ð¸Ñ†Ñ ÐºÐ°Ñ„ÐµÐ´Ñ€ Ð·'ÑÐ²Ð¸Ñ‚ÑŒÑÑ Ð¿Ñ–ÑÐ»Ñ Ñ–Ð¼Ð¿Ð¾Ñ€Ñ‚Ñƒ ÑÑ‚Ñ€ÑƒÐºÑ‚ÑƒÑ€Ð¸.")
+                render_section_heading("Кафедри")
+                render_empty_state("Немає даних", "Таблиця кафедр з'явиться після імпорту структури.")
             else:
                 top_department_rows = sorted(
                     department_overview_rows,
@@ -105,13 +105,13 @@ def render() -> None:
                 )[:8]
                 top_departments = department_overview_dataframe(top_department_rows)
                 render_fullscreen_dataframe_heading(
-                    "ÐšÐ°Ñ„ÐµÐ´Ñ€Ð¸",
+                    "Кафедри",
                     top_departments,
                     key="dashboard_departments_fullscreen",
-                    caption="ÐŸÐ¾Ñ‚Ð¾Ñ‡Ð½Ð¸Ð¹ Ð·Ñ€Ñ–Ð· ÐºÐ°Ñ„ÐµÐ´Ñ€ Ð·Ð° Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ð°Ð¼Ð¸ Ñ‚Ð° Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–ÑÐ¼Ð¸.",
+                    caption="Поточний зріз кафедр за викладачами та публікаціями.",
                 )
                 st.download_button(
-                    "Ð•ÐºÑÐ¿Ð¾Ñ€Ñ‚ ÐºÐ°Ñ„ÐµÐ´Ñ€ CSV",
+                    "Експорт кафедр CSV",
                     _csv_bytes(top_departments),
                     file_name="dashboard_departments.csv",
                     mime="text/csv",
@@ -120,12 +120,12 @@ def render() -> None:
                 _render_dashboard_table(top_departments)
 
     with coverage_tab:
-        render_section_heading("ÐŸÐ¾ÐºÑ€Ð¸Ñ‚Ñ‚Ñ Ð¿Ñ€Ð¾Ñ„Ñ–Ð»Ñ–Ð² Ñ– Ð´Ð¶ÐµÑ€ÐµÐ»")
+        render_section_heading("Покриття профілів і джерел")
         coverage_columns = st.columns(5, gap="medium")
 
         if total_teachers > 0:
             safe_total = max(total_teachers, 1)
-            coverage_columns[0].metric("Ð‘ÑƒÐ´ÑŒ-ÑÐºÐ¸Ð¹ Ð¿Ñ€Ð¾Ñ„Ñ–Ð»ÑŒ", f"{profile_coverage['with_any_profile']} / {safe_total}")
+            coverage_columns[0].metric("Будь-який профіль", f"{profile_coverage['with_any_profile']} / {safe_total}")
             coverage_columns[1].metric("ORCID", f"{profile_coverage['with_orcid']} / {safe_total}")
             coverage_columns[2].metric("Scholar", f"{profile_coverage['with_scholar']} / {safe_total}")
             coverage_columns[3].metric("Scopus", f"{profile_coverage['with_scopus']} / {safe_total}")
@@ -134,11 +134,11 @@ def render() -> None:
         source_columns = st.columns([1.05, 0.95], gap="large")
         with source_columns[0]:
             if publication_sources.empty:
-                render_empty_state("Ð”Ð¶ÐµÑ€ÐµÐ»Ð° Ñ‰Ðµ Ð½Ðµ Ð½Ð°ÐºÐ¾Ð¿Ð¸Ñ‡ÐµÐ½Ñ–", "ÐŸÑ–ÑÐ»Ñ Ð·Ð°Ð²Ð°Ð½Ñ‚Ð°Ð¶ÐµÐ½Ð½Ñ Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ð¹ Ñ‚ÑƒÑ‚ Ð·'ÑÐ²Ð¸Ñ‚ÑŒÑÑ Ð·Ð²ÐµÐ´ÐµÐ½Ð½Ñ Ð·Ð° ÑÐµÑ€Ð²Ñ–ÑÐ°Ð¼Ð¸.")
+                render_empty_state("Джерела ще не накопичені", "Після завантаження публікацій тут з'явиться зведення за сервісами.")
             else:
-                chart_source = publication_sources.set_index("Ð”Ð¶ÐµÑ€ÐµÐ»Ð¾")
+                chart_source = publication_sources.set_index("Джерело")
                 render_fullscreen_bar_chart_heading(
-                    "Ð¡Ñ‚Ñ€ÑƒÐºÑ‚ÑƒÑ€Ð° Ð´Ð¶ÐµÑ€ÐµÐ»",
+                    "Структура джерел",
                     chart_source,
                     key="dashboard_sources_chart_fullscreen",
                 )
@@ -146,22 +146,22 @@ def render() -> None:
 
         with source_columns[1]:
             if publication_sources.empty:
-                render_empty_state("Ð¢Ð°Ð±Ð»Ð¸Ñ†Ñ Ð´Ð¶ÐµÑ€ÐµÐ» Ð¿Ð¾Ñ€Ð¾Ð¶Ð½Ñ", "Ð¡Ð¿ÐµÑ€ÑˆÑƒ Ð¿Ð¾Ñ‚Ñ€Ñ–Ð±Ð½Ð¾ Ñ–Ð¼Ð¿Ð¾Ñ€Ñ‚ÑƒÐ²Ð°Ñ‚Ð¸ Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—.")
+                render_empty_state("Таблиця джерел порожня", "Спершу потрібно імпортувати публікації.")
             else:
                 render_fullscreen_dataframe_heading(
-                    "Ð¢Ð°Ð±Ð»Ð¸Ñ†Ñ Ð´Ð¶ÐµÑ€ÐµÐ»",
+                    "Таблиця джерел",
                     publication_sources,
                     key="dashboard_sources_table_fullscreen",
                 )
                 render_adaptive_dataframe(publication_sources, use_container_width=True, hide_index=True, height=280)
 
     with distribution_tab:
-        render_section_heading("Ð Ð¾Ð·Ð¿Ð¾Ð´Ñ–Ð» Ñ– Ð¿Ð¾Ð²Ð½Ð¸Ð¹ Ð·Ñ€Ñ–Ð·")
+        render_section_heading("Розподіл і повний зріз")
         full_columns = st.columns(2, gap="large")
 
         with full_columns[0]:
             render_fullscreen_dataframe_heading(
-                "ÐŸÐ¾Ð²Ð½Ð¸Ð¹ ÑÐ¿Ð¸ÑÐ¾Ðº Ñ„Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚Ñ–Ð²",
+                "Повний список факультетів",
                 faculty_overview,
                 key="dashboard_faculties_fullscreen_full",
             )
@@ -169,7 +169,7 @@ def render() -> None:
 
         with full_columns[1]:
             render_fullscreen_dataframe_heading(
-                "ÐŸÐ¾Ð²Ð½Ð¸Ð¹ ÑÐ¿Ð¸ÑÐ¾Ðº ÐºÐ°Ñ„ÐµÐ´Ñ€",
+                "Повний список кафедр",
                 department_overview,
                 key="dashboard_departments_fullscreen_full",
             )
