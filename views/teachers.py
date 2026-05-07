@@ -314,13 +314,13 @@ def render() -> None:
     readiness_label, readiness_caption = _profile_readiness(profile, publications)
     status_counts = _status_counts(publications)
 
-    selector_columns = st.columns([1.18, 0.82], gap="large", vertical_alignment="bottom")
+    selector_columns = st.columns([1.18, 0.82], gap="large")
     with selector_columns[0]:
         st.selectbox("Обрати викладача", list(teacher_labels.keys()), key=selected_teacher_key)
     with selector_columns[1]:
         st.caption("Повний профіль викладача відображається праворуч, а публікації та співавтори винесені в окремі вкладки нижче.")
 
-    top_layout = st.columns([1.18, 0.82], gap="large", vertical_alignment="top")
+    top_layout = st.columns([1.18, 0.82], gap="large")
 
     with top_layout[0]:
         render_fullscreen_dataframe_heading(
