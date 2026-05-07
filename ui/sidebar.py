@@ -2,7 +2,7 @@
 
 import streamlit as st
 
-from config import get_admin_password, get_ui_theme, is_admin_mode
+from config import get_admin_password, is_admin_mode
 
 
 def render_sidebar(
@@ -24,27 +24,6 @@ def render_sidebar(
             """,
             unsafe_allow_html=True,
         )
-
-        current_theme = get_ui_theme()
-        st.markdown("**Тема інтерфейсу**")
-        theme_cols = st.columns([0.66, 0.34], gap="small")
-        current_theme_label = "Світла тема" if current_theme == "light" else "Темна тема"
-        theme_button_label = "☀️ Світла" if current_theme == "dark" else "🌙 Темна"
-        theme_cols[0].markdown(
-            f'<div class="sidebar-theme-caption">Зараз: {current_theme_label}</div>',
-            unsafe_allow_html=True,
-        )
-        if theme_cols[1].button(
-            theme_button_label,
-            key="sidebar_theme_toggle",
-            use_container_width=True,
-            type="secondary",
-            help="Перемкнути тему інтерфейсу",
-        ):
-            next_theme = "light" if current_theme == "dark" else "dark"
-            st.session_state["ui_theme"] = next_theme
-            st.query_params["theme"] = next_theme
-            st.rerun()
 
         for section_name in section_order:
             section_pages = [
@@ -83,7 +62,6 @@ def render_sidebar(
                     if current_page in {"structure", "data-center"}:
                         st.session_state["current_page"] = "dashboard"
                         st.query_params["page"] = "dashboard"
-                        st.query_params["theme"] = get_ui_theme()
                     st.rerun()
             else:
                 entered_password = st.text_input(
