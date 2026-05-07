@@ -249,6 +249,10 @@ def apply_theme() -> None:
             box-shadow: var(--shadow);
             margin-bottom: 0.82rem;
             text-align: center;
+            min-height: 9.4rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .summary-strip-title {
@@ -262,12 +266,17 @@ def apply_theme() -> None:
 
         .summary-strip-value {
             font-family: "Space Grotesk", "Manrope", sans-serif;
-            font-size: clamp(1.1rem, 1.55vw, 1.55rem);
+            font-size: clamp(1rem, 1.35vw, 1.45rem);
             font-weight: 700;
             letter-spacing: -0.04em;
             color: var(--text-main);
             word-break: break-word;
             line-height: 1.15;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 3.25rem;
         }
 
         .summary-strip-caption {
@@ -275,6 +284,7 @@ def apply_theme() -> None:
             color: var(--text-muted);
             font-size: 0.88rem;
             line-height: 1.55;
+            min-height: 2.7rem;
         }
 
         .kv-card {
@@ -1919,6 +1929,7 @@ def render_download_link(
     *,
     file_name: str,
     mime: str,
+    key: str | None = None,
 ) -> None:
     st.download_button(
         label,
@@ -1926,6 +1937,7 @@ def render_download_link(
         file_name=file_name,
         mime=mime,
         use_container_width=True,
+        key=key,
     )
 
 
