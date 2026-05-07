@@ -149,10 +149,10 @@ def render() -> None:
     service = require_service()
     render_header("Аналітика", "Порівняльні зрізи, рейтинги, динаміка та звіти для факультетів, кафедр і викладачів.")
 
-    controls = st.columns([0.85, 0.95, 0.55], gap="large")
+    controls = st.columns([0.9, 1.0, 0.55], gap="large", vertical_alignment="bottom")
     top_limit = controls[0].slider("Кількість записів у топах", min_value=5, max_value=20, value=10, step=1)
     scope = controls[1].selectbox("Контур даних", ["Усі записи", "Підтверджені", "Офіційні"])
-    if controls[2].button("Оновити аналітику", use_container_width=True):
+    if controls[2].button("Оновити аналітику", use_container_width=True, key="analytics_refresh_button"):
         st.cache_data.clear()
         st.rerun()
     available_years = service.get_publication_years()
@@ -186,7 +186,7 @@ def render() -> None:
     teachers_with_publications = sum(1 for row in scoped_teacher_rows if int(row.get("publications", 0) or 0) > 0)
     average_publications = (scoped_publication_count / teachers_with_publications) if teachers_with_publications else 0.0
 
-    highlights = st.columns(4, gap="medium")
+    highlights = st.columns(4, gap="medium", vertical_alignment="stretch")
     with highlights[0]:
         render_summary_strip(
             "Лідер публікацій",
