@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import re
 from textwrap import dedent
 from html import escape, unescape
@@ -425,6 +426,30 @@ def apply_theme() -> None:
             color: #8cf0df;
             text-decoration: underline;
             transform: none;
+        }
+
+        .download-link-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 3rem;
+            padding: 0.8rem 1rem;
+            border-radius: 18px;
+            border: 1px solid rgba(56, 189, 248, 0.24);
+            background: linear-gradient(180deg, rgba(17, 39, 66, 0.95), rgba(10, 25, 47, 0.98));
+            color: var(--text-main) !important;
+            text-decoration: none !important;
+            font-weight: 700;
+            box-shadow: 0 18px 32px rgba(2, 8, 23, 0.28);
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            box-sizing: border-box;
+        }
+
+        .download-link-button:hover {
+            border-color: rgba(45, 212, 191, 0.5);
+            box-shadow: 0 18px 42px rgba(45, 212, 191, 0.10);
+            transform: translateY(-1px);
         }
 
         div[data-baseweb="select"] > div,
@@ -1038,9 +1063,11 @@ def apply_theme() -> None:
 
         .adaptive-light-table-shell {
             width: 100%;
+            max-width: 100%;
             overflow-x: auto;
             overflow-y: auto;
             display: block;
+            box-sizing: border-box;
             border-radius: 24px;
             border: 1px solid rgba(37, 99, 235, 0.12);
             background: rgba(255, 255, 255, 0.98);
@@ -1053,6 +1080,7 @@ def apply_theme() -> None:
         .adaptive-light-table-shell table {
             width: max-content;
             min-width: 100%;
+            max-width: none;
             border-collapse: separate;
             border-spacing: 0;
             background: rgba(255, 255, 255, 0.98);
@@ -1079,17 +1107,12 @@ def apply_theme() -> None:
             vertical-align: top;
             white-space: normal;
             word-break: break-word;
-            min-width: 140px;
+            min-width: 96px;
+            max-width: 320px;
         }
 
-        .adaptive-light-table-shell td:first-child,
-        .adaptive-light-table-shell th:first-child {
-            min-width: 320px;
-        }
-
-        .adaptive-light-table-shell td:nth-child(2),
-        .adaptive-light-table-shell th:nth-child(2) {
-            min-width: 180px;
+        .adaptive-light-table-shell th {
+            white-space: nowrap;
         }
 
         .adaptive-light-table-shell td {
@@ -1103,19 +1126,6 @@ def apply_theme() -> None:
         .adaptive-light-table-shell span,
         .adaptive-light-table-shell div {
             color: var(--text-main) !important;
-        }
-
-        .adaptive-light-table-shell td:first-child,
-        .adaptive-light-table-shell th:first-child {
-            position: sticky;
-            left: 0;
-            z-index: 1;
-            background: rgba(255, 255, 255, 0.98);
-        }
-
-        .adaptive-light-table-shell thead th:first-child {
-            z-index: 2;
-            background: rgba(243, 248, 253, 0.98);
         }
 
         .adaptive-light-table-shell tbody tr:hover td {
@@ -1134,6 +1144,12 @@ def apply_theme() -> None:
         .adaptive-light-table-shell::-webkit-scrollbar-thumb {
             background: rgba(37, 99, 235, 0.25);
             border-radius: 999px;
+        }
+
+        .adaptive-light-table-shell-compact th,
+        .adaptive-light-table-shell-compact td {
+            padding: 0.62rem 0.72rem;
+            max-width: 260px;
         }
 
         .empty-state {
@@ -1156,7 +1172,7 @@ def apply_theme() -> None:
         [data-testid="stCaptionContainer"],
         .stCaption,
         small {
-            color: #0f2747 !important;
+            color: #17324d !important;
         }
 
         div[data-testid="stMetricLabel"],
@@ -1230,6 +1246,15 @@ def apply_theme() -> None:
             border: none !important;
             box-shadow: none !important;
             font-weight: 700 !important;
+            opacity: 1 !important;
+        }
+
+        button[role="tab"] *,
+        div[data-baseweb="tab-list"] button *,
+        div[role="tablist"] button *,
+        div[role="radiogroup"] > label *,
+        div[data-baseweb="radio"] label * {
+            color: #17324d !important;
             opacity: 1 !important;
         }
 
@@ -1370,14 +1395,16 @@ def apply_theme() -> None:
         }
 
         /* Dropdown popovers / listboxes */
-        div[data-baseweb="popover"] {
+        div[data-baseweb="popover"],
+        div[data-baseweb="menu"] {
             background: rgba(255, 255, 255, 0.98) !important;
             border: 1px solid rgba(37, 99, 235, 0.14) !important;
             border-radius: 18px !important;
             box-shadow: 0 18px 38px rgba(15, 23, 42, 0.12) !important;
         }
 
-        div[data-baseweb="popover"] * {
+        div[data-baseweb="popover"] *,
+        div[data-baseweb="menu"] * {
             color: var(--text-main) !important;
         }
 
@@ -1450,8 +1477,17 @@ def apply_theme() -> None:
             opacity: 1 !important;
         }
 
+        [data-testid="stCheckbox"] label {
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.55rem !important;
+        }
+
         [data-testid="stCheckbox"] [data-baseweb="checkbox"] {
             background: transparent !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
         }
 
         [data-testid="stCheckbox"] [data-baseweb="checkbox"] > div {
@@ -1496,6 +1532,29 @@ def apply_theme() -> None:
         .stButton > button[data-testid="baseButton-secondary"]:hover {
             border-color: rgba(37, 99, 235, 0.20) !important;
             background: #f8fbfe !important;
+        }
+
+        .download-link-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            min-height: 3rem;
+            padding: 0.8rem 1rem;
+            border-radius: 16px;
+            border: 1px solid rgba(37, 99, 235, 0.12);
+            background: rgba(255, 255, 255, 0.98);
+            color: var(--text-main) !important;
+            text-decoration: none !important;
+            font-weight: 700;
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+            box-sizing: border-box;
+        }
+
+        .download-link-button:hover {
+            border-color: rgba(37, 99, 235, 0.20);
+            background: #f8fbfe;
+            box-shadow: 0 12px 24px rgba(14, 165, 233, 0.10);
         }
 
         .light-chart-shell {
@@ -1557,6 +1616,14 @@ def apply_theme() -> None:
         .stMarkdown strong,
         .stMarkdown b {
             color: #0f2747 !important;
+        }
+
+        [data-testid="stAlert"] p,
+        [data-testid="stInfo"] p,
+        [data-testid="stSuccess"] p,
+        [data-testid="stWarning"] p,
+        [data-testid="stError"] p {
+            color: #17324d !important;
         }
 
         [data-baseweb="radio"] label,
@@ -1835,6 +1902,7 @@ def render_adaptive_dataframe(
     use_container_width: bool = True,
     hide_index: bool = True,
     height: int | None = None,
+    compact: bool = False,
 ) -> None:
     if get_ui_theme() != "light":
         st.dataframe(
@@ -1852,10 +1920,11 @@ def render_adaptive_dataframe(
         escape=True,
     )
     height_style = f"max-height: {height}px;" if height else ""
+    compact_class = " adaptive-light-table-shell-compact" if compact else ""
     st.markdown(
         dedent(
             f"""
-            <div class="adaptive-light-table-shell" style="{height_style}">
+            <div class="adaptive-light-table-shell{compact_class}" style="{height_style}">
                 {table_html}
             </div>
             """
@@ -1919,6 +1988,21 @@ def render_adaptive_bar_chart(
     st.markdown('<div class="light-chart-shell">', unsafe_allow_html=True)
     st.altair_chart(chart, use_container_width=use_container_width)
     st.markdown("</div>", unsafe_allow_html=True)
+
+
+def render_download_link(
+    label: str,
+    data: bytes,
+    *,
+    file_name: str,
+    mime: str,
+) -> None:
+    encoded = base64.b64encode(data).decode("ascii")
+    href = f"data:{mime};base64,{encoded}"
+    st.markdown(
+        f'<a class="download-link-button" download="{escape(file_name)}" href="{href}">{escape(label)}</a>',
+        unsafe_allow_html=True,
+    )
 
 
 if hasattr(st, "dialog"):
