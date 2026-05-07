@@ -120,6 +120,33 @@ def _normalize_html_shell(html: str | None, theme: str = "dark") -> str | None:
         ),
         1,
     )
+    html = html.replace(
+        "</body>",
+        (
+            "<script>"
+            "function __codexFitNetwork() {"
+            "  try {"
+            "    if (typeof network !== 'undefined' && network) {"
+            "      network.once('stabilizationIterationsDone', function () {"
+            "        try { network.fit({animation: false}); } catch (e) {}"
+            "        try { network.moveTo({scale: 1.08, animation: false}); } catch (e) {}"
+            "      });"
+            "      setTimeout(function () {"
+            "        try { network.fit({animation: false}); } catch (e) {}"
+            "        try { network.moveTo({scale: 1.08, animation: false}); } catch (e) {}"
+            "      }, 350);"
+            "    }"
+            "  } catch (e) {}"
+            "}"
+            "if (document.readyState === 'loading') {"
+            "  document.addEventListener('DOMContentLoaded', __codexFitNetwork);"
+            "} else {"
+            "  __codexFitNetwork();"
+            "}"
+            "</script></body>"
+        ),
+        1,
+    )
     return html
 
 
