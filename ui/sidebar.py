@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import streamlit as st
 
@@ -38,6 +38,7 @@ def render_sidebar(
             theme_button_label,
             key="sidebar_theme_toggle",
             use_container_width=True,
+            type="secondary",
             help="Перемкнути тему інтерфейсу",
         ):
             next_theme = "light" if current_theme == "dark" else "dark"
