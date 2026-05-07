@@ -28,17 +28,17 @@ def _csv_bytes(frame: pd.DataFrame) -> bytes:
 
 def _department_options(service) -> dict[str, str]:
     rows = service.get_departments()
-    options = {"Ð£ÑÑ– ÐºÐ°Ñ„ÐµÐ´Ñ€Ð¸": ""}
+    options = {"Усі кафедри": ""}
     for row in rows:
         faculty_name = str(row.get("faculty_name") or "").strip()
-        label = f"{row['name']} â€” {faculty_name}" if faculty_name else str(row["name"])
+        label = f"{row['name']} — {faculty_name}" if faculty_name else str(row["name"])
         options[label] = row["code"]
     return options
 
 
 def _faculty_options(service) -> dict[str, str]:
     rows = service.get_faculty_overview()
-    options = {"Ð£ÑÑ– Ñ„Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚Ð¸": ""}
+    options = {"Усі факультети": ""}
     for row in rows:
         options[str(row["name"])] = row["code"]
     return options
@@ -51,7 +51,7 @@ def _teacher_options(rows: list[dict[str, object]]) -> dict[str, str]:
         department_name = str(row.get("department_name") or "").strip()
         if not name:
             continue
-        label = f"{name} â€” {department_name}" if department_name else name
+        label = f"{name} — {department_name}" if department_name else name
         suffix = 2
         candidate = label
         while candidate in options:
@@ -72,7 +72,7 @@ def _render_graph_tabs(
     export_name: str,
     empty_graph_text: str,
 ) -> None:
-    visual_tab, table_tab = st.tabs(["Ð’Ñ–Ð·ÑƒÐ°Ð»Ñ–Ð·Ð°Ñ†Ñ–Ñ", "Ð¢Ð°Ð±Ð»Ð¸Ñ†Ñ Ñ‚Ð° ÐµÐºÑÐ¿Ð¾Ñ€Ñ‚"])
+    visual_tab, table_tab = st.tabs(["Візуалізація", "Таблиця та експорт"])
 
     with visual_tab:
         render_fullscreen_html_heading(
@@ -85,20 +85,20 @@ def _render_graph_tabs(
         if html:
             components.html(html, height=760, scrolling=False)
         else:
-            render_empty_state("Ð†Ð½Ñ‚ÐµÑ€Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¸Ð¹ Ð³Ñ€Ð°Ñ„ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¸Ð¹", empty_graph_text)
+            render_empty_state("Інтерактивний граф недоступний", empty_graph_text)
 
     with table_tab:
         if frame.empty:
-            render_empty_state("Ð¢Ð°Ð±Ð»Ð¸Ñ‡Ð½Ð¸Ð¹ Ð·Ñ€Ñ–Ð· Ð¿Ð¾Ñ€Ð¾Ð¶Ð½Ñ–Ð¹", "Ð”Ð»Ñ Ð¿Ð¾Ñ‚Ð¾Ñ‡Ð½Ð¾Ð³Ð¾ Ñ€ÐµÐ¶Ð¸Ð¼Ñƒ Ð¿Ð¾ÐºÐ¸ Ñ‰Ð¾ Ð½ÐµÐ¼Ð°Ñ” Ð·Ð²'ÑÐ·ÐºÑ–Ð² Ð´Ð»Ñ ÐµÐºÑÐ¿Ð¾Ñ€Ñ‚Ñƒ.")
+            render_empty_state("Табличний зріз порожній", "Для поточного режиму поки що немає зв'язків для експорту.")
         else:
             render_fullscreen_dataframe_heading(
-                "Ð¢Ð°Ð±Ð»Ð¸Ñ‡Ð½Ð¸Ð¹ Ð·Ñ€Ñ–Ð· Ð³Ñ€Ð°Ñ„Ð°",
+                "Табличний зріз графа",
                 frame,
                 key=table_fullscreen_key,
-                caption="ÐŸÐ¾Ð²Ð½Ð¸Ð¹ ÑÐ¿Ð¸ÑÐ¾Ðº Ð·Ð²'ÑÐ·ÐºÑ–Ð² Ð´Ð»Ñ Ð¿Ð¾Ñ‚Ð¾Ñ‡Ð½Ð¾Ð³Ð¾ Ñ€ÐµÐ¶Ð¸Ð¼Ñƒ Ð¼ÐµÑ€ÐµÐ¶Ñ–.",
+                caption="Повний список зв'язків для поточного режиму мережі.",
             )
             st.download_button(
-                "Ð•ÐºÑÐ¿Ð¾Ñ€Ñ‚ Ð¿Ð¾Ñ‚Ð¾Ñ‡Ð½Ð¾Ð³Ð¾ Ð³Ñ€Ð°Ñ„Ð° CSV",
+                "Експорт поточного графа CSV",
                 _csv_bytes(frame),
                 file_name=export_name,
                 mime="text/csv",
@@ -111,88 +111,88 @@ def render() -> None:
     service = require_service()
     ui_theme = get_ui_theme()
     render_header(
-        "ÐœÐµÑ€ÐµÐ¶ÐµÐ²Ð° Ð°Ð½Ð°Ð»Ñ–Ñ‚Ð¸ÐºÐ°",
-        subtitle="Ð”Ð¾ÑÐ»Ñ–Ð´Ð¶ÑƒÐ¹Ñ‚Ðµ Ð·Ð²'ÑÐ·ÐºÐ¸ Ð¼Ñ–Ð¶ Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð¾Ð¼, ÑÐ¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð¾Ð¼, ÐºÐ°Ñ„ÐµÐ´Ñ€Ð°Ð¼Ð¸ Ñ‚Ð° Ð¾ÐºÑ€ÐµÐ¼Ð¸Ð¼Ð¸ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ð°Ð¼Ð¸.",
+        "Мережева аналітика",
+        subtitle="Досліджуйте зв'язки між авторством, співавторством, кафедрами та окремими викладачами.",
     )
-    mode_options = ["ÐÐ²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð¾", "Ð¡Ð¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð¾ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–Ð²", "ÐŸÑ€Ð¾Ñ„Ñ–Ð»ÑŒ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ð°", "Ð—'ÑÐ·ÐºÐ¸ Ð¼Ñ–Ð¶ ÐºÐ°Ñ„ÐµÐ´Ñ€Ð°Ð¼Ð¸"]
-    mode = st.selectbox("Ð¢Ð¸Ð¿ Ð¼ÐµÑ€ÐµÐ¶Ñ–", mode_options, index=0, help="ÐžÐ±ÐµÑ€Ñ–Ñ‚ÑŒ Ð¿Ñ€Ð¾Ñ”ÐºÑ†Ñ–ÑŽ Ð³Ñ€Ð°Ñ„Ð° Ð´Ð»Ñ Ð¿Ð¾Ñ‚Ð¾Ñ‡Ð½Ð¾Ð³Ð¾ Ð°Ð½Ð°Ð»Ñ–Ð·Ñƒ.")
+    mode_options = ["Авторство", "Співавторство викладачів", "Профіль викладача", "З'язки між кафедрами"]
+    mode = st.selectbox("Тип мережі", mode_options, index=0, help="Оберіть проєкцію графа для поточного аналізу.")
     controls = st.columns([1.15, 0.85], gap="large")
-    edge_limit = controls[1].slider("Ð›Ñ–Ð¼Ñ–Ñ‚ Ð·Ð²'ÑÐ·ÐºÑ–Ð²", min_value=20, max_value=240, value=120, step=10)
+    edge_limit = controls[1].slider("Ліміт зв'язків", min_value=20, max_value=240, value=120, step=10)
 
-    with st.expander("Ð¯Ðº Ñ‡Ð¸Ñ‚Ð°Ñ‚Ð¸ Ð³Ñ€Ð°Ñ„", expanded=False):
-        if mode == "ÐÐ²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð¾":
-            st.caption("Ð£ Ñ†Ñ–Ð¹ Ð¿Ñ€Ð¾Ñ”ÐºÑ†Ñ–Ñ— Ð²ÑƒÐ·Ð»Ð¸ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–Ð² Ð·'Ñ”Ð´Ð½ÑƒÑŽÑ‚ÑŒÑÑ Ð· Ð²ÑƒÐ·Ð»Ð°Ð¼Ð¸ Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ð¹. Ð¦Ðµ Ð·Ñ€ÑƒÑ‡Ð½Ð¾ Ð´Ð»Ñ Ð¿ÐµÑ€ÐµÐ²Ñ–Ñ€ÐºÐ¸ Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð² Ñ– Ð¿Ð¾ÐºÑ€Ð¸Ñ‚Ñ‚Ñ Ð·Ð°Ð¿Ð¸ÑÑ–Ð².")
-        elif mode == "Ð¡Ð¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð¾ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–Ð²":
-            st.caption("Ð¢ÑƒÑ‚ Ð¿Ð¾ÐºÐ°Ð·Ð°Ð½Ñ– Ð¿Ñ€ÑÐ¼Ñ– Ð·Ð²'ÑÐ·ÐºÐ¸ Ð¼Ñ–Ð¶ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ð°Ð¼Ð¸. Ð§Ð¸Ð¼ Ñ‚Ð¾Ð²ÑÑ‚Ñ–ÑˆÐµ Ñ€ÐµÐ±Ñ€Ð¾, Ñ‚Ð¸Ð¼ Ð±Ñ–Ð»ÑŒÑˆÐµ ÑÐ¿Ñ–Ð»ÑŒÐ½Ð¸Ñ… Ñ€Ð¾Ð±Ñ–Ñ‚ Ð¼Ñ–Ð¶ Ð¿Ð°Ñ€Ð¾ÑŽ.")
-        elif mode == "ÐŸÑ€Ð¾Ñ„Ñ–Ð»ÑŒ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ð°":
-            st.caption("Ð¦ÐµÐ¹ Ñ€ÐµÐ¶Ð¸Ð¼ Ð±ÑƒÐ´ÑƒÑ” Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ñƒ Ð¼ÐµÑ€ÐµÐ¶Ñƒ Ð½Ð°Ð²ÐºÐ¾Ð»Ð¾ Ð¾Ð´Ð½Ð¾Ð³Ð¾ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ð°: Ð¹Ð¾Ð³Ð¾ Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ—, Ð½Ð°Ð¹Ð±Ð»Ð¸Ð¶Ñ‡Ñ– ÑÐ¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€Ð¸ Ñ‚Ð° Ð¿Ð¾Ð²'ÑÐ·Ð°Ð½Ð¸Ð¹ Ð¿Ñ–Ð´Ñ€Ð¾Ð·Ð´Ñ–Ð».")
+    with st.expander("Як читати граф", expanded=False):
+        if mode == "Авторство":
+            st.caption("У цій проєкції вузли викладачів з'єднуються з вузлами публікацій. Це зручно для перевірки авторств і покриття записів.")
+        elif mode == "Співавторство викладачів":
+            st.caption("Тут показані прямі зв'язки між викладачами. Чим товстіше ребро, тим більше спільних робіт між парою.")
+        elif mode == "Профіль викладача":
+            st.caption("Цей режим будує локальну мережу навколо одного викладача: його публікації, найближчі співавтори та пов'язаний підрозділ.")
         else:
-            st.caption("Ð£ Ñ†Ñ–Ð¹ Ð¿Ñ€Ð¾Ñ”ÐºÑ†Ñ–Ñ— Ð²Ð¸Ð´Ð½Ð¾ ÑÐ¿Ñ–Ð²Ð¿Ñ€Ð°Ñ†ÑŽ Ð¼Ñ–Ð¶ ÐºÐ°Ñ„ÐµÐ´Ñ€Ð°Ð¼Ð¸. Ð¦Ðµ Ð¾Ð´Ð¸Ð½ Ñ–Ð· Ð½Ð°Ð¹ÑÐ¸Ð»ÑŒÐ½Ñ–ÑˆÐ¸Ñ… Ð·Ñ€Ñ–Ð·Ñ–Ð² Ð´Ð»Ñ Ð´ÐµÐ¼Ð¾Ð½ÑÑ‚Ñ€Ð°Ñ†Ñ–Ñ— Ñ€ÐµÐ°Ð»ÑŒÐ½Ð¾Ñ— Ð¼ÐµÑ€ÐµÐ¶ÐµÐ²Ð¾Ñ— Ð²Ð·Ð°Ñ”Ð¼Ð¾Ð´Ñ–Ñ—.")
+            st.caption("У цій проєкції видно співпрацю між кафедрами. Це один із найсильніших зрізів для демонстрації реальної мережевої взаємодії.")
 
-    if mode == "ÐÐ²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð¾":
+    if mode == "Авторство":
         department_labels = _department_options(service)
-        selected_department_label = controls[0].selectbox("ÐšÐ°Ñ„ÐµÐ´Ñ€Ð°", list(department_labels.keys()))
+        selected_department_label = controls[0].selectbox("Кафедра", list(department_labels.keys()))
         edges = service.get_graph_edges(department_code=department_labels[selected_department_label], limit=edge_limit)
         if not edges:
-            render_empty_state("ÐÐµÐ´Ð¾ÑÑ‚Ð°Ñ‚Ð½ÑŒÐ¾ Ð´Ð°Ð½Ð¸Ñ… Ð´Ð»Ñ Ð³Ñ€Ð°Ñ„Ð°", "ÐŸÑ–ÑÐ»Ñ Ð·Ð°Ð²Ð°Ð½Ñ‚Ð°Ð¶ÐµÐ½Ð½Ñ Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ð¹ Ñ‚ÑƒÑ‚ Ð·'ÑÐ²Ð¸Ñ‚ÑŒÑÑ Ð¼ÐµÑ€ÐµÐ¶Ð° Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð°.")
+            render_empty_state("Недостатньо даних для графа", "Після завантаження публікацій тут з'явиться мережа авторства.")
             return
 
         teacher_count = len({edge["teacher_id"] for edge in edges})
         publication_count = len({edge["publication_id"] for edge in edges})
         summary = st.columns(3, gap="medium")
-        summary[0].metric("Ð’ÑƒÐ·Ð»Ð¸ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–Ð²", teacher_count)
-        summary[1].metric("Ð’ÑƒÐ·Ð»Ð¸ Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ð¹", publication_count)
-        summary[2].metric("Ð—Ð²'ÑÐ·ÐºÐ¸ Ð³Ñ€Ð°Ñ„Ð°", len(edges))
+        summary[0].metric("Вузли викладачів", teacher_count)
+        summary[1].metric("Вузли публікацій", publication_count)
+        summary[2].metric("Зв'язки графа", len(edges))
 
         graph_html = build_bipartite_graph_html(edges, theme=ui_theme)
         frame = graph_edges_dataframe(edges)
         _render_graph_tabs(
-            title="Ð†Ð½Ñ‚ÐµÑ€Ð°ÐºÑ‚Ð¸Ð²Ð½Ð° Ð¼ÐµÑ€ÐµÐ¶Ð° Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð°",
+            title="Інтерактивна мережа авторства",
             html=graph_html,
             frame=frame,
             fullscreen_key="graph_bipartite_fullscreen",
             table_fullscreen_key="graph_bipartite_table_fullscreen",
-            caption="ÐœÐµÑ€ÐµÐ¶Ð° Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð°",
+            caption="Мережа авторства",
             export_name="graph_authorship_edges.csv",
-            empty_graph_text="Ð‘Ñ–Ð±Ð»Ñ–Ð¾Ñ‚ÐµÐºÐ° Ð²Ñ–Ð·ÑƒÐ°Ð»Ñ–Ð·Ð°Ñ†Ñ–Ñ— Ð½Ðµ Ð¿Ñ–Ð´ÐºÐ»ÑŽÑ‡Ð¸Ð»Ð°ÑÑ, Ñ‚Ð¾Ð¼Ñƒ Ð²Ð¸ÐºÐ¾Ñ€Ð¸ÑÑ‚Ð¾Ð²ÑƒÐ¹Ñ‚Ðµ Ñ‚Ð°Ð±Ð»Ð¸Ñ‡Ð½Ð¸Ð¹ Ð·Ñ€Ñ–Ð· Ð½Ð¸Ð¶Ñ‡Ðµ.",
+            empty_graph_text="Бібліотека візуалізації не підключилася, тому використовуйте табличний зріз нижче.",
         )
         return
 
-    if mode == "Ð¡Ð¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð¾ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–Ð²":
+    if mode == "Співавторство викладачів":
         department_labels = _department_options(service)
-        selected_department_label = controls[0].selectbox("ÐšÐ°Ñ„ÐµÐ´Ñ€Ð°", list(department_labels.keys()))
+        selected_department_label = controls[0].selectbox("Кафедра", list(department_labels.keys()))
         edges = service.get_teacher_coauthor_graph(
             department_code=department_labels[selected_department_label],
             limit=edge_limit,
         )
         if not edges:
-            render_empty_state("ÐÐµÐ¼Ð°Ñ” Ð·Ð²'ÑÐ·ÐºÑ–Ð² ÑÐ¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð°", "ÐŸÐ¾Ñ‚Ñ€Ñ–Ð±Ð½Ñ– ÑÐ¿Ñ–Ð»ÑŒÐ½Ñ– Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ— Ð¼Ñ–Ð¶ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ð°Ð¼Ð¸, Ñ‰Ð¾Ð± Ð¿Ð¾Ð±ÑƒÐ´ÑƒÐ²Ð°Ñ‚Ð¸ Ñ†ÑŽ Ð¿Ñ€Ð¾Ñ”ÐºÑ†Ñ–ÑŽ.")
+            render_empty_state("Немає зв'язків співавторства", "Потрібні спільні публікації між викладачами, щоб побудувати цю проєкцію.")
             return
 
         teacher_count = len({edge["source_id"] for edge in edges} | {edge["target_id"] for edge in edges})
         total_weight = sum(int(edge.get("weight", 0) or 0) for edge in edges)
         summary = st.columns(3, gap="medium")
-        summary[0].metric("Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ– Ð² Ð¼ÐµÑ€ÐµÐ¶Ñ–", teacher_count)
-        summary[1].metric("ÐŸÐ°Ñ€Ð¸ ÑÐ¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€Ñ–Ð²", len(edges))
-        summary[2].metric("Ð¡ÑƒÐ¼Ð°Ñ€Ð½Ñ– ÑÐ¿Ñ–Ð»ÑŒÐ½Ñ– Ñ€Ð¾Ð±Ð¾Ñ‚Ð¸", total_weight)
+        summary[0].metric("Викладачі в мережі", teacher_count)
+        summary[1].metric("Пари співавторів", len(edges))
+        summary[2].metric("Сумарні спільні роботи", total_weight)
 
         graph_html = build_coauthor_graph_html(edges, theme=ui_theme)
         frame = coauthor_graph_dataframe(edges)
         _render_graph_tabs(
-            title="Ð†Ð½Ñ‚ÐµÑ€Ð°ÐºÑ‚Ð¸Ð²Ð½Ð° Ð¼ÐµÑ€ÐµÐ¶Ð° ÑÐ¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð°",
+            title="Інтерактивна мережа співавторства",
             html=graph_html,
             frame=frame,
             fullscreen_key="graph_coauthor_fullscreen",
             table_fullscreen_key="graph_coauthor_table_fullscreen",
-            caption="ÐœÐµÑ€ÐµÐ¶Ð° ÑÐ¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€ÑÑ‚Ð²Ð° Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–Ð²",
+            caption="Мережа співавторства викладачів",
             export_name="graph_coauthors.csv",
-            empty_graph_text="Ð†Ð½Ñ‚ÐµÑ€Ð°ÐºÑ‚Ð¸Ð²Ð½Ð° Ð²Ñ–Ð·ÑƒÐ°Ð»Ñ–Ð·Ð°Ñ†Ñ–Ñ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð°, Ð°Ð»Ðµ Ñ‚Ð°Ð±Ð»Ð¸Ñ‡Ð½Ð¸Ð¹ Ð·Ñ€Ñ–Ð· Ð·Ð²'ÑÐ·ÐºÑ–Ð² Ð·Ð±ÐµÑ€ÐµÐ¶ÐµÐ½Ð¾.",
+            empty_graph_text="Інтерактивна візуалізація недоступна, але табличний зріз зв'язків збережено.",
         )
         return
 
-    if mode == "ÐŸÑ€Ð¾Ñ„Ñ–Ð»ÑŒ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ð°":
+    if mode == "Профіль викладача":
         department_labels = _department_options(service)
-        selected_department_label = controls[0].selectbox("ÐšÐ°Ñ„ÐµÐ´Ñ€Ð°", list(department_labels.keys()))
+        selected_department_label = controls[0].selectbox("Кафедра", list(department_labels.keys()))
         selected_department_code = department_labels[selected_department_label]
         teacher_rows = service.get_teachers()
         if selected_department_code:
@@ -201,10 +201,10 @@ def render() -> None:
             ]
         teacher_labels = _teacher_options(teacher_rows)
         if not teacher_labels:
-            render_empty_state("Ð’Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ– Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ñ–", "Ð£ Ð²Ð¸Ð±Ñ€Ð°Ð½Ñ–Ð¹ ÐºÐ°Ñ„ÐµÐ´Ñ€Ñ– Ð¿Ð¾ÐºÐ¸ Ð½ÐµÐ¼Ð°Ñ” Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ñ–Ð² Ð´Ð»Ñ Ð¿Ð¾Ð±ÑƒÐ´Ð¾Ð²Ð¸ Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ð¾Ð³Ð¾ Ð³Ñ€Ð°Ñ„Ð°.")
+            render_empty_state("Викладачі недоступні", "У вибраній кафедрі поки немає викладачів для побудови локального графа.")
             return
 
-        selected_teacher_label = st.selectbox("ÐžÐ±ÐµÑ€Ñ–Ñ‚ÑŒ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ð°", list(teacher_labels.keys()))
+        selected_teacher_label = st.selectbox("Оберіть викладача", list(teacher_labels.keys()))
         selected_teacher_id = teacher_labels[selected_teacher_label]
         selected_teacher_profile = next(
             (row for row in teacher_rows if str(row.get("id") or "").strip() == selected_teacher_id),
@@ -212,69 +212,69 @@ def render() -> None:
         )
         edges = service.get_teacher_focus_graph(selected_teacher_id, limit=edge_limit)
         if not edges:
-            render_empty_state("Ð›Ð¾ÐºÐ°Ð»ÑŒÐ½Ð¸Ð¹ Ð³Ñ€Ð°Ñ„ Ð¿Ð¾Ñ€Ð¾Ð¶Ð½Ñ–Ð¹", "Ð”Ð»Ñ Ñ†ÑŒÐ¾Ð³Ð¾ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ð° Ñ‰Ðµ Ð½Ðµ Ð·Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾ Ð¿ÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ð¹ Ð°Ð±Ð¾ ÑÐ¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€ÑÑŒÐºÐ¸Ñ… Ð·Ð²'ÑÐ·ÐºÑ–Ð².")
+            render_empty_state("Локальний граф порожній", "Для цього викладача ще не знайдено публікацій або співавторських зв'язків.")
             return
 
         publication_count = len({edge["publication_id"] for edge in edges})
         teacher_count = len({edge["teacher_id"] for edge in edges})
         coauthor_count = max(teacher_count - 1, 0)
         summary = st.columns(3, gap="medium")
-        summary[0].metric("ÐžÐ±Ñ€Ð°Ð½Ð¸Ð¹ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡", edges[0].get("focus_teacher_name", selected_teacher_label))
-        summary[1].metric("ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ— Ñƒ Ñ„Ð¾ÐºÑƒÑÑ–", publication_count)
-        summary[2].metric("Ð¡Ð¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€Ð¸ Ð¿Ð¾Ñ€ÑƒÑ‡", coauthor_count)
+        summary[0].metric("Обраний викладач", edges[0].get("focus_teacher_name", selected_teacher_label))
+        summary[1].metric("Публікації у фокусі", publication_count)
+        summary[2].metric("Співавтори поруч", coauthor_count)
 
         render_key_value_card(
-            "ÐŸÑ€Ð¾Ñ„Ñ–Ð»ÑŒ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ð°",
+            "Профіль викладача",
             [
-                ("ÐŸÐ†Ð‘", str(selected_teacher_profile.get("full_name") or edges[0].get("focus_teacher_name") or "")),
-                ("ÐšÐ°Ñ„ÐµÐ´Ñ€Ð°", str(selected_teacher_profile.get("department_name") or "â€”")),
-                ("ÐŸÐ¾ÑÐ°Ð´Ð°", str(selected_teacher_profile.get("position") or "â€”")),
-                ("ORCID", str(selected_teacher_profile.get("orcid") or "â€”")),
-                ("Scopus", str(selected_teacher_profile.get("scopus") or "â€”")),
-                ("WoS", str(selected_teacher_profile.get("web_of_science") or "â€”")),
+                ("ПІБ", str(selected_teacher_profile.get("full_name") or edges[0].get("focus_teacher_name") or "")),
+                ("Кафедра", str(selected_teacher_profile.get("department_name") or "—")),
+                ("Посада", str(selected_teacher_profile.get("position") or "—")),
+                ("ORCID", str(selected_teacher_profile.get("orcid") or "—")),
+                ("Scopus", str(selected_teacher_profile.get("scopus") or "—")),
+                ("WoS", str(selected_teacher_profile.get("web_of_science") or "—")),
             ],
         )
 
         graph_html = build_bipartite_graph_html(edges, focus_teacher_id=selected_teacher_id, theme=ui_theme)
         frame = graph_edges_dataframe(edges)
         _render_graph_tabs(
-            title="Ð›Ð¾ÐºÐ°Ð»ÑŒÐ½Ð° Ð¼ÐµÑ€ÐµÐ¶Ð° Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ð°",
+            title="Локальна мережа викладача",
             html=graph_html,
             frame=frame,
             fullscreen_key="graph_teacher_focus_fullscreen",
             table_fullscreen_key="graph_teacher_focus_table_fullscreen",
-            caption="ÐŸÑƒÐ±Ð»Ñ–ÐºÐ°Ñ†Ñ–Ñ— Ñ‚Ð° ÑÐ¿Ñ–Ð²Ð°Ð²Ñ‚Ð¾Ñ€Ð¸ Ð½Ð°Ð²ÐºÐ¾Ð»Ð¾ Ð¾Ð±Ñ€Ð°Ð½Ð¾Ð³Ð¾ Ð²Ð¸ÐºÐ»Ð°Ð´Ð°Ñ‡Ð°.",
+            caption="Публікації та співавтори навколо обраного викладача.",
             export_name="graph_teacher_focus.csv",
-            empty_graph_text="Ð†Ð½Ñ‚ÐµÑ€Ð°ÐºÑ‚Ð¸Ð²Ð½Ð° Ð²Ñ–Ð·ÑƒÐ°Ð»Ñ–Ð·Ð°Ñ†Ñ–Ñ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð°, Ð°Ð»Ðµ Ð½Ð¸Ð¶Ñ‡Ðµ Ð¼Ð¾Ð¶Ð½Ð° Ð¿ÐµÑ€ÐµÐ³Ð»ÑÐ½ÑƒÑ‚Ð¸ Ñ‚Ð°Ð±Ð»Ð¸Ñ‡Ð½Ð¸Ð¹ Ð·Ñ€Ñ–Ð· Ð»Ð¾ÐºÐ°Ð»ÑŒÐ½Ð¾Ð³Ð¾ Ð³Ñ€Ð°Ñ„Ð°.",
+            empty_graph_text="Інтерактивна візуалізація недоступна, але нижче можна переглянути табличний зріз локального графа.",
         )
         return
 
     faculty_labels = _faculty_options(service)
-    selected_faculty_label = controls[0].selectbox("Ð¤Ð°ÐºÑƒÐ»ÑŒÑ‚ÐµÑ‚", list(faculty_labels.keys()))
+    selected_faculty_label = controls[0].selectbox("Факультет", list(faculty_labels.keys()))
     edges = service.get_department_collaboration_edges(
         faculty_code=faculty_labels[selected_faculty_label],
         limit=edge_limit,
     )
     if not edges:
-        render_empty_state("ÐœÑ–Ð¶ÐºÐ°Ñ„ÐµÐ´Ñ€Ð°Ð»ÑŒÐ½Ð¸Ñ… Ð·Ð²'ÑÐ·ÐºÑ–Ð² Ð¿Ð¾ÐºÐ¸ Ð½ÐµÐ¼Ð°Ñ”", "Ð¦Ñ Ð¼ÐµÑ€ÐµÐ¶Ð° Ð·'ÑÐ²Ð¸Ñ‚ÑŒÑÑ Ð¿Ñ–ÑÐ»Ñ Ð½Ð°ÐºÐ¾Ð¿Ð¸Ñ‡ÐµÐ½Ð½Ñ ÑÐ¿Ñ–Ð»ÑŒÐ½Ð¸Ñ… Ñ€Ð¾Ð±Ñ–Ñ‚ Ð¼Ñ–Ð¶ ÐºÐ°Ñ„ÐµÐ´Ñ€Ð°Ð¼Ð¸.")
+        render_empty_state("Міжкафедральних зв'язків поки немає", "Ця мережа з'явиться після накопичення спільних робіт між кафедрами.")
         return
 
     department_count = len({edge["source_id"] for edge in edges} | {edge["target_id"] for edge in edges})
     total_weight = sum(int(edge.get("weight", 0) or 0) for edge in edges)
     summary = st.columns(3, gap="medium")
-    summary[0].metric("ÐšÐ°Ñ„ÐµÐ´Ñ€Ð¸ Ð² Ð¼ÐµÑ€ÐµÐ¶Ñ–", department_count)
-    summary[1].metric("ÐœÑ–Ð¶ÐºÐ°Ñ„ÐµÐ´Ñ€Ð°Ð»ÑŒÐ½Ñ– Ð·Ð²'ÑÐ·ÐºÐ¸", len(edges))
-    summary[2].metric("Ð¡Ð¿Ñ–Ð»ÑŒÐ½Ñ– Ñ€Ð¾Ð±Ð¾Ñ‚Ð¸", total_weight)
+    summary[0].metric("Кафедри в мережі", department_count)
+    summary[1].metric("Міжкафедральні зв'язки", len(edges))
+    summary[2].metric("Спільні роботи", total_weight)
 
     graph_html = build_department_graph_html(edges, theme=ui_theme)
     frame = department_collaboration_dataframe(edges)
     _render_graph_tabs(
-        title="Ð†Ð½Ñ‚ÐµÑ€Ð°ÐºÑ‚Ð¸Ð²Ð½Ð° Ð¼Ñ–Ð¶ÐºÐ°Ñ„ÐµÐ´Ñ€Ð°Ð»ÑŒÐ½Ð° Ð¼ÐµÑ€ÐµÐ¶Ð°",
+        title="Інтерактивна міжкафедральна мережа",
         html=graph_html,
         frame=frame,
         fullscreen_key="graph_department_fullscreen",
         table_fullscreen_key="graph_department_table_fullscreen",
-        caption="ÐœÑ–Ð¶ÐºÐ°Ñ„ÐµÐ´Ñ€Ð°Ð»ÑŒÐ½Ð° Ð¼ÐµÑ€ÐµÐ¶Ð°",
+        caption="Міжкафедральна мережа",
         export_name="graph_department_collaboration.csv",
-        empty_graph_text="Ð†Ð½Ñ‚ÐµÑ€Ð°ÐºÑ‚Ð¸Ð²Ð½Ð° Ð²Ñ–Ð·ÑƒÐ°Ð»Ñ–Ð·Ð°Ñ†Ñ–Ñ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð°, Ð°Ð»Ðµ Ð½Ð¸Ð¶Ñ‡Ðµ Ð´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¸Ð¹ ÐµÐºÑÐ¿Ð¾Ñ€Ñ‚ Ð¿Ð¾Ñ‚Ð¾Ñ‡Ð½Ð¾Ð³Ð¾ Ð·Ñ€Ñ–Ð·Ñƒ.",
+        empty_graph_text="Інтерактивна візуалізація недоступна, але нижче доступний експорт поточного зрізу.",
     )
