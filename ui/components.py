@@ -26,7 +26,7 @@ def setup_page(title: str) -> None:
     st.set_page_config(
         page_title=title,
         layout="wide",
-        page_icon="ðŸŽ“",
+        page_icon="🎓",
         initial_sidebar_state="expanded",
     )
     apply_theme()
@@ -1630,7 +1630,7 @@ def render_fullscreen_dataframe_heading(
     if frame.empty:
         render_section_heading(title, subtitle)
         return
-    if st.button(title, key=key, type="tertiary", help="Ð’Ñ–Ð´ÐºÑ€Ð¸Ñ‚Ð¸ Ð½Ð° Ð²ÐµÑÑŒ ÐµÐºÑ€Ð°Ð½"):
+    if st.button(title, key=key, type="tertiary", help="Відкрити на весь екран"):
         _fullscreen_dataframe_dialog(title, frame, caption)
     if subtitle:
         st.markdown(
@@ -1650,7 +1650,7 @@ def render_fullscreen_bar_chart_heading(
     if data.empty:
         render_section_heading(title, subtitle)
         return
-    if st.button(title, key=key, type="tertiary", help="Ð’Ñ–Ð´ÐºÑ€Ð¸Ñ‚Ð¸ Ð½Ð° Ð²ÐµÑÑŒ ÐµÐºÑ€Ð°Ð½"):
+    if st.button(title, key=key, type="tertiary", help="Відкрити на весь екран"):
         _fullscreen_bar_chart_dialog(title, data, caption)
     if subtitle:
         st.markdown(
@@ -1671,7 +1671,7 @@ def render_fullscreen_html_heading(
     if not html.strip():
         render_section_heading(title, subtitle)
         return
-    if st.button(title, key=key, type="tertiary", help="Ð’Ñ–Ð´ÐºÑ€Ð¸Ñ‚Ð¸ Ð½Ð° Ð²ÐµÑÑŒ ÐµÐºÑ€Ð°Ð½"):
+    if st.button(title, key=key, type="tertiary", help="Відкрити на весь екран"):
         _fullscreen_html_dialog(title, html, height, caption)
     if subtitle:
         st.markdown(
@@ -1713,7 +1713,7 @@ def render_summary_strip(title: str, value: str, caption: str = "") -> None:
 def render_key_value_card(title: str, items: list[tuple[str, str]]) -> None:
     rows = "".join(
         [
-            f'<div class="kv-row"><div class="kv-label">{escape(label)}</div><div class="kv-value">{escape(value or "â€”")}</div></div>'
+            f'<div class="kv-row"><div class="kv-label">{escape(label)}</div><div class="kv-value">{escape(value or "—")}</div></div>'
             for label, value in items
         ]
     )
@@ -1779,8 +1779,8 @@ def render_adaptive_bar_chart(
     if chart_frame.index.name:
         x_label = str(chart_frame.index.name)
     else:
-        x_label = "ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ñ–Ñ"
-    y_label = str(chart_frame.columns[0]) if len(chart_frame.columns) == 1 else "Ð—Ð½Ð°Ñ‡ÐµÐ½Ð½Ñ"
+        x_label = "Категорія"
+    y_label = str(chart_frame.columns[0]) if len(chart_frame.columns) == 1 else "Значення"
 
     chart_frame = chart_frame.reset_index()
     chart_frame.columns = [x_label] + [str(col) for col in chart_frame.columns[1:]]
@@ -1801,15 +1801,15 @@ def render_adaptive_bar_chart(
         )
     else:
         value_fields = [col for col in chart_frame.columns if col != x_label]
-        melted = chart_frame.melt(id_vars=[x_label], value_vars=value_fields, var_name="Ð¡ÐµÑ€Ñ–Ñ", value_name="Ð—Ð½Ð°Ñ‡ÐµÐ½Ð½Ñ")
+        melted = chart_frame.melt(id_vars=[x_label], value_vars=value_fields, var_name="Серія", value_name="Значення")
         chart = (
             alt.Chart(melted)
             .mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5)
             .encode(
                 x=alt.X(f"{x_label}:N", sort=None, axis=alt.Axis(labelAngle=-45, labelColor="#24415f", titleColor="#24415f")),
-                y=alt.Y("Ð—Ð½Ð°Ñ‡ÐµÐ½Ð½Ñ:Q", axis=alt.Axis(labelColor="#24415f", titleColor="#24415f")),
-                color=alt.Color("Ð¡ÐµÑ€Ñ–Ñ:N", scale=alt.Scale(range=["#0ea5e9", "#2dd4bf", "#f59e0b", "#1d4ed8"])),
-                tooltip=[x_label, "Ð¡ÐµÑ€Ñ–Ñ", "Ð—Ð½Ð°Ñ‡ÐµÐ½Ð½Ñ"],
+                y=alt.Y("Значення:Q", axis=alt.Axis(labelColor="#24415f", titleColor="#24415f")),
+                color=alt.Color("Серія:N", scale=alt.Scale(range=["#0ea5e9", "#2dd4bf", "#f59e0b", "#1d4ed8"])),
+                tooltip=[x_label, "Серія", "Значення"],
             )
             .properties(height=height, background="transparent")
             .configure_view(strokeOpacity=0)
@@ -1823,35 +1823,35 @@ def render_adaptive_bar_chart(
 
 
 if hasattr(st, "dialog"):
-    @st.dialog("ÐŸÐµÑ€ÐµÐ³Ð»ÑÐ´ Ð½Ð° Ð²ÐµÑÑŒ ÐµÐºÑ€Ð°Ð½", width="large")
+    @st.dialog("Перегляд на весь екран", width="large")
     def _fullscreen_dataframe_dialog(title: str, frame: pd.DataFrame, caption: str = "") -> None:
         render_section_heading(title, caption)
         render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=760)
 
 
-    @st.dialog("ÐŸÐµÑ€ÐµÐ³Ð»ÑÐ´ Ð½Ð° Ð²ÐµÑÑŒ ÐµÐºÑ€Ð°Ð½", width="large")
+    @st.dialog("Перегляд на весь екран", width="large")
     def _fullscreen_bar_chart_dialog(title: str, data: pd.DataFrame, caption: str = "") -> None:
         render_section_heading(title, caption)
         render_adaptive_bar_chart(data, use_container_width=True, height=760)
 
 
-    @st.dialog("ÐŸÐµÑ€ÐµÐ³Ð»ÑÐ´ Ð½Ð° Ð²ÐµÑÑŒ ÐµÐºÑ€Ð°Ð½", width="large")
+    @st.dialog("Перегляд на весь екран", width="large")
     def _fullscreen_html_dialog(title: str, html: str, height: int, caption: str = "") -> None:
         render_section_heading(title, caption)
         components.html(html, height=height, scrolling=False)
 else:
     def _fullscreen_dataframe_dialog(title: str, frame: pd.DataFrame, caption: str = "") -> None:
-        st.info("ÐŸÐ¾Ð²Ð½Ð¾ÐµÐºÑ€Ð°Ð½Ð½Ð¸Ð¹ Ð¿ÐµÑ€ÐµÐ³Ð»ÑÐ´ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¸Ð¹ Ñƒ Ñ†ÑŒÐ¾Ð¼Ñƒ ÑÐµÑ€ÐµÐ´Ð¾Ð²Ð¸Ñ‰Ñ–.")
+        st.info("Повноекранний перегляд недоступний у цьому середовищі.")
         render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=760)
 
 
     def _fullscreen_bar_chart_dialog(title: str, data: pd.DataFrame, caption: str = "") -> None:
-        st.info("ÐŸÐ¾Ð²Ð½Ð¾ÐµÐºÑ€Ð°Ð½Ð½Ð¸Ð¹ Ð¿ÐµÑ€ÐµÐ³Ð»ÑÐ´ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¸Ð¹ Ñƒ Ñ†ÑŒÐ¾Ð¼Ñƒ ÑÐµÑ€ÐµÐ´Ð¾Ð²Ð¸Ñ‰Ñ–.")
+        st.info("Повноекранний перегляд недоступний у цьому середовищі.")
         render_adaptive_bar_chart(data, use_container_width=True, height=760)
 
 
     def _fullscreen_html_dialog(title: str, html: str, height: int, caption: str = "") -> None:
-        st.info("ÐŸÐ¾Ð²Ð½Ð¾ÐµÐºÑ€Ð°Ð½Ð½Ð¸Ð¹ Ð¿ÐµÑ€ÐµÐ³Ð»ÑÐ´ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¸Ð¹ Ñƒ Ñ†ÑŒÐ¾Ð¼Ñƒ ÑÐµÑ€ÐµÐ´Ð¾Ð²Ð¸Ñ‰Ñ–.")
+        st.info("Повноекранний перегляд недоступний у цьому середовищі.")
         components.html(html, height=height, scrolling=False)
 
 
@@ -1867,27 +1867,27 @@ def _build_service(uri: str, user: str, password: str, database: str) -> Neo4jSe
 def require_service() -> Neo4jService:
     config = get_neo4j_config()
     if not config:
-        st.error("ÐÐµ Ð·Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾ Ð½Ð°Ð»Ð°ÑˆÑ‚ÑƒÐ²Ð°Ð½Ð½Ñ Ð¿Ñ–Ð´ÐºÐ»ÑŽÑ‡ÐµÐ½Ð½Ñ Ð´Ð¾ Neo4j Aura.")
+        st.error("Не знайдено налаштування підключення до Neo4j Aura.")
         st.code(get_connection_help_text())
         st.stop()
 
     try:
         return _build_service(config.uri, config.user, config.password, config.database)
     except ModuleNotFoundError as exc:
-        st.error("ÐÐµ Ð²Ð´Ð°Ð»Ð¾ÑÑ Ð·Ð°Ð¿ÑƒÑÑ‚Ð¸Ñ‚Ð¸ ÐºÐ»Ñ–Ñ”Ð½Ñ‚ Neo4j Ñƒ ÑÐµÑ€ÐµÐ´Ð¾Ð²Ð¸Ñ‰Ñ– Streamlit Cloud.")
+        st.error("Не вдалося запустити клієнт Neo4j у середовищі Streamlit Cloud.")
         st.caption(
-            "ÐÐ°Ð¹Ñ–Ð¼Ð¾Ð²Ñ–Ñ€Ð½Ñ–ÑˆÐµ, Ð·Ð°Ð»ÐµÐ¶Ð½Ñ–ÑÑ‚ÑŒ `neo4j` Ñ‰Ðµ Ð½Ðµ Ð²ÑÑ‚Ð°Ð½Ð¾Ð²Ð¸Ð»Ð°ÑÑ Ð°Ð±Ð¾ Ð·Ð±Ñ–Ñ€ÐºÐ° ÑÐµÑ€ÐµÐ´Ð¾Ð²Ð¸Ñ‰Ð° Ð·Ð°Ð²ÐµÑ€ÑˆÐ¸Ð»Ð°ÑÑ Ð· Ð¿Ð¾Ð¼Ð¸Ð»ÐºÐ¾ÑŽ. "
-            "ÐŸÐµÑ€ÐµÐ²Ñ–Ñ€Ñ‚Ðµ `Logs` Ñ– Ð²Ð¸ÐºÐ¾Ð½Ð°Ð¹Ñ‚Ðµ `Redeploy` Ð¿Ñ–ÑÐ»Ñ Ð·Ð°Ð²ÐµÑ€ÑˆÐµÐ½Ð½Ñ Ð²ÑÑ‚Ð°Ð½Ð¾Ð²Ð»ÐµÐ½Ð½Ñ Ð·Ð°Ð»ÐµÐ¶Ð½Ð¾ÑÑ‚ÐµÐ¹."
+            "Найімовірніше, залежність `neo4j` ще не встановилася або збірка середовища завершилася з помилкою. "
+            "Перевірте `Logs` і виконайте `Redeploy` після завершення встановлення залежностей."
         )
         st.code(str(exc))
         st.stop()
     except Exception as exc:
-        st.error(f"ÐÐµ Ð²Ð´Ð°Ð»Ð¾ÑÑ Ð¿Ñ–Ð´ÐºÐ»ÑŽÑ‡Ð¸Ñ‚Ð¸ÑÑ Ð´Ð¾ Neo4j Aura: {exc}")
+        st.error(f"Не вдалося підключитися до Neo4j Aura: {exc}")
         if config.database:
             st.caption(
-                "ÐŸÐ¾Ñ€Ð°Ð´Ð°: ÑÐºÑ‰Ð¾ Ð² `Secrets` Ð²ÐºÐ°Ð·Ð°Ð½Ð¾ `NEO4J_DATABASE`, Ð¿ÐµÑ€ÐµÐ²Ñ–Ñ€Ñ‚Ðµ Ð½Ð°Ð·Ð²Ñƒ Ð±Ð°Ð·Ð¸ Ð°Ð±Ð¾ Ñ‚Ð¸Ð¼Ñ‡Ð°ÑÐ¾Ð²Ð¾ Ð¿Ñ€Ð¸Ð±ÐµÑ€Ñ–Ñ‚ÑŒ "
-                "Ñ†ÐµÐ¹ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€, Ñ‰Ð¾Ð± Aura Ð²Ð¸ÐºÐ¾Ñ€Ð¸ÑÑ‚Ð°Ð»Ð° Ð´Ð¾Ð¼Ð°ÑˆÐ½ÑŽ Ð±Ð°Ð·Ñƒ Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡Ð½Ð¾."
+                "Порада: якщо в `Secrets` вказано `NEO4J_DATABASE`, перевірте назву бази або тимчасово приберіть "
+                "цей параметр, щоб Aura використала домашню базу автоматично."
             )
         else:
-            st.caption("ÐŸÐµÑ€ÐµÐ²Ñ–Ñ€Ñ‚Ðµ `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` Ñ– Ð¿Ñ€Ð°Ð²Ð° Ð´Ð¾ÑÑ‚ÑƒÐ¿Ñƒ Ð´Ð¾ Neo4j Aura.")
+            st.caption("Перевірте `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` і права доступу до Neo4j Aura.")
         st.stop()
