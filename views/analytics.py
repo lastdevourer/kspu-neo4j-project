@@ -8,13 +8,11 @@ from ui.components import (
     render_empty_state,
     render_adaptive_dataframe,
     render_adaptive_bar_chart,
-    render_control_spacer,
     render_fullscreen_bar_chart_heading,
     render_fullscreen_dataframe_heading,
     render_header,
     render_info_card,
     render_section_heading,
-    render_summary_strip,
     require_service,
 )
 from ui.formatters import (
@@ -164,11 +162,9 @@ def render() -> None:
     service = require_service()
     render_header("Аналітика", "Порівняльні зрізи, рейтинги, динаміка та звіти для факультетів, кафедр і викладачів.")
 
-    controls = st.columns([0.9, 1.02, 0.48], gap="medium", vertical_alignment="bottom")
+    controls = st.columns([0.9, 1.0, 0.55], gap="large", vertical_alignment="bottom")
     top_limit = controls[0].slider("Кількість записів у топах", min_value=5, max_value=20, value=10, step=1)
     scope = controls[1].selectbox("Контур даних", ["Усі записи", "Підтверджені", "Офіційні"])
-    with controls[2]:
-        render_control_spacer("Дії")
     if controls[2].button("Оновити аналітику", use_container_width=True, key="analytics_refresh_button"):
         st.cache_data.clear()
         st.rerun()
@@ -204,30 +200,10 @@ def render() -> None:
     average_publications = (scoped_publication_count / teachers_with_publications) if teachers_with_publications else 0.0
 
     highlights = st.columns(4, gap="medium", vertical_alignment="stretch")
-    with highlights[0]:
-        render_summary_strip(
-            "Лідер публікацій",
-            _compact_person_name(top_teachers[0]["teacher"]) if top_teachers else "—",
-            scope,
-        )
-    with highlights[1]:
-        render_summary_strip(
-            "Найсильніша пара",
-            _compact_pair_label(top_pairs[0]) if top_pairs else "—",
-            "Повні ПІБ — у таблиці нижче.",
-        )
-    with highlights[2]:
-        render_summary_strip(
-            "Центральний вузол",
-            _compact_person_name(centrality_rows[0]["teacher"]) if centrality_rows else "—",
-            f"Публікацій у контурі: {scoped_publication_count}",
-        )
-    with highlights[3]:
-        render_summary_strip(
-            "Середнє навантаження",
-            f"{average_publications:.1f}",
-            f"викладачів з роботами: {teachers_with_publications}",
-        )
+    highlights[0].metric("Лідер публікацій", _compact_person_name(top_teachers[0]["teacher"]) if top_teachers else "—")
+    highlights[1].metric("Найсильніша пара", _compact_pair_label(top_pairs[0]) if top_pairs else "—")
+    highlights[2].metric("Центральний вузол", _compact_person_name(centrality_rows[0]["teacher"]) if centrality_rows else "—")
+    highlights[3].metric("Середнє навантаження", f"{average_publications:.1f}")
 
     render_info_card(
         "Аналітичний висновок",
