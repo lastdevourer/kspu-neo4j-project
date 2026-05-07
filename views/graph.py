@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import pandas as pd
 import streamlit as st
@@ -104,7 +104,7 @@ def _render_graph_tabs(
                 mime="text/csv",
                 use_container_width=True,
             )
-            render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=420)
+            render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=360, compact=True)
 
 
 def render() -> None:
@@ -114,8 +114,22 @@ def render() -> None:
         "Мережева аналітика",
         subtitle="Досліджуйте зв'язки між авторством, співавторством, кафедрами та окремими викладачами.",
     )
-    mode_options = ["Авторство", "Співавторство викладачів", "Профіль викладача", "З'язки між кафедрами"]
-    mode = st.selectbox("Тип мережі", mode_options, index=0, help="Оберіть проєкцію графа для поточного аналізу.")
+    mode_options = ["Авторство", "Співавторство викладачів", "Профіль викладача", "Зв'язки між кафедрами"]
+    mode_state_key = "graph_mode_selection"
+    if st.session_state.get(mode_state_key) not in mode_options:
+        st.session_state[mode_state_key] = mode_options[0]
+    st.markdown("**Тип мережі**")
+    mode_columns = st.columns(4, gap="small")
+    for index, option in enumerate(mode_options):
+        if mode_columns[index].button(
+            option,
+            key=f"graph_mode_button_{index}",
+            use_container_width=True,
+            type="primary" if st.session_state[mode_state_key] == option else "secondary",
+        ):
+            st.session_state[mode_state_key] = option
+            st.rerun()
+    mode = st.session_state[mode_state_key]
     controls = st.columns([1.15, 0.85], gap="large")
     edge_limit = controls[1].slider("Ліміт зв'язків", min_value=20, max_value=240, value=120, step=10)
 
