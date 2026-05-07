@@ -162,7 +162,7 @@ def render() -> None:
     service = require_service()
     render_header("Аналітика", "Порівняльні зрізи, рейтинги, динаміка та звіти для факультетів, кафедр і викладачів.")
 
-    controls = st.columns([0.9, 1.0, 0.55], gap="large", vertical_alignment="bottom")
+    controls = st.columns([0.9, 1.0, 0.55], gap="large")
     top_limit = controls[0].slider("Кількість записів у топах", min_value=5, max_value=20, value=10, step=1)
     scope = controls[1].selectbox("Контур даних", ["Усі записи", "Підтверджені", "Офіційні"])
     if controls[2].button("Оновити аналітику", use_container_width=True, key="analytics_refresh_button"):
@@ -199,7 +199,7 @@ def render() -> None:
     teachers_with_publications = sum(1 for row in scoped_teacher_rows if int(row.get("publications", 0) or 0) > 0)
     average_publications = (scoped_publication_count / teachers_with_publications) if teachers_with_publications else 0.0
 
-    highlights = st.columns(4, gap="medium", vertical_alignment="top")
+    highlights = st.columns(4, gap="medium")
     highlights[0].metric("Лідер публікацій", _compact_person_name(top_teachers[0]["teacher"]) if top_teachers else "—")
     highlights[1].metric("Найсильніша пара", _compact_pair_label(top_pairs[0]) if top_pairs else "—")
     highlights[2].metric("Центральний вузол", _compact_person_name(centrality_rows[0]["teacher"]) if centrality_rows else "—")
