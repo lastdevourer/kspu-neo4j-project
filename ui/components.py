@@ -26,7 +26,7 @@ def setup_page(title: str) -> None:
     st.set_page_config(
         page_title=title,
         layout="wide",
-        page_icon="🎓",
+        page_icon="ðŸŽ“",
         initial_sidebar_state="expanded",
     )
     apply_theme()
@@ -679,8 +679,8 @@ def apply_theme() -> None:
             --line-soft: rgba(37, 99, 235, 0.12);
             --line-strong: rgba(14, 165, 233, 0.18);
             --text-main: #10233d;
-            --text-soft: #1f3d5b;
-            --text-muted: #294867;
+            --text-soft: #17324d;
+            --text-muted: #274867;
             --shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
         }
 
@@ -792,9 +792,8 @@ def apply_theme() -> None:
         [data-testid="stMetricLabel"] label,
         .stCaption,
         .stCaption p,
-        small,
-        .stMarkdown p {
-            color: #17324d !important;
+        small {
+            color: #10233d !important;
         }
 
         .summary-strip-caption,
@@ -816,6 +815,16 @@ def apply_theme() -> None:
 
         .empty-state-title {
             color: var(--text-main) !important;
+        }
+
+        .stMarkdown p,
+        .stMarkdown li,
+        .stMarkdown span,
+        .stMarkdown div,
+        [data-testid="stAlert"] p,
+        [data-testid="stAlert"] span,
+        [data-testid="stAlert"] div {
+            color: #132c49 !important;
         }
 
         .empty-state {
@@ -840,12 +849,33 @@ def apply_theme() -> None:
             padding: 0.2rem 0.35rem !important;
         }
 
+        [data-testid="stSidebar"] .stButton > button {
+            border-radius: 16px !important;
+        }
+
         [data-testid="stSidebar"] .stTextInput > div > div,
         [data-testid="stSidebar"] div[data-baseweb="select"] > div,
-        [data-testid="stSidebar"] div[data-baseweb="textarea"] > div {
+        [data-testid="stSidebar"] div[data-baseweb="textarea"] > div,
+        [data-testid="stSidebar"] div[data-baseweb="base-input"] > div {
             background: rgba(255, 255, 255, 0.96) !important;
             border: 1px solid rgba(37, 99, 235, 0.14) !important;
             box-shadow: 0 10px 20px rgba(15, 23, 42, 0.05) !important;
+        }
+
+        [data-testid="stSidebar"] div[data-baseweb="input"],
+        [data-testid="stSidebar"] div[data-baseweb="base-input"],
+        [data-testid="stSidebar"] [data-testid="stTextInputRootElement"] {
+            background: rgba(255, 255, 255, 0.96) !important;
+            border-color: rgba(37, 99, 235, 0.14) !important;
+            box-shadow: none !important;
+        }
+
+        [data-testid="stSidebar"] div[data-baseweb="input"] button,
+        [data-testid="stSidebar"] div[data-baseweb="base-input"] button {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: #35516f !important;
         }
 
         div[data-baseweb="tab-list"] {
@@ -853,20 +883,33 @@ def apply_theme() -> None:
             margin-bottom: 0.35rem;
         }
 
+        div[role="tablist"] button,
         button[role="tab"] {
             border-radius: 14px !important;
             padding: 0.55rem 0.9rem !important;
             border: 1px solid rgba(37, 99, 235, 0.08) !important;
             background: rgba(255, 255, 255, 0.58) !important;
-            color: var(--text-soft) !important;
+            color: #17324d !important;
             transition: all 0.18s ease;
         }
 
+        div[role="tablist"] button *,
+        button[role="tab"] * {
+            color: #17324d !important;
+            opacity: 1 !important;
+        }
+
+        div[role="tablist"] button[aria-selected="true"],
         button[role="tab"][aria-selected="true"] {
             background: rgba(255, 255, 255, 0.96) !important;
             color: var(--text-main) !important;
             border-color: rgba(14, 165, 233, 0.18) !important;
             box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+        }
+
+        div[role="tablist"] button[aria-selected="true"] *,
+        button[role="tab"][aria-selected="true"] * {
+            color: var(--text-main) !important;
         }
 
         [data-baseweb="radio"] > div {
@@ -994,13 +1037,17 @@ def apply_theme() -> None:
         }
 
         .adaptive-light-table-shell {
-            overflow: auto;
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: auto;
+            display: block;
             border-radius: 24px;
             border: 1px solid rgba(37, 99, 235, 0.12);
             background: rgba(255, 255, 255, 0.98);
             box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
             scrollbar-color: rgba(37, 99, 235, 0.28) rgba(226, 236, 248, 0.9);
             scrollbar-width: thin;
+            padding-bottom: 0.15rem;
         }
 
         .adaptive-light-table-shell table {
@@ -1030,24 +1077,53 @@ def apply_theme() -> None:
             padding: 0.78rem 0.88rem;
             border-bottom: 1px solid rgba(37, 99, 235, 0.08);
             vertical-align: top;
-            white-space: nowrap;
+            white-space: normal;
+            word-break: break-word;
+            min-width: 140px;
         }
 
-        .adaptive-light-table-shell td:nth-child(1),
+        .adaptive-light-table-shell td:first-child,
+        .adaptive-light-table-shell th:first-child {
+            min-width: 320px;
+        }
+
         .adaptive-light-table-shell td:nth-child(2),
-        .adaptive-light-table-shell th:nth-child(1),
         .adaptive-light-table-shell th:nth-child(2) {
-            white-space: normal;
             min-width: 180px;
         }
 
         .adaptive-light-table-shell td {
-            line-height: 1.4;
+            line-height: 1.45;
             color: var(--text-main);
+        }
+
+        .adaptive-light-table-shell td *,
+        .adaptive-light-table-shell th *,
+        .adaptive-light-table-shell a,
+        .adaptive-light-table-shell span,
+        .adaptive-light-table-shell div {
+            color: var(--text-main) !important;
+        }
+
+        .adaptive-light-table-shell td:first-child,
+        .adaptive-light-table-shell th:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.98);
+        }
+
+        .adaptive-light-table-shell thead th:first-child {
+            z-index: 2;
+            background: rgba(243, 248, 253, 0.98);
         }
 
         .adaptive-light-table-shell tbody tr:hover td {
             background: rgba(14, 165, 233, 0.04);
+        }
+
+        .adaptive-light-table-shell tbody tr:last-child td {
+            border-bottom: none;
         }
 
         .adaptive-light-table-shell::-webkit-scrollbar {
@@ -1076,9 +1152,30 @@ def apply_theme() -> None:
         .sidebar-section-label,
         .sidebar-theme-caption,
         .sidebar-admin-hint,
+        .kv-label,
         [data-testid="stCaptionContainer"],
-        .stCaption {
-            color: #17324d !important;
+        .stCaption,
+        small {
+            color: #0f2747 !important;
+        }
+
+        div[data-testid="stMetricLabel"],
+        div[data-testid="stMetricLabel"] *,
+        label[data-testid="stWidgetLabel"],
+        label[data-testid="stWidgetLabel"] *,
+        .stMarkdown p,
+        .stMarkdown li,
+        .stMarkdown span,
+        .stMarkdown div {
+            color: #10233d !important;
+        }
+
+        .stMarkdown strong,
+        .stMarkdown b,
+        .kv-value,
+        .summary-strip-title,
+        .section-heading-title {
+            color: #0f2747 !important;
         }
 
         [data-testid="stSidebar"] .stTextInput input,
@@ -1096,6 +1193,55 @@ def apply_theme() -> None:
             background: rgba(255, 255, 255, 0.98) !important;
             border: 1px solid rgba(37, 99, 235, 0.14) !important;
             box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06) !important;
+        }
+
+        .stSlider [data-baseweb="slider"] {
+            background: transparent !important;
+        }
+
+        .stSlider [role="slider"] {
+            box-shadow: none !important;
+        }
+
+        .stSlider [data-testid="stTickBarMin"],
+        .stSlider [data-testid="stTickBarMax"] {
+            background: #cfe0f4 !important;
+        }
+
+        div[role="tablist"],
+        div[data-baseweb="tab-list"],
+        div[role="radiogroup"],
+        div[data-baseweb="radio"] > div {
+            background: #edf4fa !important;
+            border: 1px solid rgba(37, 99, 235, 0.12) !important;
+            border-radius: 14px !important;
+            padding: 4px !important;
+            box-shadow: none !important;
+        }
+
+        button[role="tab"],
+        div[data-baseweb="tab-list"] button,
+        div[role="tablist"] button,
+        div[role="radiogroup"] > label,
+        div[data-baseweb="radio"] label {
+            background: transparent !important;
+            color: #17324d !important;
+            border-radius: 10px !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-weight: 700 !important;
+            opacity: 1 !important;
+        }
+
+        button[role="tab"][aria-selected="true"],
+        div[data-baseweb="tab-list"] button[aria-selected="true"],
+        div[role="tablist"] button[aria-selected="true"],
+        div[role="radiogroup"] > label:has(input:checked),
+        div[data-baseweb="radio"] label:has(input:checked) {
+            background: rgba(255, 255, 255, 0.98) !important;
+            color: #0f2747 !important;
+            border: 1px solid rgba(37, 99, 235, 0.12) !important;
+            box-shadow: 0 1px 2px rgba(15, 39, 71, 0.06) !important;
         }
 
         [data-testid="stSidebar"] div.stButton > button {
@@ -1116,19 +1262,6 @@ def apply_theme() -> None:
             box-shadow: 0 12px 24px rgba(14, 165, 233, 0.10);
         }
 
-        [data-baseweb="tab-list"] button,
-        [role="tablist"] button {
-            color: var(--text-main) !important;
-            background: rgba(255, 255, 255, 0.92) !important;
-            border: 1px solid rgba(37, 99, 235, 0.10) !important;
-        }
-
-        [data-baseweb="tab-list"] button[aria-selected="true"],
-        [role="tablist"] button[aria-selected="true"] {
-            background: linear-gradient(135deg, rgba(18, 184, 214, 0.15), rgba(29, 155, 240, 0.12)) !important;
-            border-color: rgba(18, 184, 214, 0.22) !important;
-        }
-
         .stSelectbox label,
         .stTextInput label,
         .stSlider label,
@@ -1140,7 +1273,143 @@ def apply_theme() -> None:
 
         [data-testid="stMetricLabel"],
         [data-testid="stMetricLabel"] p {
-            color: #35506b !important;
+            color: #0f2747 !important;
+        }
+
+        /* ===== Light theme widget fixes for Streamlit/BaseWeb widgets ===== */
+        div[role="tablist"] {
+            background: #edf4fa !important;
+            border: 1px solid rgba(37, 99, 235, 0.12) !important;
+            border-radius: 14px !important;
+            padding: 4px !important;
+            gap: 4px !important;
+        }
+
+        button[role="tab"] {
+            background: transparent !important;
+            color: #17324d !important;
+            border-radius: 10px !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-weight: 700 !important;
+        }
+
+        button[role="tab"][aria-selected="true"] {
+            background: rgba(255, 255, 255, 0.98) !important;
+            color: var(--text-main) !important;
+            border: 1px solid rgba(37, 99, 235, 0.12) !important;
+            box-shadow: 0 1px 2px rgba(15, 39, 71, 0.06) !important;
+        }
+
+        div[role="radiogroup"] {
+            background: #edf4fa !important;
+            border: 1px solid rgba(37, 99, 235, 0.12) !important;
+            border-radius: 14px !important;
+            padding: 4px !important;
+        }
+
+        div[role="radiogroup"] > label {
+            background: transparent !important;
+            color: #17324d !important;
+            border-radius: 10px !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-weight: 700 !important;
+        }
+
+        div[role="radiogroup"] > label:has(input:checked) {
+            background: rgba(255, 255, 255, 0.98) !important;
+            color: var(--text-main) !important;
+            border: 1px solid rgba(37, 99, 235, 0.12) !important;
+            box-shadow: 0 1px 2px rgba(15, 39, 71, 0.06) !important;
+        }
+
+        .stTextInput > div > div,
+        .stNumberInput > div > div,
+        div[data-baseweb="input"],
+        div[data-baseweb="base-input"] {
+            background: rgba(255, 255, 255, 0.98) !important;
+            border: 1px solid rgba(37, 99, 235, 0.14) !important;
+            border-radius: 14px !important;
+            box-shadow: none !important;
+        }
+
+        .stTextInput input,
+        .stNumberInput input,
+        div[data-baseweb="input"] input,
+        div[data-baseweb="base-input"] input {
+            background: transparent !important;
+            color: var(--text-main) !important;
+            -webkit-text-fill-color: var(--text-main) !important;
+        }
+
+        .stTextInput input::placeholder,
+        .stNumberInput input::placeholder {
+            color: #7b90aa !important;
+        }
+
+        div[data-baseweb="input"]:focus-within,
+        div[data-baseweb="base-input"]:focus-within,
+        .stTextInput > div > div:focus-within,
+        .stNumberInput > div > div:focus-within {
+            border-color: #8fded1 !important;
+            box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.14) !important;
+        }
+
+        div[data-baseweb="select"] > div,
+        div[data-baseweb="select"] {
+            background: rgba(255, 255, 255, 0.98) !important;
+            color: var(--text-main) !important;
+            border: 1px solid rgba(37, 99, 235, 0.14) !important;
+            border-radius: 14px !important;
+            box-shadow: none !important;
+        }
+
+        div[data-baseweb="select"] * {
+            color: var(--text-main) !important;
+        }
+
+        [data-baseweb="slider"] > div {
+            background: transparent !important;
+        }
+
+        [data-baseweb="slider"] [role="slider"] {
+            background: #22c7b7 !important;
+            border: 2px solid #ffffff !important;
+            box-shadow: 0 0 0 3px rgba(45, 212, 191, 0.18) !important;
+        }
+
+        .stSlider [data-baseweb="slider"] {
+            background: transparent !important;
+        }
+
+        .stSlider [role="slider"] {
+            box-shadow: none !important;
+        }
+
+        details,
+        summary,
+        [data-testid="stExpander"] {
+            background: rgba(255, 255, 255, 0.98) !important;
+            color: var(--text-main) !important;
+            border-color: rgba(37, 99, 235, 0.12) !important;
+        }
+
+        .stButton > button {
+            border-radius: 14px !important;
+        }
+
+        .stButton > button[kind="secondary"],
+        .stButton > button[data-testid="baseButton-secondary"] {
+            background: rgba(255, 255, 255, 0.98) !important;
+            color: var(--text-main) !important;
+            border: 1px solid rgba(37, 99, 235, 0.12) !important;
+        }
+
+        .stButton > button[kind="secondary"]:hover,
+        .stButton > button[data-testid="baseButton-secondary"]:hover {
+            border-color: rgba(37, 99, 235, 0.20) !important;
+            background: #f8fbfe !important;
         }
 
         .light-chart-shell {
@@ -1180,6 +1449,111 @@ def apply_theme() -> None:
 
         [data-testid="stException"] * {
             color: #7f1d1d !important;
+        }
+
+        [data-testid="stAlert"],
+        [data-testid="stAlert"] *,
+        small,
+        .stCaption,
+        [data-testid="stCaptionContainer"],
+        .stMarkdown p,
+        .stMarkdown li,
+        .stMarkdown span,
+        .stMarkdown div {
+            color: #10233d !important;
+        }
+
+        .stMarkdown a,
+        a {
+            color: #0f5fa8 !important;
+        }
+
+        .stMarkdown strong,
+        .stMarkdown b {
+            color: #0f2747 !important;
+        }
+
+        [data-testid="stSidebar"] input,
+        [data-testid="stSidebar"] textarea,
+        [data-testid="stSidebar"] svg,
+        [data-testid="stSidebar"] button[title*="password"],
+        [data-testid="stSidebar"] button[aria-label*="password"],
+        [data-testid="stSidebar"] button[aria-label*="Password"] {
+            color: var(--text-main) !important;
+            fill: var(--text-main) !important;
+        }
+
+        [data-testid="stSidebar"] .stTextInput button,
+        [data-testid="stSidebar"] div[data-baseweb="input"] button,
+        [data-testid="stSidebar"] div[data-baseweb="base-input"] button {
+            background: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: #17324d !important;
+            fill: #17324d !important;
+        }
+
+        /* Final light-theme widget overrides */
+        div[role="tablist"],
+        div[data-baseweb="tab-list"],
+        div[role="radiogroup"],
+        div[data-baseweb="radio"] > div {
+            background: #edf4fa !important;
+            border: 1px solid rgba(37, 99, 235, 0.12) !important;
+            border-radius: 14px !important;
+            padding: 4px !important;
+            gap: 4px !important;
+        }
+
+        button[role="tab"],
+        div[data-baseweb="tab-list"] button,
+        div[role="tablist"] button,
+        div[role="radiogroup"] > label,
+        div[data-baseweb="radio"] label {
+            background: transparent !important;
+            color: #0f2747 !important;
+            border-radius: 10px !important;
+            border: none !important;
+            box-shadow: none !important;
+            font-weight: 700 !important;
+            opacity: 1 !important;
+            min-height: 2.5rem !important;
+        }
+
+        button[role="tab"] *,
+        div[data-baseweb="tab-list"] button *,
+        div[role="tablist"] button *,
+        div[role="radiogroup"] > label *,
+        div[data-baseweb="radio"] label * {
+            color: #0f2747 !important;
+            opacity: 1 !important;
+        }
+
+        button[role="tab"][aria-selected="true"],
+        div[data-baseweb="tab-list"] button[aria-selected="true"],
+        div[role="tablist"] button[aria-selected="true"],
+        div[role="radiogroup"] > label:has(input:checked),
+        div[data-baseweb="radio"] label:has(input:checked) {
+            background: rgba(255, 255, 255, 0.98) !important;
+            color: #0f2747 !important;
+            border: 1px solid rgba(37, 99, 235, 0.12) !important;
+            box-shadow: 0 1px 2px rgba(15, 39, 71, 0.06) !important;
+        }
+
+        button[role="tab"][aria-selected="true"] *,
+        div[data-baseweb="tab-list"] button[aria-selected="true"] *,
+        div[role="tablist"] button[aria-selected="true"] *,
+        div[role="radiogroup"] > label:has(input:checked) *,
+        div[data-baseweb="radio"] label:has(input:checked) * {
+            color: #0f2747 !important;
+        }
+
+        div[role="tablist"]::before,
+        div[data-baseweb="tab-list"]::before,
+        div[role="radiogroup"]::before,
+        div[data-baseweb="radio"] > div::before {
+            display: none !important;
+            content: none !important;
         }
         </style>
         """
@@ -1256,7 +1630,7 @@ def render_fullscreen_dataframe_heading(
     if frame.empty:
         render_section_heading(title, subtitle)
         return
-    if st.button(title, key=key, type="tertiary", help="Відкрити на весь екран"):
+    if st.button(title, key=key, type="tertiary", help="Ð’Ñ–Ð´ÐºÑ€Ð¸Ñ‚Ð¸ Ð½Ð° Ð²ÐµÑÑŒ ÐµÐºÑ€Ð°Ð½"):
         _fullscreen_dataframe_dialog(title, frame, caption)
     if subtitle:
         st.markdown(
@@ -1276,7 +1650,7 @@ def render_fullscreen_bar_chart_heading(
     if data.empty:
         render_section_heading(title, subtitle)
         return
-    if st.button(title, key=key, type="tertiary", help="Відкрити на весь екран"):
+    if st.button(title, key=key, type="tertiary", help="Ð’Ñ–Ð´ÐºÑ€Ð¸Ñ‚Ð¸ Ð½Ð° Ð²ÐµÑÑŒ ÐµÐºÑ€Ð°Ð½"):
         _fullscreen_bar_chart_dialog(title, data, caption)
     if subtitle:
         st.markdown(
@@ -1297,7 +1671,7 @@ def render_fullscreen_html_heading(
     if not html.strip():
         render_section_heading(title, subtitle)
         return
-    if st.button(title, key=key, type="tertiary", help="Відкрити на весь екран"):
+    if st.button(title, key=key, type="tertiary", help="Ð’Ñ–Ð´ÐºÑ€Ð¸Ñ‚Ð¸ Ð½Ð° Ð²ÐµÑÑŒ ÐµÐºÑ€Ð°Ð½"):
         _fullscreen_html_dialog(title, html, height, caption)
     if subtitle:
         st.markdown(
@@ -1339,7 +1713,7 @@ def render_summary_strip(title: str, value: str, caption: str = "") -> None:
 def render_key_value_card(title: str, items: list[tuple[str, str]]) -> None:
     rows = "".join(
         [
-            f'<div class="kv-row"><div class="kv-label">{escape(label)}</div><div class="kv-value">{escape(value or "—")}</div></div>'
+            f'<div class="kv-row"><div class="kv-label">{escape(label)}</div><div class="kv-value">{escape(value or "â€”")}</div></div>'
             for label, value in items
         ]
     )
@@ -1405,8 +1779,8 @@ def render_adaptive_bar_chart(
     if chart_frame.index.name:
         x_label = str(chart_frame.index.name)
     else:
-        x_label = "Категорія"
-    y_label = str(chart_frame.columns[0]) if len(chart_frame.columns) == 1 else "Значення"
+        x_label = "ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ñ–Ñ"
+    y_label = str(chart_frame.columns[0]) if len(chart_frame.columns) == 1 else "Ð—Ð½Ð°Ñ‡ÐµÐ½Ð½Ñ"
 
     chart_frame = chart_frame.reset_index()
     chart_frame.columns = [x_label] + [str(col) for col in chart_frame.columns[1:]]
@@ -1427,15 +1801,15 @@ def render_adaptive_bar_chart(
         )
     else:
         value_fields = [col for col in chart_frame.columns if col != x_label]
-        melted = chart_frame.melt(id_vars=[x_label], value_vars=value_fields, var_name="Серія", value_name="Значення")
+        melted = chart_frame.melt(id_vars=[x_label], value_vars=value_fields, var_name="Ð¡ÐµÑ€Ñ–Ñ", value_name="Ð—Ð½Ð°Ñ‡ÐµÐ½Ð½Ñ")
         chart = (
             alt.Chart(melted)
             .mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5)
             .encode(
                 x=alt.X(f"{x_label}:N", sort=None, axis=alt.Axis(labelAngle=-45, labelColor="#24415f", titleColor="#24415f")),
-                y=alt.Y("Значення:Q", axis=alt.Axis(labelColor="#24415f", titleColor="#24415f")),
-                color=alt.Color("Серія:N", scale=alt.Scale(range=["#0ea5e9", "#2dd4bf", "#f59e0b", "#1d4ed8"])),
-                tooltip=[x_label, "Серія", "Значення"],
+                y=alt.Y("Ð—Ð½Ð°Ñ‡ÐµÐ½Ð½Ñ:Q", axis=alt.Axis(labelColor="#24415f", titleColor="#24415f")),
+                color=alt.Color("Ð¡ÐµÑ€Ñ–Ñ:N", scale=alt.Scale(range=["#0ea5e9", "#2dd4bf", "#f59e0b", "#1d4ed8"])),
+                tooltip=[x_label, "Ð¡ÐµÑ€Ñ–Ñ", "Ð—Ð½Ð°Ñ‡ÐµÐ½Ð½Ñ"],
             )
             .properties(height=height, background="transparent")
             .configure_view(strokeOpacity=0)
@@ -1449,35 +1823,35 @@ def render_adaptive_bar_chart(
 
 
 if hasattr(st, "dialog"):
-    @st.dialog("Перегляд на весь екран", width="large")
+    @st.dialog("ÐŸÐµÑ€ÐµÐ³Ð»ÑÐ´ Ð½Ð° Ð²ÐµÑÑŒ ÐµÐºÑ€Ð°Ð½", width="large")
     def _fullscreen_dataframe_dialog(title: str, frame: pd.DataFrame, caption: str = "") -> None:
         render_section_heading(title, caption)
         render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=760)
 
 
-    @st.dialog("Перегляд на весь екран", width="large")
+    @st.dialog("ÐŸÐµÑ€ÐµÐ³Ð»ÑÐ´ Ð½Ð° Ð²ÐµÑÑŒ ÐµÐºÑ€Ð°Ð½", width="large")
     def _fullscreen_bar_chart_dialog(title: str, data: pd.DataFrame, caption: str = "") -> None:
         render_section_heading(title, caption)
         render_adaptive_bar_chart(data, use_container_width=True, height=760)
 
 
-    @st.dialog("Перегляд на весь екран", width="large")
+    @st.dialog("ÐŸÐµÑ€ÐµÐ³Ð»ÑÐ´ Ð½Ð° Ð²ÐµÑÑŒ ÐµÐºÑ€Ð°Ð½", width="large")
     def _fullscreen_html_dialog(title: str, html: str, height: int, caption: str = "") -> None:
         render_section_heading(title, caption)
         components.html(html, height=height, scrolling=False)
 else:
     def _fullscreen_dataframe_dialog(title: str, frame: pd.DataFrame, caption: str = "") -> None:
-        st.info("Повноекранний перегляд недоступний у цьому середовищі.")
+        st.info("ÐŸÐ¾Ð²Ð½Ð¾ÐµÐºÑ€Ð°Ð½Ð½Ð¸Ð¹ Ð¿ÐµÑ€ÐµÐ³Ð»ÑÐ´ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¸Ð¹ Ñƒ Ñ†ÑŒÐ¾Ð¼Ñƒ ÑÐµÑ€ÐµÐ´Ð¾Ð²Ð¸Ñ‰Ñ–.")
         render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=760)
 
 
     def _fullscreen_bar_chart_dialog(title: str, data: pd.DataFrame, caption: str = "") -> None:
-        st.info("Повноекранний перегляд недоступний у цьому середовищі.")
+        st.info("ÐŸÐ¾Ð²Ð½Ð¾ÐµÐºÑ€Ð°Ð½Ð½Ð¸Ð¹ Ð¿ÐµÑ€ÐµÐ³Ð»ÑÐ´ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¸Ð¹ Ñƒ Ñ†ÑŒÐ¾Ð¼Ñƒ ÑÐµÑ€ÐµÐ´Ð¾Ð²Ð¸Ñ‰Ñ–.")
         render_adaptive_bar_chart(data, use_container_width=True, height=760)
 
 
     def _fullscreen_html_dialog(title: str, html: str, height: int, caption: str = "") -> None:
-        st.info("Повноекранний перегляд недоступний у цьому середовищі.")
+        st.info("ÐŸÐ¾Ð²Ð½Ð¾ÐµÐºÑ€Ð°Ð½Ð½Ð¸Ð¹ Ð¿ÐµÑ€ÐµÐ³Ð»ÑÐ´ Ð½ÐµÐ´Ð¾ÑÑ‚ÑƒÐ¿Ð½Ð¸Ð¹ Ñƒ Ñ†ÑŒÐ¾Ð¼Ñƒ ÑÐµÑ€ÐµÐ´Ð¾Ð²Ð¸Ñ‰Ñ–.")
         components.html(html, height=height, scrolling=False)
 
 
@@ -1493,27 +1867,27 @@ def _build_service(uri: str, user: str, password: str, database: str) -> Neo4jSe
 def require_service() -> Neo4jService:
     config = get_neo4j_config()
     if not config:
-        st.error("Не знайдено налаштування підключення до Neo4j Aura.")
+        st.error("ÐÐµ Ð·Ð½Ð°Ð¹Ð´ÐµÐ½Ð¾ Ð½Ð°Ð»Ð°ÑˆÑ‚ÑƒÐ²Ð°Ð½Ð½Ñ Ð¿Ñ–Ð´ÐºÐ»ÑŽÑ‡ÐµÐ½Ð½Ñ Ð´Ð¾ Neo4j Aura.")
         st.code(get_connection_help_text())
         st.stop()
 
     try:
         return _build_service(config.uri, config.user, config.password, config.database)
     except ModuleNotFoundError as exc:
-        st.error("Не вдалося запустити клієнт Neo4j у середовищі Streamlit Cloud.")
+        st.error("ÐÐµ Ð²Ð´Ð°Ð»Ð¾ÑÑ Ð·Ð°Ð¿ÑƒÑÑ‚Ð¸Ñ‚Ð¸ ÐºÐ»Ñ–Ñ”Ð½Ñ‚ Neo4j Ñƒ ÑÐµÑ€ÐµÐ´Ð¾Ð²Ð¸Ñ‰Ñ– Streamlit Cloud.")
         st.caption(
-            "Найімовірніше, залежність `neo4j` ще не встановилася або збірка середовища завершилася з помилкою. "
-            "Перевірте `Logs` і виконайте `Redeploy` після завершення встановлення залежностей."
+            "ÐÐ°Ð¹Ñ–Ð¼Ð¾Ð²Ñ–Ñ€Ð½Ñ–ÑˆÐµ, Ð·Ð°Ð»ÐµÐ¶Ð½Ñ–ÑÑ‚ÑŒ `neo4j` Ñ‰Ðµ Ð½Ðµ Ð²ÑÑ‚Ð°Ð½Ð¾Ð²Ð¸Ð»Ð°ÑÑ Ð°Ð±Ð¾ Ð·Ð±Ñ–Ñ€ÐºÐ° ÑÐµÑ€ÐµÐ´Ð¾Ð²Ð¸Ñ‰Ð° Ð·Ð°Ð²ÐµÑ€ÑˆÐ¸Ð»Ð°ÑÑ Ð· Ð¿Ð¾Ð¼Ð¸Ð»ÐºÐ¾ÑŽ. "
+            "ÐŸÐµÑ€ÐµÐ²Ñ–Ñ€Ñ‚Ðµ `Logs` Ñ– Ð²Ð¸ÐºÐ¾Ð½Ð°Ð¹Ñ‚Ðµ `Redeploy` Ð¿Ñ–ÑÐ»Ñ Ð·Ð°Ð²ÐµÑ€ÑˆÐµÐ½Ð½Ñ Ð²ÑÑ‚Ð°Ð½Ð¾Ð²Ð»ÐµÐ½Ð½Ñ Ð·Ð°Ð»ÐµÐ¶Ð½Ð¾ÑÑ‚ÐµÐ¹."
         )
         st.code(str(exc))
         st.stop()
     except Exception as exc:
-        st.error(f"Не вдалося підключитися до Neo4j Aura: {exc}")
+        st.error(f"ÐÐµ Ð²Ð´Ð°Ð»Ð¾ÑÑ Ð¿Ñ–Ð´ÐºÐ»ÑŽÑ‡Ð¸Ñ‚Ð¸ÑÑ Ð´Ð¾ Neo4j Aura: {exc}")
         if config.database:
             st.caption(
-                "Порада: якщо в `Secrets` вказано `NEO4J_DATABASE`, перевірте назву бази або тимчасово приберіть "
-                "цей параметр, щоб Aura використала домашню базу автоматично."
+                "ÐŸÐ¾Ñ€Ð°Ð´Ð°: ÑÐºÑ‰Ð¾ Ð² `Secrets` Ð²ÐºÐ°Ð·Ð°Ð½Ð¾ `NEO4J_DATABASE`, Ð¿ÐµÑ€ÐµÐ²Ñ–Ñ€Ñ‚Ðµ Ð½Ð°Ð·Ð²Ñƒ Ð±Ð°Ð·Ð¸ Ð°Ð±Ð¾ Ñ‚Ð¸Ð¼Ñ‡Ð°ÑÐ¾Ð²Ð¾ Ð¿Ñ€Ð¸Ð±ÐµÑ€Ñ–Ñ‚ÑŒ "
+                "Ñ†ÐµÐ¹ Ð¿Ð°Ñ€Ð°Ð¼ÐµÑ‚Ñ€, Ñ‰Ð¾Ð± Aura Ð²Ð¸ÐºÐ¾Ñ€Ð¸ÑÑ‚Ð°Ð»Ð° Ð´Ð¾Ð¼Ð°ÑˆÐ½ÑŽ Ð±Ð°Ð·Ñƒ Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡Ð½Ð¾."
             )
         else:
-            st.caption("Перевірте `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` і права доступу до Neo4j Aura.")
+            st.caption("ÐŸÐµÑ€ÐµÐ²Ñ–Ñ€Ñ‚Ðµ `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` Ñ– Ð¿Ñ€Ð°Ð²Ð° Ð´Ð¾ÑÑ‚ÑƒÐ¿Ñƒ Ð´Ð¾ Neo4j Aura.")
         st.stop()
