@@ -11,7 +11,7 @@ def render_sidebar(
     pages: dict[str, dict[str, object]],
 ) -> str:
     selected_page = current_page
-    section_order = ["ÐžÐ³Ð»ÑÐ´", "ÐšÐ°Ñ‚Ð°Ð»Ð¾Ð³", "ÐÐ´Ð¼Ñ–Ð½Ñ–ÑÑ‚Ñ€ÑƒÐ²Ð°Ð½Ð½Ñ"]
+    section_order = ["Огляд", "Каталог", "Адміністрування"]
     admin_password = get_admin_password()
 
     with st.sidebar:
@@ -19,26 +19,26 @@ def render_sidebar(
             """
             <div class="sidebar-brand">
                 <div class="sidebar-brand-kicker">KSU</div>
-                <div class="sidebar-brand-title">ÐÐºÐ°Ð´ÐµÐ¼Ñ–Ñ‡Ð½Ð° Ð¼ÐµÑ€ÐµÐ¶Ð°</div>
+                <div class="sidebar-brand-title">Академічна мережа</div>
             </div>
             """,
             unsafe_allow_html=True,
         )
 
         current_theme = get_ui_theme()
-        st.markdown("**Ð¢ÐµÐ¼Ð° Ñ–Ð½Ñ‚ÐµÑ€Ñ„ÐµÐ¹ÑÑƒ**")
+        st.markdown("**Тема інтерфейсу**")
         theme_cols = st.columns([0.66, 0.34], gap="small")
-        current_theme_label = "Ð¡Ð²Ñ–Ñ‚Ð»Ð° Ñ‚ÐµÐ¼Ð°" if current_theme == "light" else "Ð¢ÐµÐ¼Ð½Ð° Ñ‚ÐµÐ¼Ð°"
-        theme_button_label = "â˜€ï¸ Ð¡Ð²Ñ–Ñ‚Ð»Ð°" if current_theme == "dark" else "ðŸŒ™ Ð¢ÐµÐ¼Ð½Ð°"
+        current_theme_label = "Світла тема" if current_theme == "light" else "Темна тема"
+        theme_button_label = "☀️ Світла" if current_theme == "dark" else "🌙 Темна"
         theme_cols[0].markdown(
-            f'<div class="sidebar-theme-caption">Ð—Ð°Ñ€Ð°Ð·: {current_theme_label}</div>',
+            f'<div class="sidebar-theme-caption">Зараз: {current_theme_label}</div>',
             unsafe_allow_html=True,
         )
         if theme_cols[1].button(
             theme_button_label,
             key="sidebar_theme_toggle",
             use_container_width=True,
-            help="ÐŸÐµÑ€ÐµÐ¼ÐºÐ½ÑƒÑ‚Ð¸ Ñ‚ÐµÐ¼Ñƒ Ñ–Ð½Ñ‚ÐµÑ€Ñ„ÐµÐ¹ÑÑƒ",
+            help="Перемкнути тему інтерфейсу",
         ):
             next_theme = "light" if current_theme == "dark" else "dark"
             st.session_state["ui_theme"] = next_theme
@@ -70,11 +70,11 @@ def render_sidebar(
 
         if admin_password:
             st.markdown("---")
-            st.markdown("**Ð ÐµÐ¶Ð¸Ð¼ ÐºÐµÑ€ÑƒÐ²Ð°Ð½Ð½Ñ**")
+            st.markdown("**Режим керування**")
             if is_admin_mode():
-                st.success("ÐÐ´Ð¼Ñ–Ð½Ñ€ÐµÐ¶Ð¸Ð¼ Ñ€Ð¾Ð·Ð±Ð»Ð¾ÐºÐ¾Ð²Ð°Ð½Ð¾ Ð´Ð»Ñ Ð¿Ð¾Ñ‚Ð¾Ñ‡Ð½Ð¾Ñ— ÑÐµÑÑ–Ñ—.")
+                st.success("Адмінрежим розблоковано для поточної сесії.")
                 if st.button(
-                    "Ð—Ð°ÐºÑ€Ð¸Ñ‚Ð¸ Ð°Ð´Ð¼Ñ–Ð½Ñ€ÐµÐ¶Ð¸Ð¼",
+                    "Закрити адмінрежим",
                     key="sidebar_lock_admin_mode",
                     use_container_width=True,
                 ):
@@ -86,13 +86,13 @@ def render_sidebar(
                     st.rerun()
             else:
                 entered_password = st.text_input(
-                    "ÐŸÐ°Ñ€Ð¾Ð»ÑŒ Ð°Ð´Ð¼Ñ–Ð½Ñ–ÑÑ‚Ñ€Ð°Ñ‚Ð¾Ñ€Ð°",
+                    "Пароль адміністратора",
                     type="password",
                     key="sidebar_admin_password",
-                    placeholder="Ð’Ð²ÐµÐ´Ñ–Ñ‚ÑŒ Ð¿Ð°Ñ€Ð¾Ð»ÑŒ Ð´Ð»Ñ Ñ€ÐµÐ´Ð°Ð³ÑƒÐ²Ð°Ð½Ð½Ñ",
+                    placeholder="Введіть пароль для редагування",
                 )
                 if st.button(
-                    "Ð Ð¾Ð·Ð±Ð»Ð¾ÐºÑƒÐ²Ð°Ñ‚Ð¸ Ð°Ð´Ð¼Ñ–Ð½Ñ€ÐµÐ¶Ð¸Ð¼",
+                    "Розблокувати адмінрежим",
                     key="sidebar_unlock_admin_mode",
                     use_container_width=True,
                 ):
@@ -100,6 +100,6 @@ def render_sidebar(
                         st.session_state["admin_unlocked"] = True
                         st.session_state.pop("sidebar_admin_password", None)
                         st.rerun()
-                    st.error("ÐÐµÐ²Ñ–Ñ€Ð½Ð¸Ð¹ Ð¿Ð°Ñ€Ð¾Ð»ÑŒ Ð°Ð´Ð¼Ñ–Ð½Ñ–ÑÑ‚Ñ€Ð°Ñ‚Ð¾Ñ€Ð°.")
+                    st.error("Невірний пароль адміністратора.")
 
     return selected_page
