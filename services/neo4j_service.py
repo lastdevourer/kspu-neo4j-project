@@ -1244,27 +1244,27 @@ class Neo4jService:
     def get_overview_counts(self) -> dict[str, int]:
         rows = self.run_query(
             """
-            CALL {
+            CALL () {
                 MATCH (f:Faculty)
                 RETURN count(DISTINCT f) AS faculties
             }
-            CALL {
+            CALL () {
                 MATCH (d:Department)
                 RETURN count(DISTINCT d) AS departments
             }
-            CALL {
+            CALL () {
                 MATCH (t:Teacher)
                 RETURN count(DISTINCT t) AS teachers
             }
-            CALL {
+            CALL () {
                 MATCH (p:Publication)
                 RETURN count(DISTINCT p) AS publications
             }
-            CALL {
+            CALL () {
                 MATCH (:Teacher)-[r:AUTHORED]->(:Publication)
                 RETURN count(r) AS authorship_links
             }
-            CALL {
+            CALL () {
                 MATCH (a:Teacher)-[:AUTHORED]->(:Publication)<-[:AUTHORED]-(b:Teacher)
                 WHERE coalesce(a.id, a.teacher_id) < coalesce(b.id, b.teacher_id)
                 RETURN count(DISTINCT coalesce(a.id, a.teacher_id) + "|" + coalesce(b.id, b.teacher_id)) AS coauthor_pairs
