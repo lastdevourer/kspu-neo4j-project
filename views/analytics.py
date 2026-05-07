@@ -8,6 +8,7 @@ from ui.components import (
     render_empty_state,
     render_adaptive_dataframe,
     render_adaptive_bar_chart,
+    render_control_spacer,
     render_fullscreen_bar_chart_heading,
     render_fullscreen_dataframe_heading,
     render_header,
@@ -152,6 +153,8 @@ def render() -> None:
     controls = st.columns([0.9, 1.0, 0.55], gap="large", vertical_alignment="bottom")
     top_limit = controls[0].slider("Кількість записів у топах", min_value=5, max_value=20, value=10, step=1)
     scope = controls[1].selectbox("Контур даних", ["Усі записи", "Підтверджені", "Офіційні"])
+    with controls[2]:
+        render_control_spacer("Оновлення")
     if controls[2].button("Оновити аналітику", use_container_width=True, key="analytics_refresh_button"):
         st.cache_data.clear()
         st.rerun()
