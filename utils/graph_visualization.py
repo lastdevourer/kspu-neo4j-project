@@ -87,6 +87,42 @@ def _base_network(height: str = "720px", theme: str = "dark") -> Network | None:
     return net
 
 
+def _normalize_html_shell(html: str | None, theme: str = "dark") -> str | None:
+    if not html:
+        return html
+
+    colors = _palette(theme)
+    body_style = (
+        f"margin:0;padding:0;background:{colors['bg']};"
+        f"color:{colors['font']};overflow:hidden;"
+    )
+    network_style = (
+        f"width:100%;height:100%;margin:0;padding:0;"
+        f"background:{colors['bg']};border:none;outline:none;"
+    )
+
+    html = html.replace("<body>", f'<body style="{body_style}">')
+    html = html.replace(
+        '<div id="mynetwork"',
+        f'<div id="mynetwork" style="{network_style}"',
+        1,
+    )
+    html = html.replace(
+        "</head>",
+        (
+            "<style>"
+            "html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; height: 100% !important; "
+            f"background: {colors['bg']} !important; overflow: hidden !important; }}"
+            "#mynetwork { border: none !important; outline: none !important; "
+            f"background: {colors['bg']} !important; }}"
+            "canvas { display: block !important; }"
+            "</style></head>"
+        ),
+        1,
+    )
+    return html
+
+
 def build_bipartite_graph_html(edges: list[dict], focus_teacher_id: str = "", theme: str = "dark") -> str | None:
     net = _base_network(theme=theme)
     if net is None or not edges:
@@ -129,7 +165,7 @@ def build_bipartite_graph_html(edges: list[dict], focus_teacher_id: str = "", th
 
         net.add_edge(teacher_node, publication_node, color=colors["edge"], width=1.2)
 
-    return net.generate_html()
+    return _normalize_html_shell(net.generate_html(), theme=theme)
 
 
 def build_coauthor_graph_html(edges: list[dict], theme: str = "dark") -> str | None:
@@ -172,7 +208,7 @@ def build_coauthor_graph_html(edges: list[dict], theme: str = "dark") -> str | N
             title=f"Спільні публікації: {edge.get('weight', 1)}<br>{titles}",
         )
 
-    return net.generate_html()
+    return _normalize_html_shell(net.generate_html(), theme=theme)
 
 
 def build_department_graph_html(edges: list[dict], theme: str = "dark") -> str | None:
@@ -215,4 +251,4 @@ def build_department_graph_html(edges: list[dict], theme: str = "dark") -> str |
             title=f"Спільні публікації: {edge.get('weight', 1)}<br>{titles}",
         )
 
-    return net.generate_html()
+    return _normalize_html_shell(net.generate_html(), theme=theme)
