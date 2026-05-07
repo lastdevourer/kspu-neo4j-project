@@ -96,7 +96,7 @@ def _show_flash_message() -> None:
 
 def _build_teacher_publications_preview(frame, *, admin_mode: bool):
     preview_columns = (
-        ["Публікація", "Статус", "Рік", "Джерело"]
+        ["Публікація", "Рік", "Джерело"]
         if not admin_mode
         else ["Публікація", "Статус", "Рівень довіри", "Рік", "Джерело"]
     )
@@ -314,7 +314,9 @@ def render() -> None:
     readiness_label, readiness_caption = _profile_readiness(profile, publications)
     status_counts = _status_counts(publications)
 
-    layout = st.columns([1.1, 0.9], gap="large")
+    st.selectbox("Обрати викладача", list(teacher_labels.keys()), key=selected_teacher_key)
+
+    layout = st.columns([1.28, 0.92], gap="large")
 
     with layout[0]:
         render_fullscreen_dataframe_heading(
@@ -330,7 +332,7 @@ def render() -> None:
             mime="text/csv",
             use_container_width=True,
         )
-        render_adaptive_dataframe(teachers_table, use_container_width=True, hide_index=True, height=320)
+        render_adaptive_dataframe(teachers_table, use_container_width=True, hide_index=True, height=360, compact=True)
 
         lower_tabs = st.tabs(["Публікації викладача", "Співавтори"])
 
@@ -365,7 +367,7 @@ def render() -> None:
                     caption="Розширений перегляд публікацій вибраного викладача.",
                 )
                 publications_preview = _build_teacher_publications_preview(publications_table, admin_mode=admin_mode)
-                render_adaptive_dataframe(publications_preview, use_container_width=True, hide_index=True, height=260)
+                render_adaptive_dataframe(publications_preview, use_container_width=True, hide_index=True, height=240, compact=True)
 
             if admin_mode:
                 _render_publication_management(service, selected_teacher_id, publications, all_publications)
@@ -385,11 +387,10 @@ def render() -> None:
                     key=f"teacher_coauthors_fullscreen_{selected_teacher_id}",
                     caption="Повний список співавторів вибраного викладача.",
                 )
-                render_adaptive_dataframe(coauthors_table, use_container_width=True, hide_index=True, height=260)
+                render_adaptive_dataframe(coauthors_table, use_container_width=True, hide_index=True, height=240, compact=True)
 
     with layout[1]:
         render_section_heading("Картка викладача")
-        st.selectbox("Обрати викладача", list(teacher_labels.keys()), key=selected_teacher_key)
 
         spotlight = st.columns(2, gap="medium")
         with spotlight[0]:
