@@ -24,7 +24,7 @@ def _csv_bytes(frame):
 
 
 def _render_dashboard_table(frame) -> None:
-    render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=360)
+    render_adaptive_dataframe(frame, use_container_width=True, hide_index=True, height=340, compact=True)
 
 
 def render() -> None:
