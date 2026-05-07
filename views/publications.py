@@ -584,7 +584,7 @@ def render() -> None:
 
     publication_map = {_publication_option(row): row for row in filtered_rows}
 
-    layout = st.columns([1.08, 0.92], gap="large", vertical_alignment="top")
+    layout = st.columns([1.08, 0.92], gap="large")
     with layout[0]:
         render_fullscreen_dataframe_heading(
             "Таблиця публікацій",
@@ -593,19 +593,19 @@ def render() -> None:
             subtitle="Натисніть на заголовок, щоб відкрити повний перегляд таблиці.",
             caption="Повний зріз відфільтрованих публікацій.",
         )
-        controls = st.columns([0.56, 0.44], gap="small", vertical_alignment="bottom")
-        if admin_mode:
-            with controls[0]:
-                render_control_spacer("Робоча панель")
-            if controls[0].button("Відкрити робочу панель", use_container_width=True, key="open_publication_workspace"):
-                _publication_workspace_dialog(service, filtered_rows, all_teachers)
-        else:
-            with controls[0]:
-                render_control_spacer("Режим")
-                st.caption("Публічний режим: модерація та редагування приховані.")
-        with controls[1]:
-            render_control_spacer("Експорт")
-            st.download_button(
+    controls = st.columns([0.56, 0.44], gap="small")
+    if admin_mode:
+        with controls[0]:
+            render_control_spacer("Робоча панель")
+        if controls[0].button("Відкрити робочу панель", use_container_width=True, key="open_publication_workspace"):
+            _publication_workspace_dialog(service, filtered_rows, all_teachers)
+    else:
+        with controls[0]:
+            render_control_spacer("Режим")
+            st.caption("Публічний режим: модерація та редагування приховані.")
+    with controls[1]:
+        render_control_spacer("Експорт")
+        st.download_button(
                 "Експорт поточного зрізу CSV",
                 _csv_bytes(publications_table),
                 file_name="publications_current_slice.csv",
