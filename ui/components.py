@@ -220,8 +220,8 @@ def apply_theme() -> None:
         }
 
         .control-spacer-label {
-            min-height: 1.25rem;
-            margin-bottom: 0.38rem;
+            min-height: 1.35rem;
+            margin-bottom: 0.3rem;
             color: var(--text-soft);
             font-size: 0.92rem;
             font-weight: 700;
@@ -431,6 +431,7 @@ def apply_theme() -> None:
             font-weight: 700;
             line-height: 1.2;
             justify-content: flex-start;
+            text-align: left;
         }
 
         div.stButton > button[kind="tertiary"]:hover {
