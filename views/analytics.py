@@ -146,15 +146,29 @@ def _department_comparison_frame(rows: list[dict]) -> pd.DataFrame:
     return comparison[["Кафедра", "Факультет", "Викладачі", "Публікації", "Середнє на викладача"]]
 
 
+def _compact_person_name(value: str) -> str:
+    parts = [part for part in str(value or "").strip().split() if part]
+    if not parts:
+        return "—"
+    if len(parts) == 1:
+        return parts[0]
+    initials = " ".join(f"{part[0]}." for part in parts[1:3] if part)
+    return f"{parts[0]} {initials}".strip()
+
+
+def _compact_pair_label(row: dict[str, object]) -> str:
+    return f"{_compact_person_name(str(row.get('teacher_a') or ''))} / {_compact_person_name(str(row.get('teacher_b') or ''))}"
+
+
 def render() -> None:
     service = require_service()
     render_header("Аналітика", "Порівняльні зрізи, рейтинги, динаміка та звіти для факультетів, кафедр і викладачів.")
 
-    controls = st.columns([0.9, 1.0, 0.55], gap="large", vertical_alignment="bottom")
+    controls = st.columns([0.9, 1.02, 0.48], gap="medium", vertical_alignment="bottom")
     top_limit = controls[0].slider("Кількість записів у топах", min_value=5, max_value=20, value=10, step=1)
     scope = controls[1].selectbox("Контур даних", ["Усі записи", "Підтверджені", "Офіційні"])
     with controls[2]:
-        render_control_spacer("Оновлення")
+        render_control_spacer("Дії")
     if controls[2].button("Оновити аналітику", use_container_width=True, key="analytics_refresh_button"):
         st.cache_data.clear()
         st.rerun()
@@ -193,19 +207,19 @@ def render() -> None:
     with highlights[0]:
         render_summary_strip(
             "Лідер публікацій",
-            top_teachers[0]["teacher"] if top_teachers else "—",
+            _compact_person_name(top_teachers[0]["teacher"]) if top_teachers else "—",
             scope,
         )
     with highlights[1]:
         render_summary_strip(
             "Найсильніша пара",
-            f"{top_pairs[0]['teacher_a']} / {top_pairs[0]['teacher_b']}" if top_pairs else "—",
-            scope,
+            _compact_pair_label(top_pairs[0]) if top_pairs else "—",
+            "Повні ПІБ — у таблиці нижче.",
         )
     with highlights[2]:
         render_summary_strip(
             "Центральний вузол",
-            centrality_rows[0]["teacher"] if centrality_rows else "—",
+            _compact_person_name(centrality_rows[0]["teacher"]) if centrality_rows else "—",
             f"Публікацій у контурі: {scoped_publication_count}",
         )
     with highlights[3]:
