@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import re
 from textwrap import dedent
 from html import escape, unescape
@@ -10,12 +9,7 @@ import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 
-try:
-    import altair as alt
-except ModuleNotFoundError:  # pragma: no cover
-    alt = None
-
-from config import get_connection_help_text, get_neo4j_config, get_ui_theme
+from config import get_connection_help_text, get_neo4j_config
 from data.loaders import load_teachers_seed
 from data.seed_data import DEPARTMENTS, FACULTIES
 
@@ -1724,10 +1718,7 @@ def apply_theme() -> None:
         </style>
         """
 
-    style = dark_theme_css
-    if get_ui_theme() == "light":
-        style += light_theme_css
-    st.markdown(style, unsafe_allow_html=True)
+    st.markdown(dark_theme_css, unsafe_allow_html=True)
 
 
 def render_header(title: str, subtitle: str = "", kicker: str = "") -> None:
@@ -1904,32 +1895,12 @@ def render_adaptive_dataframe(
     height: int | None = None,
     compact: bool = False,
 ) -> None:
-    if get_ui_theme() != "light":
-        st.dataframe(
-            frame,
-            use_container_width=use_container_width,
-            hide_index=hide_index,
-            height=height,
-        )
-        return
-
-    table_html = frame.to_html(
-        index=not hide_index,
-        classes="adaptive-light-table",
-        border=0,
-        escape=True,
-    )
-    height_style = f"max-height: {height}px;" if height else ""
-    compact_class = " adaptive-light-table-shell-compact" if compact else ""
-    st.markdown(
-        dedent(
-            f"""
-            <div class="adaptive-light-table-shell{compact_class}" style="{height_style}">
-                {table_html}
-            </div>
-            """
-    ).strip(),
-        unsafe_allow_html=True,
+    del compact
+    st.dataframe(
+        frame,
+        use_container_width=use_container_width,
+        hide_index=hide_index,
+        height=height,
     )
 
 
@@ -1939,55 +1910,7 @@ def render_adaptive_bar_chart(
     use_container_width: bool = True,
     height: int = 280,
 ) -> None:
-    if get_ui_theme() != "light" or alt is None:
-        st.bar_chart(data, use_container_width=use_container_width, height=height)
-        return
-
-    chart_frame = data.copy()
-    if chart_frame.index.name:
-        x_label = str(chart_frame.index.name)
-    else:
-        x_label = "Категорія"
-    y_label = str(chart_frame.columns[0]) if len(chart_frame.columns) == 1 else "Значення"
-
-    chart_frame = chart_frame.reset_index()
-    chart_frame.columns = [x_label] + [str(col) for col in chart_frame.columns[1:]]
-
-    if len(chart_frame.columns) == 2:
-        x_field, y_field = chart_frame.columns
-        chart = (
-            alt.Chart(chart_frame)
-            .mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5, color="#0ea5e9")
-            .encode(
-                x=alt.X(f"{x_field}:N", sort=None, axis=alt.Axis(labelAngle=-45, labelColor="#24415f", titleColor="#24415f")),
-                y=alt.Y(f"{y_field}:Q", axis=alt.Axis(labelColor="#24415f", titleColor="#24415f")),
-                tooltip=[x_field, y_field],
-            )
-            .properties(height=height, background="transparent")
-            .configure_view(strokeOpacity=0)
-            .configure_axis(gridColor="#d7e6f5", domainColor="#bfd5ea", tickColor="#bfd5ea")
-        )
-    else:
-        value_fields = [col for col in chart_frame.columns if col != x_label]
-        melted = chart_frame.melt(id_vars=[x_label], value_vars=value_fields, var_name="Серія", value_name="Значення")
-        chart = (
-            alt.Chart(melted)
-            .mark_bar(cornerRadiusTopLeft=5, cornerRadiusTopRight=5)
-            .encode(
-                x=alt.X(f"{x_label}:N", sort=None, axis=alt.Axis(labelAngle=-45, labelColor="#24415f", titleColor="#24415f")),
-                y=alt.Y("Значення:Q", axis=alt.Axis(labelColor="#24415f", titleColor="#24415f")),
-                color=alt.Color("Серія:N", scale=alt.Scale(range=["#0ea5e9", "#2dd4bf", "#f59e0b", "#1d4ed8"])),
-                tooltip=[x_label, "Серія", "Значення"],
-            )
-            .properties(height=height, background="transparent")
-            .configure_view(strokeOpacity=0)
-            .configure_axis(gridColor="#d7e6f5", domainColor="#bfd5ea", tickColor="#bfd5ea")
-            .configure_legend(labelColor="#24415f", titleColor="#24415f")
-        )
-
-    st.markdown('<div class="light-chart-shell">', unsafe_allow_html=True)
-    st.altair_chart(chart, use_container_width=use_container_width)
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.bar_chart(data, use_container_width=use_container_width, height=height)
 
 
 def render_download_link(
@@ -1997,11 +1920,12 @@ def render_download_link(
     file_name: str,
     mime: str,
 ) -> None:
-    encoded = base64.b64encode(data).decode("ascii")
-    href = f"data:{mime};base64,{encoded}"
-    st.markdown(
-        f'<a class="download-link-button" download="{escape(file_name)}" href="{href}">{escape(label)}</a>',
-        unsafe_allow_html=True,
+    st.download_button(
+        label,
+        data,
+        file_name=file_name,
+        mime=mime,
+        use_container_width=True,
     )
 
 
