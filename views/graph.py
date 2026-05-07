@@ -130,7 +130,7 @@ def render() -> None:
             st.session_state[mode_state_key] = option
             st.rerun()
     mode = st.session_state[mode_state_key]
-    controls = st.columns([1.08, 0.92], gap="large", vertical_alignment="bottom")
+    controls = st.columns([1.08, 0.92], gap="large")
     edge_limit = controls[1].slider("Ліміт зв'язків", min_value=20, max_value=240, value=120, step=10)
 
     with st.expander("Як читати граф", expanded=False):
