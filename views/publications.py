@@ -6,7 +6,6 @@ from config import is_admin_mode
 from ui.components import (
     render_empty_state,
     render_adaptive_dataframe,
-    render_download_link,
     render_fullscreen_dataframe_heading,
     render_header,
     render_key_value_card,
@@ -575,13 +574,16 @@ def render() -> None:
         render_summary_strip("Охоплені роки", str(covered_years))
 
     secondary = st.columns(3, gap="medium")
-    secondary[0].metric("Авторські входження", authorship_links)
-    secondary[1].metric("Кандидати", filtered_status_counts["Кандидат"])
-    secondary[2].metric("Співавторські роботи", sum(1 for row in filtered_rows if int(row.get("authors_count", 0) or 0) > 1))
+    with secondary[0]:
+        render_summary_strip("Авторські входження", str(authorship_links))
+    with secondary[1]:
+        render_summary_strip("Кандидати", str(filtered_status_counts["Кандидат"]))
+    with secondary[2]:
+        render_summary_strip("Співавторські роботи", str(sum(1 for row in filtered_rows if int(row.get("authors_count", 0) or 0) > 1)))
 
     publication_map = {_publication_option(row): row for row in filtered_rows}
 
-    layout = st.columns([1.16, 0.94], gap="large")
+    layout = st.columns([1.08, 0.92], gap="large", vertical_alignment="top")
     with layout[0]:
         render_fullscreen_dataframe_heading(
             "Таблиця публікацій",
@@ -590,21 +592,22 @@ def render() -> None:
             subtitle="Натисніть на заголовок, щоб відкрити повний перегляд таблиці.",
             caption="Повний зріз відфільтрованих публікацій.",
         )
-        controls = st.columns([0.64, 0.36], gap="small")
+        controls = st.columns([0.56, 0.44], gap="small", vertical_alignment="bottom")
         if admin_mode:
             if controls[0].button("Відкрити робочу панель", use_container_width=True, key="open_publication_workspace"):
                 _publication_workspace_dialog(service, filtered_rows, all_teachers)
         else:
             controls[0].caption("Публічний режим: модерація та редагування приховані.")
-        with controls[1]:
-            render_download_link(
-                "Експорт поточного зрізу CSV",
-                _csv_bytes(publications_table),
-                file_name="publications_current_slice.csv",
-                mime="text/csv",
-            )
+        controls[1].download_button(
+            "Експорт поточного зрізу CSV",
+            _csv_bytes(publications_table),
+            file_name="publications_current_slice.csv",
+            mime="text/csv",
+            use_container_width=True,
+            key="publications_current_slice_download",
+        )
         publications_preview = _build_publications_preview_frame(publications_table, admin_mode=admin_mode)
-        render_adaptive_dataframe(publications_preview, use_container_width=True, hide_index=True, height=260, compact=True)
+        render_adaptive_dataframe(publications_preview, use_container_width=True, hide_index=True, height=320, compact=True)
 
     with layout[1]:
         render_section_heading("Деталі публікації")
