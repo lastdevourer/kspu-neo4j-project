@@ -14,7 +14,7 @@ except ModuleNotFoundError:  # pragma: no cover - optional on Streamlit Cloud
 
 load_dotenv()
 
-UI_THEMES = {"dark", "light"}
+UI_THEMES = {"dark"}
 DEFAULT_UI_THEME = "dark"
 
 
@@ -63,32 +63,12 @@ def normalize_ui_theme(value: str) -> str:
 
 
 def get_default_ui_theme() -> str:
-    raw = (
-        _read_streamlit_secret("DEFAULT_UI_THEME")
-        or os.getenv("DEFAULT_UI_THEME", "").strip()
-        or _read_streamlit_secret("PRESENTATION_MODE")
-        or os.getenv("PRESENTATION_MODE", "").strip()
-    )
-    if str(raw).strip().lower() in {"1", "true", "yes", "on"}:
-        return "light"
-    return normalize_ui_theme(raw)
+    return DEFAULT_UI_THEME
 
 
 def get_ui_theme() -> str:
-    query_theme = str(st.query_params.get("theme", "") or "")
-    if query_theme:
-        theme = normalize_ui_theme(query_theme)
-        st.session_state["ui_theme"] = theme
-        return theme
-
-    if "ui_theme" in st.session_state:
-        theme = normalize_ui_theme(str(st.session_state.get("ui_theme", "")))
-        st.session_state["ui_theme"] = theme
-        return theme
-
-    theme = get_default_ui_theme()
-    st.session_state["ui_theme"] = theme
-    return theme
+    st.session_state["ui_theme"] = DEFAULT_UI_THEME
+    return DEFAULT_UI_THEME
 
 
 def is_admin_mode() -> bool:
