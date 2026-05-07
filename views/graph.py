@@ -8,12 +8,10 @@ from config import get_ui_theme
 from ui.components import (
     render_empty_state,
     render_adaptive_dataframe,
-    render_control_spacer,
     render_fullscreen_dataframe_heading,
     render_fullscreen_html_heading,
     render_header,
     render_key_value_card,
-    render_summary_strip,
     require_service,
 )
 from ui.formatters import coauthor_graph_dataframe, department_collaboration_dataframe, graph_edges_dataframe
@@ -120,7 +118,7 @@ def render() -> None:
     mode_state_key = "graph_mode_selection"
     if st.session_state.get(mode_state_key) not in mode_options:
         st.session_state[mode_state_key] = mode_options[0]
-    render_control_spacer("Тип мережі")
+    st.markdown("**Тип мережі**")
     mode_columns = st.columns(4, gap="small")
     for index, option in enumerate(mode_options):
         if mode_columns[index].button(
@@ -133,8 +131,6 @@ def render() -> None:
             st.rerun()
     mode = st.session_state[mode_state_key]
     controls = st.columns([1.08, 0.92], gap="large", vertical_alignment="bottom")
-    with controls[1]:
-        render_control_spacer("Щільність графа")
     edge_limit = controls[1].slider("Ліміт зв'язків", min_value=20, max_value=240, value=120, step=10)
 
     with st.expander("Як читати граф", expanded=False):
@@ -158,12 +154,9 @@ def render() -> None:
         teacher_count = len({edge["teacher_id"] for edge in edges})
         publication_count = len({edge["publication_id"] for edge in edges})
         summary = st.columns(3, gap="medium")
-        with summary[0]:
-            render_summary_strip("Вузли викладачів", str(teacher_count))
-        with summary[1]:
-            render_summary_strip("Вузли публікацій", str(publication_count))
-        with summary[2]:
-            render_summary_strip("Зв'язки графа", str(len(edges)))
+        summary[0].metric("Вузли викладачів", teacher_count)
+        summary[1].metric("Вузли публікацій", publication_count)
+        summary[2].metric("Зв'язки графа", len(edges))
 
         graph_html = build_bipartite_graph_html(edges, theme=ui_theme)
         frame = graph_edges_dataframe(edges)
@@ -193,12 +186,9 @@ def render() -> None:
         teacher_count = len({edge["source_id"] for edge in edges} | {edge["target_id"] for edge in edges})
         total_weight = sum(int(edge.get("weight", 0) or 0) for edge in edges)
         summary = st.columns(3, gap="medium")
-        with summary[0]:
-            render_summary_strip("Викладачі в мережі", str(teacher_count))
-        with summary[1]:
-            render_summary_strip("Пари співавторів", str(len(edges)))
-        with summary[2]:
-            render_summary_strip("Сумарні спільні роботи", str(total_weight))
+        summary[0].metric("Викладачі в мережі", teacher_count)
+        summary[1].metric("Пари співавторів", len(edges))
+        summary[2].metric("Сумарні спільні роботи", total_weight)
 
         graph_html = build_coauthor_graph_html(edges, theme=ui_theme)
         frame = coauthor_graph_dataframe(edges)
@@ -243,12 +233,9 @@ def render() -> None:
         teacher_count = len({edge["teacher_id"] for edge in edges})
         coauthor_count = max(teacher_count - 1, 0)
         summary = st.columns(3, gap="medium")
-        with summary[0]:
-            render_summary_strip("Обраний викладач", str(edges[0].get("focus_teacher_name", selected_teacher_label)))
-        with summary[1]:
-            render_summary_strip("Публікації у фокусі", str(publication_count))
-        with summary[2]:
-            render_summary_strip("Співавтори поруч", str(coauthor_count))
+        summary[0].metric("Обраний викладач", edges[0].get("focus_teacher_name", selected_teacher_label))
+        summary[1].metric("Публікації у фокусі", publication_count)
+        summary[2].metric("Співавтори поруч", coauthor_count)
 
         render_key_value_card(
             "Профіль викладача",
@@ -289,12 +276,9 @@ def render() -> None:
     department_count = len({edge["source_id"] for edge in edges} | {edge["target_id"] for edge in edges})
     total_weight = sum(int(edge.get("weight", 0) or 0) for edge in edges)
     summary = st.columns(3, gap="medium")
-    with summary[0]:
-        render_summary_strip("Кафедри в мережі", str(department_count))
-    with summary[1]:
-        render_summary_strip("Міжкафедральні зв'язки", str(len(edges)))
-    with summary[2]:
-        render_summary_strip("Спільні роботи", str(total_weight))
+    summary[0].metric("Кафедри в мережі", department_count)
+    summary[1].metric("Міжкафедральні зв'язки", len(edges))
+    summary[2].metric("Спільні роботи", total_weight)
 
     graph_html = build_department_graph_html(edges, theme=ui_theme)
     frame = department_collaboration_dataframe(edges)
