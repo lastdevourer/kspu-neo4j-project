@@ -314,11 +314,15 @@ def render() -> None:
     readiness_label, readiness_caption = _profile_readiness(profile, publications)
     status_counts = _status_counts(publications)
 
-    st.selectbox("Обрати викладача", list(teacher_labels.keys()), key=selected_teacher_key)
+    selector_columns = st.columns([1.18, 0.82], gap="large", vertical_alignment="bottom")
+    with selector_columns[0]:
+        st.selectbox("Обрати викладача", list(teacher_labels.keys()), key=selected_teacher_key)
+    with selector_columns[1]:
+        st.caption("Повний профіль викладача відображається праворуч, а публікації та співавтори винесені в окремі вкладки нижче.")
 
-    layout = st.columns([1.28, 0.92], gap="large")
+    top_layout = st.columns([1.18, 0.82], gap="large", vertical_alignment="top")
 
-    with layout[0]:
+    with top_layout[0]:
         render_fullscreen_dataframe_heading(
             "Таблиця викладачів",
             teachers_table,
@@ -332,64 +336,9 @@ def render() -> None:
             mime="text/csv",
             use_container_width=True,
         )
-        render_adaptive_dataframe(teachers_table, use_container_width=True, hide_index=True, height=360, compact=True)
+        render_adaptive_dataframe(teachers_table, use_container_width=True, hide_index=True, height=330, compact=True)
 
-        lower_tabs = st.tabs(["Публікації викладача", "Співавтори"])
-
-        with lower_tabs[0]:
-            available_statuses = [status for status in STATUS_ORDER if status_counts[status] > 0]
-            publication_status_filter = st.selectbox(
-                "Показати статус",
-                ["Усі статуси"] + available_statuses,
-                key="teacher_publication_status_filter",
-            )
-            filtered_publications = (
-                publications
-                if publication_status_filter == "Усі статуси"
-                else [row for row in publications if row.get("status") == publication_status_filter]
-            )
-            publications_table = (
-                teacher_publications_dataframe_admin(filtered_publications)
-                if admin_mode
-                else teacher_publications_dataframe_public(filtered_publications)
-            )
-            if publications_table.empty:
-                render_section_heading("Публікації викладача")
-                render_empty_state(
-                    "Публікацій не знайдено",
-                    "Для цього викладача ще немає робіт у вибраному статусі.",
-                )
-            else:
-                render_fullscreen_dataframe_heading(
-                    "Публікації викладача",
-                    publications_table,
-                    key=f"teacher_publications_fullscreen_{selected_teacher_id}",
-                    caption="Розширений перегляд публікацій вибраного викладача.",
-                )
-                publications_preview = _build_teacher_publications_preview(publications_table, admin_mode=admin_mode)
-                render_adaptive_dataframe(publications_preview, use_container_width=True, hide_index=True, height=240, compact=True)
-
-            if admin_mode:
-                _render_publication_management(service, selected_teacher_id, publications, all_publications)
-
-        with lower_tabs[1]:
-            coauthors_table = coauthors_dataframe(coauthors)
-            if coauthors_table.empty:
-                render_section_heading("Співавтори")
-                render_empty_state(
-                    "Співавторів не виявлено",
-                    "У мережі ще не зафіксовано спільних робіт з іншими викладачами.",
-                )
-            else:
-                render_fullscreen_dataframe_heading(
-                    "Співавтори викладача",
-                    coauthors_table,
-                    key=f"teacher_coauthors_fullscreen_{selected_teacher_id}",
-                    caption="Повний список співавторів вибраного викладача.",
-                )
-                render_adaptive_dataframe(coauthors_table, use_container_width=True, hide_index=True, height=240, compact=True)
-
-    with layout[1]:
+    with top_layout[1]:
         render_section_heading("Картка викладача")
 
         spotlight = st.columns(2, gap="medium")
@@ -444,3 +393,58 @@ def render() -> None:
                     ("Потребує перевірки", str(status_counts["Потребує перевірки"])),
                 ],
             )
+
+    lower_tabs = st.tabs(["Публікації викладача", "Співавтори"])
+
+    with lower_tabs[0]:
+        available_statuses = [status for status in STATUS_ORDER if status_counts[status] > 0]
+        publication_status_filter = st.selectbox(
+            "Показати статус",
+            ["Усі статуси"] + available_statuses,
+            key="teacher_publication_status_filter",
+        )
+        filtered_publications = (
+            publications
+            if publication_status_filter == "Усі статуси"
+            else [row for row in publications if row.get("status") == publication_status_filter]
+        )
+        publications_table = (
+            teacher_publications_dataframe_admin(filtered_publications)
+            if admin_mode
+            else teacher_publications_dataframe_public(filtered_publications)
+        )
+        if publications_table.empty:
+            render_section_heading("Публікації викладача")
+            render_empty_state(
+                "Публікацій не знайдено",
+                "Для цього викладача ще немає робіт у вибраному статусі.",
+            )
+        else:
+            render_fullscreen_dataframe_heading(
+                "Публікації викладача",
+                publications_table,
+                key=f"teacher_publications_fullscreen_{selected_teacher_id}",
+                caption="Розширений перегляд публікацій вибраного викладача.",
+            )
+            publications_preview = _build_teacher_publications_preview(publications_table, admin_mode=admin_mode)
+            render_adaptive_dataframe(publications_preview, use_container_width=True, hide_index=True, height=260, compact=True)
+
+        if admin_mode:
+            _render_publication_management(service, selected_teacher_id, publications, all_publications)
+
+    with lower_tabs[1]:
+        coauthors_table = coauthors_dataframe(coauthors)
+        if coauthors_table.empty:
+            render_section_heading("Співавтори")
+            render_empty_state(
+                "Співавторів не виявлено",
+                "У мережі ще не зафіксовано спільних робіт з іншими викладачами.",
+            )
+        else:
+            render_fullscreen_dataframe_heading(
+                "Співавтори викладача",
+                coauthors_table,
+                key=f"teacher_coauthors_fullscreen_{selected_teacher_id}",
+                caption="Повний список співавторів вибраного викладача.",
+            )
+            render_adaptive_dataframe(coauthors_table, use_container_width=True, hide_index=True, height=260, compact=True)
