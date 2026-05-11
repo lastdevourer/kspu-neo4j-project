@@ -97,8 +97,8 @@ def _normalize_html_shell(html: str | None, theme: str = "dark") -> str | None:
         f"color:{colors['font']};overflow:hidden;"
     )
     network_style = (
-        f"width:100%;height:100%;margin:0;padding:0;"
-        f"background:{colors['bg']};border:none;outline:none;"
+        f"width:100%;height:100vh;min-height:100vh;max-height:100vh;"
+        f"margin:0;padding:0;background:{colors['bg']};border:none;outline:none;"
     )
 
     html = html.replace("<body>", f'<body style="{body_style}">')
@@ -113,9 +113,13 @@ def _normalize_html_shell(html: str | None, theme: str = "dark") -> str | None:
             "<style>"
             "html, body { margin: 0 !important; padding: 0 !important; width: 100% !important; height: 100% !important; "
             f"background: {colors['bg']} !important; overflow: hidden !important; }}"
-            "#mynetwork { border: none !important; outline: none !important; "
-            f"background: {colors['bg']} !important; }}"
-            "canvas { display: block !important; }"
+            "body > div, .card, .card-body, .vis-network, .vis-network canvas { "
+            "width: 100% !important; height: 100vh !important; min-height: 100vh !important; max-height: 100vh !important; "
+            "margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; box-shadow: none !important; }"
+            f".card, .card-body, .vis-network {{ background: {colors['bg']} !important; }}"
+            "#mynetwork { width: 100% !important; height: 100vh !important; min-height: 100vh !important; max-height: 100vh !important; "
+            f"border: none !important; outline: none !important; background: {colors['bg']} !important; }}"
+            "canvas { display: block !important; border: none !important; outline: none !important; }"
             "</style></head>"
         ),
         1,
