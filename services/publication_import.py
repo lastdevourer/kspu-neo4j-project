@@ -12,7 +12,7 @@ from difflib import SequenceMatcher
 from hashlib import sha1
 from typing import Any
 
-from config import PublicationImportConfig
+from config import OPEN_DATA_PUBLICATION_PAGES, PublicationImportConfig
 
 
 ORCID_TOKEN_URL = "https://orcid.org/oauth/token"
@@ -25,9 +25,9 @@ WOS_STARTER_URL = "https://api.clarivate.com/apis/wos-starter/v1/documents"
 SCHOLAR_PROFILE_URL = "https://scholar.google.com/citations"
 SCHOLAR_SEARCH_URL = "https://scholar.google.com/citations"
 
-APOSTROPHES = {"â€™": "'", "`": "'", "Ê¼": "'", "Õš": "'"}
+APOSTROPHES = {"’": "'", "`": "'", "ʼ": "'", "՚": "'"}
 SPACE_RE = re.compile(r"\s+")
-NON_WORD_RE = re.compile(r"[^0-9A-Za-zÐ-Ð¯Ð°-ÑÐ†Ñ–Ð‡Ñ—Ð„Ñ”ÒÒ‘']")
+NON_WORD_RE = re.compile(r"[^0-9A-Za-zА-Яа-яІіЇїЄєҐґ']")
 DOI_RE = re.compile(r"10\.\d{4,9}/[-._;()/:A-Z0-9]+", re.IGNORECASE)
 SCOPUS_ID_RE = re.compile(r"(?:authorid|authorId|authorID)=(\d+)|(?:scopus|author)/(\d+)", re.IGNORECASE)
 WOS_ID_RE = re.compile(r"(?:researcherid|researcherId|rid)=([^&]+)|/record/([^/?#]+)|/researcher/([^/?#]+)", re.IGNORECASE)
@@ -42,28 +42,34 @@ SCHOLAR_PROFILE_RE = re.compile(
     r'<div class="gs_ai_aff">(?P<affiliation>.*?)</div>',
     re.DOTALL,
 )
+TABLE_RE = re.compile(r"<table\b.*?</table>", re.IGNORECASE | re.DOTALL)
+TABLE_ROW_RE = re.compile(r"<tr\b.*?>(.*?)</tr>", re.IGNORECASE | re.DOTALL)
+TABLE_CELL_RE = re.compile(r"<t[dh]\b.*?>(.*?)</t[dh]>", re.IGNORECASE | re.DOTALL)
+HREF_RE = re.compile(r'href="([^"]+)"', re.IGNORECASE)
+WOS_DATE_RE = re.compile(r"\b\d{2}\.\d{2}\.(\d{4})\b")
+WOS_ITEM_RE = re.compile(r"^\s*(\d+)\.\s*$")
 
 TRANSLIT_VARIANTS = {
-    "Ð°": "a", "Ð±": "b", "Ð²": "v", "Ð³": "h", "Ò‘": "g",
-    "Ð´": "d", "Ðµ": "e", "Ñ”": "ie", "Ð¶": "zh", "Ð·": "z",
-    "Ð¸": "y", "Ñ–": "i", "Ñ—": "i", "Ð¹": "i", "Ðº": "k",
-    "Ð»": "l", "Ð¼": "m", "Ð½": "n", "Ð¾": "o", "Ð¿": "p",
-    "Ñ€": "r", "Ñ": "s", "Ñ‚": "t", "Ñƒ": "u", "Ñ„": "f",
-    "Ñ…": "kh", "Ñ†": "ts", "Ñ‡": "ch", "Ñˆ": "sh", "Ñ‰": "shch",
-    "ÑŽ": "iu", "Ñ": "ia", "ÑŒ": "", "ÑŠ": "", "Ñ‘": "e",
+    "а": "a", "б": "b", "в": "v", "г": "h", "ґ": "g",
+    "д": "d", "е": "e", "є": "ie", "ж": "zh", "з": "z",
+    "и": "y", "і": "i", "ї": "i", "й": "i", "к": "k",
+    "л": "l", "м": "m", "н": "n", "о": "o", "п": "p",
+    "р": "r", "с": "s", "т": "t", "у": "u", "ф": "f",
+    "х": "kh", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "shch",
+    "ю": "iu", "я": "ia", "ь": "", "ъ": "", "ё": "e",
 }
 
 SPECIAL_NAME_VARIANTS = {
-    "Ð¾Ð»ÐµÐºÑÐ°Ð½Ð´Ñ€": {"oleksandr", "alexander", "alexandr"},
-    "Ð°Ð»ÐµÐºÑÐ°Ð½Ð´Ñ€": {"oleksandr", "alexander", "alexandr"},
-    "ÑÐµÑ€Ð³Ñ–Ð¹": {"serhii", "sergii", "sergey", "sergei"},
-    "ÑÐµÑ€Ð³ÐµÐ¹": {"serhii", "sergii", "sergey", "sergei"},
-    "Ð²Ñ–Ñ‚Ð°Ð»Ñ–Ð¹": {"vitalii", "vitaliy", "vitaly"},
-    "Ð²Ð¸Ñ‚Ð°Ð»Ð¸Ð¹": {"vitalii", "vitaliy", "vitaly"},
-    "Ñ‚ÐµÑ‚ÑÐ½Ð°": {"tetiana", "tetyana", "tatiana"},
-    "Ñ‚Ð°Ñ‚ÑŒÑÐ½Ð°": {"tetiana", "tetyana", "tatiana"},
-    "ÑŽÑ€Ñ–Ð¹": {"yurii", "yuriy", "yuri"},
-    "ÑŽÑ€Ð¸Ð¹": {"yurii", "yuriy", "yuri"},
+    "олександр": {"oleksandr", "alexander", "alexandr"},
+    "александр": {"oleksandr", "alexander", "alexandr"},
+    "сергій": {"serhii", "sergii", "sergey", "sergei"},
+    "сергей": {"serhii", "sergii", "sergey", "sergei"},
+    "віталій": {"vitalii", "vitaliy", "vitaly"},
+    "виталий": {"vitalii", "vitaliy", "vitaly"},
+    "тетяна": {"tetiana", "tetyana", "tatiana"},
+    "татьяна": {"tetiana", "tetyana", "tatiana"},
+    "юрій": {"yurii", "yuriy", "yuri"},
+    "юрий": {"yurii", "yuriy", "yuri"},
 }
 
 
@@ -164,6 +170,39 @@ def extract_scholar_user(value: str) -> str:
 
 def parse_html_text(value: str) -> str:
     return SPACE_RE.sub(" ", html.unescape(re.sub(r"<.*?>", "", value or ""))).strip()
+
+
+def extract_first_href(value: str) -> str:
+    match = HREF_RE.search(value or "")
+    return html.unescape(match.group(1).strip()) if match else ""
+
+
+def unwrap_tracking_url(value: str) -> str:
+    url = (value or "").strip()
+    if not url:
+        return ""
+    try:
+        parsed = urllib.parse.urlparse(url)
+        params = urllib.parse.parse_qs(parsed.query)
+        for key in ("u", "url"):
+            raw = (params.get(key) or [""])[0]
+            if raw:
+                return urllib.parse.unquote(raw)
+    except Exception:
+        return url
+    return url
+
+
+def split_author_values(value: str) -> list[str]:
+    cleaned = parse_html_text(value)
+    if not cleaned:
+        return []
+    if ";" in cleaned:
+        return [part.strip() for part in cleaned.split(";") if part.strip()]
+    matches = re.findall(r"[^,;]+,\s*[^,;]+(?:\.[^,;]*)?", cleaned)
+    if matches:
+        return [part.strip() for part in matches if part.strip()]
+    return [cleaned]
 
 
 def split_person_tokens(value: str) -> list[str]:
@@ -316,7 +355,7 @@ class JsonHttpClient:
                 time.sleep(1.4 * (attempt + 1))
         if last_error is not None:
             raise last_error
-        raise RuntimeError(f"ÐÐµ Ð²Ð´Ð°Ð»Ð¾ÑÑ Ð¾Ñ‚Ñ€Ð¸Ð¼Ð°Ñ‚Ð¸ Ð²Ñ–Ð´Ð¿Ð¾Ð²Ñ–Ð´ÑŒ Ð²Ñ–Ð´ {url}")
+        raise RuntimeError(f"Не вдалося отримати відповідь від {url}")
 
     def get_json(self, base_url: str, *, params: dict[str, Any] | None = None, headers: dict[str, str] | None = None) -> dict:
         query = urllib.parse.urlencode({key: value for key, value in (params or {}).items() if value not in ("", None)})
@@ -348,6 +387,171 @@ class BasePublicationProvider:
 
     def fetch(self, teacher: TeacherIdentity) -> list[PublicationCandidate]:
         raise NotImplementedError
+
+
+class HduOpenPagesPublicationProvider(BasePublicationProvider):
+    name = "Відкриті сторінки ХДУ"
+    priority = 0
+
+    def __init__(self, config: PublicationImportConfig, client: JsonHttpClient):
+        super().__init__(config, client)
+        self._records_cache: list[PublicationCandidate] | None = None
+
+    def _build_record(
+        self,
+        *,
+        provider: str,
+        title: str,
+        year: int | None,
+        url: str,
+        authors_raw: str,
+        venue: str,
+        external_id: str,
+    ) -> PublicationCandidate | None:
+        cleaned_title = parse_html_text(title)
+        if not cleaned_title:
+            return None
+        cleaned_url = unwrap_tracking_url(url)
+        doi = extract_doi(cleaned_url)
+        cleaned_venue = parse_html_text(venue)
+        authors = split_author_values(authors_raw)
+        return PublicationCandidate(
+            provider=provider,
+            source_priority=self.priority,
+            title=cleaned_title,
+            year=year,
+            doi=doi,
+            pub_type=cleaned_venue,
+            url=cleaned_url,
+            authors=authors,
+            external_id=external_id,
+            confidence=0.97,
+            matched_by="open_hdu_pages",
+        )
+
+    def _parse_scopus_page(self, payload: str) -> list[PublicationCandidate]:
+        match = TABLE_RE.search(payload or "")
+        if not match:
+            return []
+
+        records: list[PublicationCandidate] = []
+        for row_html in TABLE_ROW_RE.findall(match.group(0)):
+            cells = TABLE_CELL_RE.findall(row_html)
+            if len(cells) < 5:
+                continue
+            title_cell = cells[1]
+            title = parse_html_text(title_cell)
+            if not title or normalize_text(title) == normalize_text("Назва документу"):
+                continue
+
+            href = extract_first_href(title_cell)
+            authors_raw = cells[2]
+            year = safe_int(parse_html_text(cells[3]))
+            venue = cells[4]
+            external_id = href or f"scopus-page:{normalize_title(title)}:{year or 'nd'}"
+            record = self._build_record(
+                provider="Scopus (сайт ХДУ)",
+                title=title,
+                year=year,
+                url=href,
+                authors_raw=authors_raw,
+                venue=venue,
+                external_id=external_id,
+            )
+            if record:
+                records.append(record)
+        return records
+
+    def _parse_wos_page(self, payload: str) -> list[PublicationCandidate]:
+        match = TABLE_RE.search(payload or "")
+        if not match:
+            return []
+
+        paragraphs = re.findall(r"<p\b.*?>(.*?)</p>", match.group(0), re.IGNORECASE | re.DOTALL)
+        records: list[PublicationCandidate] = []
+        current_year: int | None = None
+        index = 0
+
+        while index < len(paragraphs):
+            paragraph_html = paragraphs[index]
+            paragraph_text = parse_html_text(paragraph_html)
+            if not paragraph_text:
+                index += 1
+                continue
+
+            date_match = WOS_DATE_RE.search(paragraph_text)
+            if date_match:
+                current_year = safe_int(date_match.group(1))
+                index += 1
+                continue
+
+            if not re.match(r"^\d+\.\s*", paragraph_text):
+                index += 1
+                continue
+
+            title = re.sub(r"^\d+\.\s*", "", paragraph_text).strip()
+            href = extract_first_href(paragraph_html)
+            authors_raw = paragraphs[index + 1] if index + 1 < len(paragraphs) else ""
+            venue = paragraphs[index + 2] if index + 2 < len(paragraphs) else ""
+            external_id = href or f"wos-page:{normalize_title(title)}:{current_year or 'nd'}"
+            record = self._build_record(
+                provider="Web of Science (сайт ХДУ)",
+                title=title,
+                year=current_year,
+                url=href,
+                authors_raw=authors_raw,
+                venue=venue,
+                external_id=external_id,
+            )
+            if record:
+                records.append(record)
+            index += 4
+
+        return records
+
+    def _load_records(self) -> list[PublicationCandidate]:
+        if self._records_cache is not None:
+            return self._records_cache
+
+        records: list[PublicationCandidate] = []
+        for title, url in OPEN_DATA_PUBLICATION_PAGES:
+            if not url:
+                continue
+            try:
+                payload = self.client.get_text(url, headers={"User-Agent": "Mozilla/5.0"})
+            except Exception:
+                continue
+            if "ScopusKSU.aspx" in url:
+                records.extend(self._parse_scopus_page(payload))
+            elif "WebOfScienceKSU.aspx" in url:
+                records.extend(self._parse_wos_page(payload))
+
+        self._records_cache = records
+        return records
+
+    def fetch(self, teacher: TeacherIdentity) -> list[PublicationCandidate]:
+        results: list[PublicationCandidate] = []
+        for record in self._load_records():
+            if not candidate_author_matches(record, teacher):
+                continue
+            results.append(
+                PublicationCandidate(
+                    provider=record.provider,
+                    source_priority=record.source_priority,
+                    title=record.title,
+                    year=record.year,
+                    doi=record.doi,
+                    pub_type=record.pub_type,
+                    url=record.url,
+                    authors=list(record.authors),
+                    external_id=record.external_id,
+                    confidence=record.confidence,
+                    matched_by=record.matched_by,
+                )
+            )
+            if len(results) >= self.config.max_works_per_teacher:
+                break
+        return results
 
 
 class OrcidPublicationProvider(BasePublicationProvider):
@@ -796,7 +1000,7 @@ class ScholarPublicationProvider(BasePublicationProvider):
             name_score = best_name_similarity(name, variants)
             affiliation_text = normalize_text(affiliation)
             affiliation_score = 0.0
-            if any(token in affiliation_text for token in {"kherson", "kspu", "khdu", "Ñ…ÐµÑ€ÑÐ¾Ð½", "ÐºÑÐ¿Ñƒ", "Ñ…Ð´Ñƒ"}):
+            if any(token in affiliation_text for token in {"kherson", "kspu", "khdu", "херсон", "кспу", "хду"}):
                 affiliation_score = 0.18
             total_score = name_score + affiliation_score
             if total_score > best_score:
@@ -853,6 +1057,7 @@ class PublicationImportService:
         self.config = config
         self.client = JsonHttpClient()
         self.providers: list[BasePublicationProvider] = [
+            HduOpenPagesPublicationProvider(config, self.client),
             OrcidPublicationProvider(config, self.client),
             OpenAlexPublicationProvider(config, self.client),
             CrossrefPublicationProvider(config, self.client),
@@ -897,7 +1102,7 @@ class PublicationImportService:
                 try:
                     candidates = provider.fetch(teacher)
                 except Exception as exc:  # pragma: no cover - depends on runtime network/API state
-                    warnings.append(f"{provider.name}: {teacher.full_name} â€” {exc}")
+                    warnings.append(f"{provider.name}: {teacher.full_name} — {exc}")
                     continue
 
                 provider_hits[provider.name] = provider_hits.get(provider.name, 0) + len(candidates)
