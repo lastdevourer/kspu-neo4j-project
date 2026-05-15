@@ -16,6 +16,20 @@ load_dotenv()
 
 UI_THEMES = {"dark"}
 DEFAULT_UI_THEME = "dark"
+OPEN_DATA_PUBLICATION_PAGES: tuple[tuple[str, str], ...] = (
+    (
+        "Публікації науковців ХДУ",
+        "https://www.kspu.edu/About/DepartmentAndServices/Library/Actual/Academics/PublicationsKSUscientistsNMBD.aspx",
+    ),
+    (
+        "Scopus: публікації науковців ХДУ",
+        "https://www.kspu.edu/About/DepartmentAndServices/Library/Actual/Academics/PublicationsKSUscientistsNMBD/ScopusKSU.aspx",
+    ),
+    (
+        "Web of Science: публікації науковців ХДУ",
+        "https://www.kspu.edu/About/DepartmentAndServices/Library/Actual/Academics/PublicationsKSUscientistsNMBD/WebOfScienceKSU.aspx",
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -69,6 +83,10 @@ def get_default_ui_theme() -> str:
 def get_ui_theme() -> str:
     st.session_state["ui_theme"] = DEFAULT_UI_THEME
     return DEFAULT_UI_THEME
+
+
+def get_open_publication_pages() -> list[dict[str, str]]:
+    return [{"title": title, "url": url} for title, url in OPEN_DATA_PUBLICATION_PAGES]
 
 
 def is_admin_mode() -> bool:
@@ -166,6 +184,8 @@ def get_connection_help_text() -> str:
         "`NEO4J_DATABASE` (необов'язково; якщо є помилка маршрутизації, краще прибрати цей параметр і дати Aura "
         "вибрати домашню базу автоматично)\n"
         "`ADMIN_PASSWORD` (пароль для розблокування режиму керування всередині тієї ж app)\n"
-        "`DEFAULT_UI_THEME` (`dark` або `light`; якщо не задано, використовується темна тема)\n"
-        "`ADMIN_MODE` (`true` лише якщо хочете примусово тримати адмінрежим увімкненим для всіх відвідувачів)"
+        "`ADMIN_MODE` (`true` лише якщо хочете примусово тримати адмінрежим увімкненим для всіх відвідувачів)\n\n"
+        "Зовнішні ключі (`OPENALEX_API_KEY`, `ORCID_CLIENT_ID`, `SCOPUS_API_KEY`, `WOS_API_KEY`) не є обов'язковими для базового сценарію. "
+        "Основним джерелом вихідних даних у проєкті можуть бути відкрито оприлюднені сторінки ХДУ з публікаціями у Scopus та Web of Science, "
+        "а API-інтеграції розглядаються як додаткове збагачення або напрям подальшого розвитку."
     )
