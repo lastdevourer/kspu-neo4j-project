@@ -9,7 +9,8 @@ Streamlit-сервіс для обліку, перегляду та аналіт
 - граф авторства, співавторства та міжкафедральних зв'язків;
 - аналітика, рейтинги, centrality і звіти;
 - центр даних для модерації, аудиту та ручного додавання;
-- імпорт публікацій через `ORCID`, `OpenAlex`, `Crossref`, `Scopus`, `Web of Science`, `Google Scholar`;
+- опрацювання відкритих сторінок ХДУ з публікаціями у `Scopus` та `Web of Science`;
+- зовнішнє збагачення профілів і публікацій через `ORCID`, `OpenAlex`, `Crossref`, `Scopus`, `Web of Science`, `Google Scholar`;
 - публічний і адміністративний режими.
 
 ## Режими роботи
@@ -52,6 +53,16 @@ ADMIN_PASSWORD = "your-password"
 
 `ADMIN_MODE=true` варто використовувати лише як аварійний варіант, якщо потрібно примусово відкрити адмінрежим для всіх відвідувачів.
 
+## Джерело вихідних даних
+
+Базовий сценарій проєкту спирається на відкрито оприлюднені сторінки офіційного сайту ХДУ з відомостями про публікації у міжнародних базах.
+
+- [Публікації науковців ХДУ](https://www.kspu.edu/About/DepartmentAndServices/Library/Actual/Academics/PublicationsKSUscientistsNMBD.aspx)
+- [Scopus: публікації науковців ХДУ](https://www.kspu.edu/About/DepartmentAndServices/Library/Actual/Academics/PublicationsKSUscientistsNMBD/ScopusKSU.aspx)
+- [Web of Science: публікації науковців ХДУ](https://www.kspu.edu/About/DepartmentAndServices/Library/Actual/Academics/PublicationsKSUscientistsNMBD/WebOfScienceKSU.aspx)
+
+API-інтеграції не є обов'язковими для основної демонстрації системи. Вони розглядаються як додатковий механізм автоматичного збагачення та можливий напрям подальшого розвитку.
+
 ## Запуск
 
 ```bash
@@ -65,12 +76,11 @@ NEO4J_URI = "neo4j+s://..."
 NEO4J_USER = "neo4j"
 NEO4J_PASSWORD = "..."
 
+# optional enrichment only
 OPENALEX_API_KEY = "..."
 CROSSREF_MAILTO = "you@example.com"
 ORCID_CLIENT_ID = "..."
 ORCID_CLIENT_SECRET = "..."
-
-# optional
 SCOPUS_API_KEY = "..."
 SCOPUS_INSTTOKEN = "..."
 WOS_API_KEY = "..."
@@ -83,6 +93,8 @@ ADMIN_MODE = false
 ```
 
 `NEO4J_DATABASE` необов'язковий. Для `Neo4j Aura` його краще не задавати, якщо домашня база вже визначається автоматично.
+
+Для базового сценарію достатньо `NEO4J_*` та `ADMIN_PASSWORD`. Ключі зовнішніх сервісів потрібні лише тоді, коли ви хочете автоматично збагачувати відкритий контур додатковими публікаційними даними.
 
 ## Структура проєкту
 
