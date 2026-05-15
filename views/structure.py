@@ -3,7 +3,7 @@ from __future__ import annotations
 import pandas as pd
 import streamlit as st
 
-from config import get_publication_import_config
+from config import get_open_publication_pages, get_publication_import_config
 from data.loaders import load_teachers_seed
 from data.seed_data import DEPARTMENTS, FACULTIES
 from services.publication_import import PublicationImportService
@@ -162,7 +162,7 @@ def _render_faculty_department_tab(service) -> None:
                 use_container_width=True,
                 key="download_filtered_faculties",
             )
-            render_adaptive_dataframe(faculty_frame, use_container_width=True, hide_index=True, height=340)
+            render_adaptive_dataframe(faculty_frame, use_container_width=True, hide_index=True, height=280, compact=True)
 
     with tables[1]:
         if department_frame.empty:
@@ -183,7 +183,7 @@ def _render_faculty_department_tab(service) -> None:
                 use_container_width=True,
                 key="download_filtered_departments",
             )
-            render_adaptive_dataframe(department_frame, use_container_width=True, hide_index=True, height=340)
+            render_adaptive_dataframe(department_frame, use_container_width=True, hide_index=True, height=280, compact=True)
 
     edit_columns = st.columns(2, gap="large")
     faculty_edit_map = {"Новий факультет": None} | {
@@ -542,41 +542,52 @@ def _render_teachers_tab(service) -> None:
             use_container_width=True,
             key="download_filtered_teachers",
         )
-        render_adaptive_dataframe(teacher_frame, use_container_width=True, hide_index=True, height=420)
+        render_adaptive_dataframe(teacher_frame, use_container_width=True, hide_index=True, height=340, compact=True)
 
 
 def _render_publications_tab(service) -> None:
-    render_section_heading("Керування публікаціями", "Імпорт, контроль покриття джерел і швидке очищення публікаційного контуру.")
+    render_section_heading(
+        "Керування публікаціями",
+        "Основний контур формується з відкритих сторінок ХДУ, а зовнішні профільні сервіси використовуються як додаткове збагачення.",
+    )
+    open_pages = get_open_publication_pages()
+    if open_pages:
+        pages_markdown = "\n".join(f"- [{item['title']}]({item['url']})" for item in open_pages)
+        st.info(
+            "Джерелом вихідних даних у базовому сценарії є відкриті сторінки офіційного сайту ХДУ з публікаціями у Scopus та Web of Science.\n\n"
+            f"{pages_markdown}\n\n"
+            "API-інтеграції та профільні сервіси залишаються додатковим засобом автоматичного збагачення і можливим напрямом подальшого розвитку."
+        )
     with st.expander("Дії з публікаціями", expanded=False):
         import_columns = st.columns(3, gap="medium")
         publication_limit = import_columns[0].number_input(
-            "Ліміт викладачів для імпорту",
+            "Ліміт викладачів для збагачення",
             min_value=5,
             max_value=150,
             value=25,
             step=5,
         )
-        use_scholar = import_columns[1].checkbox("Google Scholar як резерв", value=True)
+        use_scholar = import_columns[1].checkbox("Google Scholar як додаткове джерело", value=True)
         delete_publications_confirm = import_columns[2].checkbox(
             "Підтверджую очищення всіх публікацій",
             key="delete_publications_confirm",
         )
 
         action_columns = st.columns(2, gap="medium")
-        if action_columns[0].button("Запустити імпорт публікацій", use_container_width=True):
+        if action_columns[0].button("Запустити збагачення публікацій", use_container_width=True):
             import_config = get_publication_import_config()
             importer = PublicationImportService(import_config)
             teachers_for_import = service.get_teachers_for_publication_import(limit=int(publication_limit))
             if not teachers_for_import:
-                st.warning("Спочатку завантажте викладачів, щоб запустити імпорт.")
+                st.warning("Спочатку завантажте викладачів, щоб запустити збагачення.")
             else:
                 import_run_id = service.create_import_run(
-                    source="Автоматичний імпорт публікацій",
+                    source="Зовнішнє збагачення публікацій",
                     include_scholar=use_scholar,
                     teachers_planned=len(teachers_for_import),
                 )
                 try:
-                    with st.spinner("Шукаю публікації через доступні джерела..."):
+                    with st.spinner("Збагачую профілі викладачів через доступні зовнішні джерела..."):
                         bundle = importer.import_for_teachers(teachers_for_import, include_scholar=use_scholar)
                         service.seed_publications(bundle.publications, bundle.authorships)
                     provider_summary = ", ".join(
@@ -657,7 +668,7 @@ def _render_publications_tab(service) -> None:
                 key="structure_publication_sources_fullscreen",
                 caption="Таблиця зведення по джерелах імпорту.",
             )
-            render_adaptive_dataframe(publication_sources, use_container_width=True, hide_index=True, height=320)
+            render_adaptive_dataframe(publication_sources, use_container_width=True, hide_index=True, height=260, compact=True)
             st.download_button(
                 "Експорт джерел CSV",
                 _csv_bytes(publication_sources),
