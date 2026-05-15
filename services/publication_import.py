@@ -430,82 +430,77 @@ class HduOpenPagesPublicationProvider(BasePublicationProvider):
         )
 
     def _parse_scopus_page(self, payload: str) -> list[PublicationCandidate]:
-        match = TABLE_RE.search(payload or "")
-        if not match:
-            return []
-
         records: list[PublicationCandidate] = []
-        for row_html in TABLE_ROW_RE.findall(match.group(0)):
-            cells = TABLE_CELL_RE.findall(row_html)
-            if len(cells) < 5:
-                continue
-            title_cell = cells[1]
-            title = parse_html_text(title_cell)
-            if not title or normalize_text(title) == normalize_text("Назва документу"):
-                continue
+        for match in TABLE_RE.finditer(payload or ""):
+            table_html = match.group(0)
+            for row_html in TABLE_ROW_RE.findall(table_html):
+                cells = TABLE_CELL_RE.findall(row_html)
+                if len(cells) < 5:
+                    continue
+                title_cell = cells[1]
+                title = parse_html_text(title_cell)
+                if not title or normalize_text(title) == normalize_text("????? ?????????"):
+                    continue
 
-            href = extract_first_href(title_cell)
-            authors_raw = cells[2]
-            year = safe_int(parse_html_text(cells[3]))
-            venue = cells[4]
-            external_id = href or f"scopus-page:{normalize_title(title)}:{year or 'nd'}"
-            record = self._build_record(
-                provider="Scopus (сайт ХДУ)",
-                title=title,
-                year=year,
-                url=href,
-                authors_raw=authors_raw,
-                venue=venue,
-                external_id=external_id,
-            )
-            if record:
-                records.append(record)
+                href = extract_first_href(title_cell)
+                authors_raw = cells[2]
+                year = safe_int(parse_html_text(cells[3]))
+                venue = cells[4]
+                external_id = href or f"scopus-page:{normalize_title(title)}:{year or 'nd'}"
+                record = self._build_record(
+                    provider="Scopus (???? ???)",
+                    title=title,
+                    year=year,
+                    url=href,
+                    authors_raw=authors_raw,
+                    venue=venue,
+                    external_id=external_id,
+                )
+                if record:
+                    records.append(record)
         return records
 
     def _parse_wos_page(self, payload: str) -> list[PublicationCandidate]:
-        match = TABLE_RE.search(payload or "")
-        if not match:
-            return []
-
-        paragraphs = re.findall(r"<p\b.*?>(.*?)</p>", match.group(0), re.IGNORECASE | re.DOTALL)
         records: list[PublicationCandidate] = []
         current_year: int | None = None
-        index = 0
+        for match in TABLE_RE.finditer(payload or ""):
+            paragraphs = re.findall(r"<p\b.*?>(.*?)</p>", match.group(0), re.IGNORECASE | re.DOTALL)
+            index = 0
 
-        while index < len(paragraphs):
-            paragraph_html = paragraphs[index]
-            paragraph_text = parse_html_text(paragraph_html)
-            if not paragraph_text:
-                index += 1
-                continue
+            while index < len(paragraphs):
+                paragraph_html = paragraphs[index]
+                paragraph_text = parse_html_text(paragraph_html)
+                if not paragraph_text:
+                    index += 1
+                    continue
 
-            date_match = WOS_DATE_RE.search(paragraph_text)
-            if date_match:
-                current_year = safe_int(date_match.group(1))
-                index += 1
-                continue
+                date_match = WOS_DATE_RE.search(paragraph_text)
+                if date_match:
+                    current_year = safe_int(date_match.group(1))
+                    index += 1
+                    continue
 
-            if not re.match(r"^\d+\.\s*", paragraph_text):
-                index += 1
-                continue
+                if not re.match(r"^\d+\.\s*", paragraph_text):
+                    index += 1
+                    continue
 
-            title = re.sub(r"^\d+\.\s*", "", paragraph_text).strip()
-            href = extract_first_href(paragraph_html)
-            authors_raw = paragraphs[index + 1] if index + 1 < len(paragraphs) else ""
-            venue = paragraphs[index + 2] if index + 2 < len(paragraphs) else ""
-            external_id = href or f"wos-page:{normalize_title(title)}:{current_year or 'nd'}"
-            record = self._build_record(
-                provider="Web of Science (сайт ХДУ)",
-                title=title,
-                year=current_year,
-                url=href,
-                authors_raw=authors_raw,
-                venue=venue,
-                external_id=external_id,
-            )
-            if record:
-                records.append(record)
-            index += 4
+                title = re.sub(r"^\d+\.\s*", "", paragraph_text).strip()
+                href = extract_first_href(paragraph_html)
+                authors_raw = paragraphs[index + 1] if index + 1 < len(paragraphs) else ""
+                venue = paragraphs[index + 2] if index + 2 < len(paragraphs) else ""
+                external_id = href or f"wos-page:{normalize_title(title)}:{current_year or 'nd'}"
+                record = self._build_record(
+                    provider="Web of Science (???? ???)",
+                    title=title,
+                    year=current_year,
+                    url=href,
+                    authors_raw=authors_raw,
+                    venue=venue,
+                    external_id=external_id,
+                )
+                if record:
+                    records.append(record)
+                index += 4
 
         return records
 
@@ -514,6 +509,7 @@ class HduOpenPagesPublicationProvider(BasePublicationProvider):
             return self._records_cache
 
         records: list[PublicationCandidate] = []
+        seen_keys: set[str] = set()
         for title, url in OPEN_DATA_PUBLICATION_PAGES:
             if not url:
                 continue
@@ -522,9 +518,21 @@ class HduOpenPagesPublicationProvider(BasePublicationProvider):
             except Exception:
                 continue
             if "ScopusKSU.aspx" in url:
-                records.extend(self._parse_scopus_page(payload))
+                candidates = self._parse_scopus_page(payload)
             elif "WebOfScienceKSU.aspx" in url:
-                records.extend(self._parse_wos_page(payload))
+                candidates = self._parse_wos_page(payload)
+            else:
+                candidates = []
+
+            for candidate in candidates:
+                dedupe_key = (
+                    candidate.doi.strip().lower()
+                    or f"{candidate.provider}|{normalize_title(candidate.title)}|{candidate.year or 'nd'}"
+                )
+                if not dedupe_key or dedupe_key in seen_keys:
+                    continue
+                seen_keys.add(dedupe_key)
+                records.append(candidate)
 
         self._records_cache = records
         return records
