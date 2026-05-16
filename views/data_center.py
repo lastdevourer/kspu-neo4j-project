@@ -530,8 +530,11 @@ def _render_import_runs_tab(service) -> None:
                 ("Scholar як резерв", "Так" if bool(selected_run.get("include_scholar")) else "Ні"),
                 ("Заплановано викладачів", str(selected_run.get("teachers_planned") or 0)),
                 ("Оброблено викладачів", str(selected_run.get("teachers_processed") or 0)),
-                ("З роботами", str(selected_run.get("teachers_with_publications") or 0)),
-                ("Знайдено публікацій", str(selected_run.get("publications_found") or 0)),
+                ("Викладачів з публікаціями", str(selected_run.get("teachers_with_publications") or 0)),
+                ("Виявлено записів", str(selected_run.get("source_records_found") or 0)),
+                ("Зіставлено кандидатів", str(selected_run.get("matched_candidates_found") or 0)),
+                ("Сформовано публікацій", str(selected_run.get("unique_publications_built") or 0)),
+                ("Завантажено публікацій", str(selected_run.get("publications_found") or 0)),
                 ("Зв'язки авторства", str(selected_run.get("authorships_found") or 0)),
             ],
         )
