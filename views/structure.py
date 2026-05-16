@@ -598,6 +598,9 @@ def _render_publications_tab(service) -> None:
                         status="Завершено",
                         teachers_processed=bundle.processed_teachers,
                         teachers_with_publications=bundle.teachers_with_publications,
+                        source_records_found=sum(bundle.provider_source_counts.values()),
+                        matched_candidates_found=bundle.matched_candidates_count,
+                        unique_publications_built=bundle.unique_publications_count,
                         publications_found=len(bundle.publications),
                         authorships_found=len(bundle.authorships),
                         warnings_count=len(bundle.warnings),
@@ -605,7 +608,11 @@ def _render_publications_tab(service) -> None:
                         provider_summary=provider_summary,
                     )
                     st.session_state[FLASH_KEY] = (
-                        f"Оброблено {bundle.processed_teachers} викладачів, публікацій: {len(bundle.publications)}. "
+                        f"Оброблено викладачів: {bundle.processed_teachers}. "
+                        f"Виявлено записів: {sum(bundle.provider_source_counts.values())}. "
+                        f"Зіставлено кандидатів: {bundle.matched_candidates_count}. "
+                        f"Сформовано публікацій: {bundle.unique_publications_count}. "
+                        f"Завантажено публікацій: {len(bundle.publications)}. "
                         f"Джерела: {provider_summary}"
                     )
                     st.rerun()
@@ -615,6 +622,9 @@ def _render_publications_tab(service) -> None:
                         status="Помилка",
                         teachers_processed=0,
                         teachers_with_publications=0,
+                        source_records_found=0,
+                        matched_candidates_found=0,
+                        unique_publications_built=0,
                         publications_found=0,
                         authorships_found=0,
                         warnings_count=0,
