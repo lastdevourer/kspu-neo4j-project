@@ -131,14 +131,14 @@ def teacher_publications_dataframe_public(rows: list[dict]) -> pd.DataFrame:
     renamed = df.rename(
         columns={
             "title": "Публікація",
-            "status": "Статус",
             "year": "Рік",
             "pub_type": "Тип",
             "source": "Джерело",
+            "authors_count": "Авторів",
             "authors": "Автори",
         }
     )
-    return renamed[["Публікація", "Статус", "Рік", "Тип", "Джерело", "Автори"]]
+    return renamed[["Публікація", "Рік", "Тип", "Джерело", "Авторів", "Автори"]]
 
 
 def teacher_publications_dataframe_admin(rows: list[dict]) -> pd.DataFrame:
@@ -187,14 +187,15 @@ def publications_dataframe_public(rows: list[dict]) -> pd.DataFrame:
     renamed = df.rename(
         columns={
             "title": "Назва",
-            "status": "Статус",
             "year": "Рік",
+            "doi": "DOI",
             "pub_type": "Тип",
             "source": "Джерело",
+            "authors_count": "Кількість авторів",
             "authors": "Автори",
         }
     )
-    return renamed[["Назва", "Статус", "Рік", "Тип", "Джерело", "Автори"]]
+    return renamed[["Назва", "Рік", "DOI", "Тип", "Джерело", "Кількість авторів", "Автори"]]
 
 
 def publications_dataframe_admin(rows: list[dict]) -> pd.DataFrame:
