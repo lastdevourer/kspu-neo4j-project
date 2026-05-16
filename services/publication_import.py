@@ -109,6 +109,9 @@ class PublicationBundle:
     teachers_with_publications: int
     warnings: list[str]
     provider_hits: dict[str, int]
+    provider_source_counts: dict[str, int]
+    matched_candidates_count: int
+    unique_publications_count: int
 
 
 def normalize_text(value: str) -> str:
@@ -536,6 +539,12 @@ class HduOpenPagesPublicationProvider(BasePublicationProvider):
 
         self._records_cache = records
         return records
+
+    def source_counts(self) -> dict[str, int]:
+        counts: dict[str, int] = {}
+        for record in self._load_records():
+            counts[record.provider] = counts.get(record.provider, 0) + 1
+        return counts
 
     def fetch(self, teacher: TeacherIdentity) -> list[PublicationCandidate]:
         results: list[PublicationCandidate] = []
@@ -1091,10 +1100,16 @@ class PublicationImportService:
         processed_teachers = 0
         teachers_with_publications = 0
         provider_hits: dict[str, int] = {}
+        provider_source_counts: dict[str, int] = {}
         warnings: list[str] = []
         publication_map: dict[str, dict[str, Any]] = {}
         publication_lookup: dict[str, str] = {}
         authorship_map: dict[tuple[str, str], dict[str, Any]] = {}
+        matched_candidates_count = 0
+
+        for provider in self.providers:
+            if isinstance(provider, HduOpenPagesPublicationProvider):
+                provider_source_counts.update(provider.source_counts())
 
         for row in teacher_rows:
             teacher = self._to_teacher_identity(row)
@@ -1114,6 +1129,7 @@ class PublicationImportService:
                     continue
 
                 provider_hits[provider.name] = provider_hits.get(provider.name, 0) + len(candidates)
+                matched_candidates_count += len(candidates)
                 for candidate in candidates:
                     if not candidate.title:
                         continue
@@ -1245,4 +1261,7 @@ class PublicationImportService:
             teachers_with_publications=teachers_with_publications,
             warnings=warnings,
             provider_hits=provider_hits,
+            provider_source_counts=provider_source_counts,
+            matched_candidates_count=matched_candidates_count,
+            unique_publications_count=len(publications),
         )
