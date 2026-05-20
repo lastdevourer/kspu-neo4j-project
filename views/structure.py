@@ -71,7 +71,7 @@ def _filter_teachers(
 
 
 def _render_faculty_department_tab(service) -> None:
-    render_section_heading("Довідник структури", "Офіційний контур університетської структури з пошуком, фільтрацією та ручним редагуванням.")
+    render_section_heading("Довідник структури", "Офіційна структура університету з пошуком, фільтрацією та ручним редагуванням.")
 
     with st.expander("Сервісні дії зі структурою", expanded=False):
         action_columns = st.columns(3, gap="medium")
@@ -548,15 +548,15 @@ def _render_teachers_tab(service) -> None:
 def _render_publications_tab(service) -> None:
     render_section_heading(
         "Керування публікаціями",
-        "Основний контур формується з відкритих сторінок ХДУ, а зовнішні профільні сервіси використовуються як додаткове збагачення.",
+        "Базові публікаційні дані завантажуються з відкритих сторінок ХДУ, а зовнішні сервіси можуть використовуватися для додаткового пошуку відомостей.",
     )
     open_pages = get_open_publication_pages()
     if open_pages:
         pages_markdown = "\n".join(f"- [{item['title']}]({item['url']})" for item in open_pages)
         st.info(
-            "Джерелом вихідних даних у базовому сценарії є відкриті сторінки офіційного сайту ХДУ з публікаціями у Scopus та Web of Science.\n\n"
+            "У базовому сценарії система використовує відкриті сторінки офіційного сайту ХДУ з публікаціями у Scopus та Web of Science.\n\n"
             f"{pages_markdown}\n\n"
-            "API-інтеграції та профільні сервіси залишаються додатковим засобом автоматичного збагачення і можливим напрямом подальшого розвитку."
+            "Зовнішні інтеграції та профільні сервіси можна використовувати для додаткового пошуку й уточнення даних."
         )
     def _run_publication_import(*, import_source: str, include_scholar: bool, use_external_sources: bool, spinner_text: str) -> None:
         import_config = get_publication_import_config()
@@ -632,15 +632,15 @@ def _render_publications_tab(service) -> None:
             value=25,
             step=5,
         )
-        use_scholar = import_columns[1].checkbox("Google Scholar у розширеному режимі", value=True)
+        use_scholar = import_columns[1].checkbox("Використовувати Google Scholar у додатковому режимі", value=True)
         delete_publications_confirm = import_columns[2].checkbox(
             "Підтверджую очищення всіх публікацій",
             key="delete_publications_confirm",
         )
 
         st.caption(
-            "Базовий режим використовує лише відкриті сторінки ХДУ. "
-            "Розширений режим додатково підключає зовнішні профільні сервіси та API, якщо для них налаштовано доступ."
+            "Базовий режим працює лише з відкритими сторінками ХДУ. "
+            "Додатковий режим може підключати зовнішні сервіси, якщо для них налаштовано доступ."
         )
 
         action_columns = st.columns(3, gap="medium")
@@ -652,12 +652,12 @@ def _render_publications_tab(service) -> None:
                 spinner_text="Завантажую публікації з відкритих сторінок ХДУ...",
             )
 
-        if action_columns[1].button("Запустити розширене збагачення", use_container_width=True):
+        if action_columns[1].button("Запустити додатковий пошук даних", use_container_width=True):
             _run_publication_import(
-                import_source="Розширене збагачення публікацій",
+                import_source="Додатковий пошук даних",
                 include_scholar=use_scholar,
                 use_external_sources=True,
-                spinner_text="Збагачую публікаційний контур через доступні зовнішні джерела...",
+                spinner_text="Виконую додатковий пошук даних через доступні зовнішні джерела...",
             )
 
         if action_columns[2].button("Очистити всі публікації", use_container_width=True, type="primary"):
@@ -675,18 +675,18 @@ def _render_publications_tab(service) -> None:
     with summary[0]:
         render_summary_strip("Публікації в базі", str(counts["publications"]), "збережені записи")
     with summary[1]:
-        render_summary_strip("Зв'язки авторства", str(counts["authorship_links"]), "поточний контур авторів")
+        render_summary_strip("Зв'язки авторства", str(counts["authorship_links"]), "наявні зв'язки у базі")
     with summary[2]:
         render_summary_strip("Джерела", str(len(publication_sources.index)), "активні типи джерел у базі")
 
     if counts["publications"]:
         st.caption(
-            "Для робочого сценарію достатньо тримати тут джерела, імпорт і очищення, "
-            "а детальну модерацію окремих записів вести на сторінках `Публікації` та `Центр даних`."
+            "На цій сторінці зосереджено завантаження, джерела та очищення публікаційних даних. "
+            "Детальна перевірка окремих записів виконується на сторінках `Публікації` та `Центр даних`."
         )
 
     if publication_sources.empty:
-        render_empty_state("Публікаційний контур порожній", "Запустіть імпорт або додайте публікації вручну, щоб побачити джерела.")
+        render_empty_state("База публікацій порожня", "Запустіть завантаження або додайте публікації вручну, щоб побачити джерела.")
     else:
         source_columns = st.columns([0.95, 1.05], gap="large")
         with source_columns[0]:
@@ -717,7 +717,7 @@ def _render_publications_tab(service) -> None:
 
 def render() -> None:
     service = require_service()
-    render_header("Структура", subtitle="Робочий простір для керування факультетами, кафедрами, викладачами та публікаційним контуром.")
+    render_header("Структура", subtitle="Робочий простір для керування факультетами, кафедрами, викладачами та публікаціями.")
     _show_flash_message()
 
     counts = service.get_overview_counts()
