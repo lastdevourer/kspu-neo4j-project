@@ -451,7 +451,7 @@ class HduOpenPagesPublicationProvider(BasePublicationProvider):
                 venue = cells[4]
                 external_id = href or f"scopus-page:{normalize_title(title)}:{year or 'nd'}"
                 record = self._build_record(
-                    provider="Scopus (???? ???)",
+                    provider="Scopus (сайт ХДУ)",
                     title=title,
                     year=year,
                     url=href,
@@ -493,7 +493,7 @@ class HduOpenPagesPublicationProvider(BasePublicationProvider):
                 venue = paragraphs[index + 2] if index + 2 < len(paragraphs) else ""
                 external_id = href or f"wos-page:{normalize_title(title)}:{current_year or 'nd'}"
                 record = self._build_record(
-                    provider="Web of Science (???? ???)",
+                    provider="Web of Science (сайт ХДУ)",
                     title=title,
                     year=current_year,
                     url=href,
@@ -1096,7 +1096,13 @@ class PublicationImportService:
             profile_url=str(row.get("profile_url") or ""),
         )
 
-    def import_for_teachers(self, teacher_rows: list[dict[str, Any]], *, include_scholar: bool = True) -> PublicationBundle:
+    def import_for_teachers(
+        self,
+        teacher_rows: list[dict[str, Any]],
+        *,
+        include_scholar: bool = True,
+        use_external_sources: bool = True,
+    ) -> PublicationBundle:
         processed_teachers = 0
         teachers_with_publications = 0
         provider_hits: dict[str, int] = {}
@@ -1107,7 +1113,13 @@ class PublicationImportService:
         authorship_map: dict[tuple[str, str], dict[str, Any]] = {}
         matched_candidates_count = 0
 
-        for provider in self.providers:
+        active_providers = [
+            provider
+            for provider in self.providers
+            if use_external_sources or isinstance(provider, HduOpenPagesPublicationProvider)
+        ]
+
+        for provider in active_providers:
             if isinstance(provider, HduOpenPagesPublicationProvider):
                 provider_source_counts.update(provider.source_counts())
 
@@ -1119,7 +1131,7 @@ class PublicationImportService:
             processed_teachers += 1
             teacher_has_hits = False
 
-            for provider in self.providers:
+            for provider in active_providers:
                 if provider.name == "Scholar" and not include_scholar:
                     continue
                 try:
