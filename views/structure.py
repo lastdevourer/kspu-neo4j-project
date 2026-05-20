@@ -558,83 +558,109 @@ def _render_publications_tab(service) -> None:
             f"{pages_markdown}\n\n"
             "API-інтеграції та профільні сервіси залишаються додатковим засобом автоматичного збагачення і можливим напрямом подальшого розвитку."
         )
+    def _run_publication_import(*, import_source: str, include_scholar: bool, use_external_sources: bool, spinner_text: str) -> None:
+        import_config = get_publication_import_config()
+        importer = PublicationImportService(import_config)
+        teachers_for_import = service.get_teachers_for_publication_import(limit=int(publication_limit))
+        if not teachers_for_import:
+            st.warning("Спочатку завантажте викладачів, щоб запустити опрацювання публікацій.")
+            return
+
+        import_run_id = service.create_import_run(
+            source=import_source,
+            include_scholar=include_scholar,
+            teachers_planned=len(teachers_for_import),
+        )
+        try:
+            with st.spinner(spinner_text):
+                bundle = importer.import_for_teachers(
+                    teachers_for_import,
+                    include_scholar=include_scholar,
+                    use_external_sources=use_external_sources,
+                )
+                service.seed_publications(bundle.publications, bundle.authorships)
+            provider_summary = ", ".join(
+                f"{name}: {count}" for name, count in sorted(bundle.provider_hits.items())
+            ) or "збігів немає"
+            service.complete_import_run(
+                import_run_id,
+                status="Завершено",
+                teachers_processed=bundle.processed_teachers,
+                teachers_with_publications=bundle.teachers_with_publications,
+                source_records_found=sum(bundle.provider_source_counts.values()),
+                matched_candidates_found=bundle.matched_candidates_count,
+                unique_publications_built=bundle.unique_publications_count,
+                publications_found=len(bundle.publications),
+                authorships_found=len(bundle.authorships),
+                warnings_count=len(bundle.warnings),
+                warning_details="\n".join(str(item).strip() for item in bundle.warnings if str(item).strip()),
+                provider_summary=provider_summary,
+            )
+            st.session_state[FLASH_KEY] = (
+                f"Оброблено викладачів: {bundle.processed_teachers}. "
+                f"Виявлено записів: {sum(bundle.provider_source_counts.values())}. "
+                f"Зіставлено кандидатів: {bundle.matched_candidates_count}. "
+                f"Сформовано публікацій: {bundle.unique_publications_count}. "
+                f"Завантажено публікацій: {len(bundle.publications)}. "
+                f"Джерела: {provider_summary}"
+            )
+            st.rerun()
+        except Exception as exc:
+            service.complete_import_run(
+                import_run_id,
+                status="Помилка",
+                teachers_processed=0,
+                teachers_with_publications=0,
+                source_records_found=0,
+                matched_candidates_found=0,
+                unique_publications_built=0,
+                publications_found=0,
+                authorships_found=0,
+                warnings_count=0,
+                warning_details="",
+                provider_summary="",
+                error_message=f"{type(exc).__name__}: {exc}",
+            )
+            st.error(f"Імпорт не завершився: {type(exc).__name__}: {exc}")
+
     with st.expander("Дії з публікаціями", expanded=False):
         import_columns = st.columns(3, gap="medium")
         publication_limit = import_columns[0].number_input(
-            "Ліміт викладачів для збагачення",
+            "Ліміт викладачів для опрацювання",
             min_value=5,
             max_value=150,
             value=25,
             step=5,
         )
-        use_scholar = import_columns[1].checkbox("Google Scholar як додаткове джерело", value=True)
+        use_scholar = import_columns[1].checkbox("Google Scholar у розширеному режимі", value=True)
         delete_publications_confirm = import_columns[2].checkbox(
             "Підтверджую очищення всіх публікацій",
             key="delete_publications_confirm",
         )
 
-        action_columns = st.columns(2, gap="medium")
-        if action_columns[0].button("Запустити збагачення публікацій", use_container_width=True):
-            import_config = get_publication_import_config()
-            importer = PublicationImportService(import_config)
-            teachers_for_import = service.get_teachers_for_publication_import(limit=int(publication_limit))
-            if not teachers_for_import:
-                st.warning("Спочатку завантажте викладачів, щоб запустити збагачення.")
-            else:
-                import_run_id = service.create_import_run(
-                    source="Зовнішнє збагачення публікацій",
-                    include_scholar=use_scholar,
-                    teachers_planned=len(teachers_for_import),
-                )
-                try:
-                    with st.spinner("Збагачую профілі викладачів через доступні зовнішні джерела..."):
-                        bundle = importer.import_for_teachers(teachers_for_import, include_scholar=use_scholar)
-                        service.seed_publications(bundle.publications, bundle.authorships)
-                    provider_summary = ", ".join(
-                        f"{name}: {count}" for name, count in sorted(bundle.provider_hits.items())
-                    ) or "збігів немає"
-                    service.complete_import_run(
-                        import_run_id,
-                        status="Завершено",
-                        teachers_processed=bundle.processed_teachers,
-                        teachers_with_publications=bundle.teachers_with_publications,
-                        source_records_found=sum(bundle.provider_source_counts.values()),
-                        matched_candidates_found=bundle.matched_candidates_count,
-                        unique_publications_built=bundle.unique_publications_count,
-                        publications_found=len(bundle.publications),
-                        authorships_found=len(bundle.authorships),
-                        warnings_count=len(bundle.warnings),
-                        warning_details="\n".join(str(item).strip() for item in bundle.warnings if str(item).strip()),
-                        provider_summary=provider_summary,
-                    )
-                    st.session_state[FLASH_KEY] = (
-                        f"Оброблено викладачів: {bundle.processed_teachers}. "
-                        f"Виявлено записів: {sum(bundle.provider_source_counts.values())}. "
-                        f"Зіставлено кандидатів: {bundle.matched_candidates_count}. "
-                        f"Сформовано публікацій: {bundle.unique_publications_count}. "
-                        f"Завантажено публікацій: {len(bundle.publications)}. "
-                        f"Джерела: {provider_summary}"
-                    )
-                    st.rerun()
-                except Exception as exc:
-                    service.complete_import_run(
-                        import_run_id,
-                        status="Помилка",
-                        teachers_processed=0,
-                        teachers_with_publications=0,
-                        source_records_found=0,
-                        matched_candidates_found=0,
-                        unique_publications_built=0,
-                        publications_found=0,
-                        authorships_found=0,
-                        warnings_count=0,
-                        warning_details="",
-                        provider_summary="",
-                        error_message=f"{type(exc).__name__}: {exc}",
-                    )
-                    st.error(f"Імпорт не завершився: {type(exc).__name__}: {exc}")
+        st.caption(
+            "Базовий режим використовує лише відкриті сторінки ХДУ. "
+            "Розширений режим додатково підключає зовнішні профільні сервіси та API, якщо для них налаштовано доступ."
+        )
 
-        if action_columns[1].button("Очистити всі публікації", use_container_width=True, type="primary"):
+        action_columns = st.columns(3, gap="medium")
+        if action_columns[0].button("Завантажити з відкритих сторінок ХДУ", use_container_width=True):
+            _run_publication_import(
+                import_source="Відкриті сторінки ХДУ",
+                include_scholar=False,
+                use_external_sources=False,
+                spinner_text="Завантажую публікації з відкритих сторінок ХДУ...",
+            )
+
+        if action_columns[1].button("Запустити розширене збагачення", use_container_width=True):
+            _run_publication_import(
+                import_source="Розширене збагачення публікацій",
+                include_scholar=use_scholar,
+                use_external_sources=True,
+                spinner_text="Збагачую публікаційний контур через доступні зовнішні джерела...",
+            )
+
+        if action_columns[2].button("Очистити всі публікації", use_container_width=True, type="primary"):
             if not delete_publications_confirm:
                 st.warning("Підтвердіть очищення всіх публікацій перед виконанням дії.")
             else:
