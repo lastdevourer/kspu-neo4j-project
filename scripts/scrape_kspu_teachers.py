@@ -832,7 +832,7 @@ def write_csv(rows: list[dict[str, str]], output_path: Path) -> None:
 
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
-    parser = argparse.ArgumentParser(description="Scrape initial KSPU teacher seed data from official staff pages.")
+    parser = argparse.ArgumentParser(description="Scrape initial KSU teacher seed data from official staff pages.")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     args = parser.parse_args()
 
