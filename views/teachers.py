@@ -287,7 +287,7 @@ def render() -> None:
     with metrics[1]:
         render_summary_strip("Публікації у вибірці", str(publications_count))
     with metrics[2]:
-        render_summary_strip("Профілі для імпорту", str(ready_profiles_count), "Є хоча б один зовнішній ідентифікатор.")
+        render_summary_strip("Викладачі з профілями", str(ready_profiles_count), "Є хоча б один зовнішній ідентифікатор.")
     with metrics[3]:
         render_summary_strip("Кафедри у вибірці", str(departments_count))
 
