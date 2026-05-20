@@ -470,11 +470,11 @@ def _render_audit_tab(service) -> None:
 def _render_import_runs_tab(service) -> None:
     render_section_heading(
         "Історія імпортів",
-        "Переглядайте останні запуски імпорту публікацій, їх покриття, попередження та помилки.",
+        "Переглядайте останні запуски завантаження публікацій, їх підсумки, попередження та помилки.",
     )
     rows = service.get_import_runs(limit=80)
     if not rows:
-        render_empty_state("Імпорти ще не запускалися", "Після першого запуску автоматичного імпорту тут з'явиться журнал із підсумками.")
+        render_empty_state("Журнал завантажень порожній", "Після першого запуску завантаження публікацій тут з'явиться журнал із підсумками.")
         return
 
     import_frame = import_runs_dataframe(rows)
@@ -484,11 +484,11 @@ def _render_import_runs_tab(service) -> None:
             "Історія імпортів",
             import_frame,
             key="data_center_import_runs_fullscreen",
-            caption="Повний журнал запусків імпорту публікацій.",
+            caption="Повний журнал запусків завантаження публікацій.",
         )
         render_adaptive_dataframe(import_frame, use_container_width=True, hide_index=True, height=300, compact=True)
         st.download_button(
-            "Експорт історії імпортів CSV",
+            "Експорт журналу завантажень CSV",
             _csv_bytes(import_frame),
             file_name="import_runs.csv",
             mime="text/csv",
@@ -527,7 +527,7 @@ def _render_import_runs_tab(service) -> None:
             [
                 ("Статус", str(selected_run.get("status") or "")),
                 ("Джерело", str(selected_run.get("source") or "")),
-                ("Scholar як резерв", "Так" if bool(selected_run.get("include_scholar")) else "Ні"),
+                ("Google Scholar", "Так" if bool(selected_run.get("include_scholar")) else "Ні"),
                 ("Заплановано викладачів", str(selected_run.get("teachers_planned") or 0)),
                 ("Оброблено викладачів", str(selected_run.get("teachers_processed") or 0)),
                 ("Викладачів з публікаціями", str(selected_run.get("teachers_with_publications") or 0)),
@@ -667,7 +667,7 @@ def _render_publication_detail(service, selected_publication: dict[str, object])
         ],
     )
     render_key_value_card(
-        "Пов'язаний контур",
+        "Пов'язані дані",
         [
             ("Назва", str(details.get("title") or selected_publication.get("title") or "")),
             ("Рік", str(details.get("year") or selected_publication.get("year") or "н/д")),
