@@ -18,30 +18,30 @@ OPENALEX_WORKS_API = "https://api.openalex.org/works"
 OPENALEX_AUTHORS_API = "https://api.openalex.org/authors"
 
 TRANSLIT_VARIANTS = {
-    "Ð°": ["a"], "Ð±": ["b"], "Ð²": ["v"], "Ð³": ["h", "g"], "Ò‘": ["g"],
-    "Ð´": ["d"], "Ðµ": ["e"], "Ñ”": ["ye", "ie"], "Ð¶": ["zh"], "Ð·": ["z"],
-    "Ð¸": ["y", "i"], "Ñ–": ["i"], "Ñ—": ["yi", "i"], "Ð¹": ["i", "y"],
-    "Ðº": ["k"], "Ð»": ["l"], "Ð¼": ["m"], "Ð½": ["n"], "Ð¾": ["o"],
-    "Ð¿": ["p"], "Ñ€": ["r"], "Ñ": ["s"], "Ñ‚": ["t"], "Ñƒ": ["u"],
-    "Ñ„": ["f"], "Ñ…": ["kh", "h"], "Ñ†": ["ts", "c"], "Ñ‡": ["ch"],
-    "Ñˆ": ["sh"], "Ñ‰": ["shch"], "ÑŽ": ["yu", "iu"], "Ñ": ["ya", "ia"],
-    "ÑŒ": [""], "ÑŠ": [""],
+    "а": ["a"], "б": ["b"], "в": ["v"], "г": ["h", "g"], "ґ": ["g"],
+    "д": ["d"], "е": ["e"], "є": ["ye", "ie"], "ж": ["zh"], "з": ["z"],
+    "и": ["y", "i"], "і": ["i"], "ї": ["yi", "i"], "й": ["i", "y"],
+    "к": ["k"], "л": ["l"], "м": ["m"], "н": ["n"], "о": ["o"],
+    "п": ["p"], "р": ["r"], "с": ["s"], "т": ["t"], "у": ["u"],
+    "ф": ["f"], "х": ["kh", "h"], "ц": ["ts", "c"], "ч": ["ch"],
+    "ш": ["sh"], "щ": ["shch"], "ю": ["yu", "iu"], "я": ["ya", "ia"],
+    "ь": [""], "ъ": [""],
 }
 
 SPECIAL_NAME_VARIANTS = {
-    "Ð³ÐµÐ½Ð½Ð°Ð´Ñ–Ð¹": ["hennadii", "gennadiy", "gennady", "gennadii", "henadii"],
-    "Ð³ÐµÐ½Ð½Ð°Ð´Ð¸Ð¹": ["hennadii", "gennadiy", "gennady", "gennadii", "henadii"],
-    "Ð¼Ð¸Ñ…Ð°Ð¹Ð»Ð¾Ð²Ð¸Ñ‡": ["mykhailovych", "mikhailovich", "mykhaylovych"],
-    "Ð¾Ð»ÐµÐºÑÐ°Ð½Ð´Ñ€": ["oleksandr", "alexander", "alexandr"],
-    "Ð°Ð»ÐµÐºÑÐ°Ð½Ð´Ñ€": ["oleksandr", "alexander", "alexandr"],
-    "Ð¾Ð»ÐµÐºÑÐ°Ð½Ð´Ñ€Ð°": ["oleksandra", "alexandra"],
-    "ÑÐµÑ€Ð³Ñ–Ð¹": ["serhii", "sergii", "sergey", "sergei"],
-    "ÑÐµÑ€Ð³ÐµÐ¹": ["serhii", "sergii", "sergey", "sergei"],
-    "Ð²Ñ–Ñ‚Ð°Ð»Ñ–Ð¹": ["vitalii", "vitaliy", "vitaly"],
-    "Ð²Ð¸Ñ‚Ð°Ð»Ð¸Ð¹": ["vitalii", "vitaliy", "vitaly"],
-    "Ð½Ð°Ñ‚Ð°Ð»Ñ–Ñ": ["nataliia", "natalia", "nataliya"],
-    "Ñ‚Ð°Ñ‚ÑŒÑÐ½Ð°": ["tetiana", "tatyana", "tatiana"],
-    "Ñ‚ÐµÑ‚ÑÐ½Ð°": ["tetiana", "tetyana", "tatiana"],
+    "геннадій": ["hennadii", "gennadiy", "gennady", "gennadii", "henadii"],
+    "геннадий": ["hennadii", "gennadiy", "gennady", "gennadii", "henadii"],
+    "михайлович": ["mykhailovych", "mikhailovich", "mykhaylovych"],
+    "олександр": ["oleksandr", "alexander", "alexandr"],
+    "александр": ["oleksandr", "alexander", "alexandr"],
+    "олександра": ["oleksandra", "alexandra"],
+    "сергій": ["serhii", "sergii", "sergey", "sergei"],
+    "сергей": ["serhii", "sergii", "sergey", "sergei"],
+    "віталій": ["vitalii", "vitaliy", "vitaly"],
+    "виталий": ["vitalii", "vitaliy", "vitaly"],
+    "наталія": ["nataliia", "natalia", "nataliya"],
+    "татьяна": ["tetiana", "tatyana", "tatiana"],
+    "тетяна": ["tetiana", "tetyana", "tatiana"],
 }
 
 NOISY_OPENALEX_TYPES = {"reference-entry", "paratext", "peer-review"}
@@ -49,8 +49,8 @@ KHERSON_TOKENS = {
     "kherson",
     "kherson state university",
     "khersonskyi derzhavnyi universytet",
-    "Ñ…ÐµÑ€ÑÐ¾Ð½",
-    "Ñ…ÐµÑ€ÑÐ¾Ð½ÑÑŒÐºÐ¸Ð¹ Ð´ÐµÑ€Ð¶Ð°Ð²Ð½Ð¸Ð¹ ÑƒÐ½Ñ–Ð²ÐµÑ€ÑÐ¸Ñ‚ÐµÑ‚",
+    "херсон",
+    "херсонський державний університет",
     "ksu",
     "khdu",
 }
@@ -81,7 +81,7 @@ def _base_openalex_params() -> dict[str, str]:
 def _get_json(url: str, timeout: int = 25) -> dict[str, Any]:
     request = urllib.request.Request(
         url,
-        headers={"User-Agent": "kspu-neo4j-publication-import/1.0"},
+        headers={"User-Agent": "ksu-academic-network/1.0"},
     )
     with urllib.request.urlopen(request, timeout=timeout) as response:
         return json.loads(response.read().decode("utf-8"))
@@ -113,8 +113,8 @@ def title_case_name(value: str | None) -> str:
 def normalize_person_name(value: str | None) -> str:
     if not value:
         return ""
-    value = value.lower().replace("â€™", "'").replace("Ê¼", "'")
-    value = re.sub(r"[^a-zÐ°-ÑÑ–Ñ—Ñ”Ò‘Ñ‘\s'-]", " ", value, flags=re.IGNORECASE)
+    value = value.lower().replace("’", "'").replace("ʼ", "'")
+    value = re.sub(r"[^a-zа-яіїєґё\s'-]", " ", value, flags=re.IGNORECASE)
     return re.sub(r"\s+", " ", value).strip()
 
 
