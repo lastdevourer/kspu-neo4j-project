@@ -561,7 +561,7 @@ def _render_publications_tab(service) -> None:
     def _run_publication_import(*, import_source: str, include_scholar: bool, use_external_sources: bool, spinner_text: str) -> None:
         import_config = get_publication_import_config()
         importer = PublicationImportService(import_config)
-        teachers_for_import = service.get_teachers_for_publication_import(limit=int(publication_limit))
+        teachers_for_import = service.get_teachers_for_publication_import()
         if not teachers_for_import:
             st.warning("Спочатку завантажте викладачів, щоб запустити опрацювання публікацій.")
             return
@@ -624,23 +624,17 @@ def _render_publications_tab(service) -> None:
             st.error(f"Імпорт не завершився: {type(exc).__name__}: {exc}")
 
     with st.expander("Дії з публікаціями", expanded=False):
-        import_columns = st.columns(3, gap="medium")
-        publication_limit = import_columns[0].number_input(
-            "Ліміт викладачів для опрацювання",
-            min_value=5,
-            max_value=150,
-            value=25,
-            step=5,
-        )
-        use_scholar = import_columns[1].checkbox("Використовувати Google Scholar у додатковому режимі", value=True)
-        delete_publications_confirm = import_columns[2].checkbox(
+        import_columns = st.columns(2, gap="medium")
+        use_scholar = import_columns[0].checkbox("Використовувати Google Scholar у додатковому режимі", value=True)
+        delete_publications_confirm = import_columns[1].checkbox(
             "Підтверджую очищення всіх публікацій",
             key="delete_publications_confirm",
         )
 
         st.caption(
             "Базовий режим працює лише з відкритими сторінками ХДУ. "
-            "Додатковий режим може підключати зовнішні сервіси, якщо для них налаштовано доступ."
+            "Додатковий режим може підключати зовнішні сервіси, якщо для них налаштовано доступ. "
+            "Під час запуску система опрацьовує весь доступний список викладачів."
         )
 
         action_columns = st.columns(3, gap="medium")
