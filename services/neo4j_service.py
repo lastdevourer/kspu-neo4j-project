@@ -1412,9 +1412,8 @@ class Neo4jService:
             {"search": search.strip(), "department_code": department_code.strip()},
         )
 
-    def get_teachers_for_publication_import(self, limit: int = 25, stale_before: str = "") -> list[dict[str, Any]]:
-        return self.run_query(
-            """
+    def get_teachers_for_publication_import(self, limit: int | None = None, stale_before: str = "") -> list[dict[str, Any]]:
+        query = """
             MATCH (t:Teacher)
             OPTIONAL MATCH (d:Department)-[:HAS_TEACHER]->(t)
             OPTIONAL MATCH (f:Faculty)-[:HAS_DEPARTMENT]->(d)
@@ -1447,10 +1446,12 @@ class Neo4jService:
                 coalesce(t.last_publication_sync_at, "") AS last_publication_sync_at,
                 profile_score
             ORDER BY profile_score DESC, publications ASC, last_publication_sync_at ASC, full_name
-            LIMIT $limit
-            """,
-            {"limit": int(limit), "stale_before": stale_before.strip()},
-        )
+            """
+        params: dict[str, Any] = {"stale_before": stale_before.strip()}
+        if limit is not None and int(limit) > 0:
+            query += "\nLIMIT $limit"
+            params["limit"] = int(limit)
+        return self.run_query(query, params)
 
     def get_teacher_import_options(self, department_code: str = "", limit: int = 200) -> list[dict[str, Any]]:
         return self.run_query(
