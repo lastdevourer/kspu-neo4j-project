@@ -64,7 +64,7 @@ EXPORT_OPTIONS = {
     "Пари співавторів": ("top_coauthor_pairs.csv", "coauthor_pairs", "csv"),
     "Показники центральності": ("centrality.csv", "centrality", "csv"),
     "Джерела публікацій": ("publication_sources.csv", "sources", "csv"),
-    "Викладачі поточного контуру": ("scoped_teachers.csv", "scoped_teachers", "csv"),
+    "Викладачі у вибірці": ("scoped_teachers.csv", "scoped_teachers", "csv"),
     "Аналітичний пакет XLSX": ("analytics_package.xlsx", "package_xlsx", "xlsx"),
 }
 
@@ -217,7 +217,7 @@ def render() -> None:
         else pd.DataFrame(columns=["Рік", "Публікації"])
     )
     if not yearly_counts.empty:
-        render_section_heading("Динаміка публікацій", "Розподіл знайдених робіт за роками в поточному контурі даних.")
+        render_section_heading("Динаміка публікацій", "Розподіл знайдених робіт за роками у вибраному наборі даних.")
         trend_columns = st.columns([1.05, 0.95], gap="large")
         with trend_columns[0]:
             chart_frame = yearly_counts.set_index("Рік")
@@ -263,7 +263,7 @@ def render() -> None:
             {"Показник": "Контур даних", "Значення": scope},
             {"Показник": "Період від", "Значення": year_from if year_from is not None else "Усі роки"},
             {"Показник": "Період до", "Значення": year_to if year_to is not None else "Усі роки"},
-            {"Показник": "Публікацій у контурі", "Значення": scoped_publication_count},
+            {"Показник": "Публікацій у вибірці", "Значення": scoped_publication_count},
             {"Показник": "Викладачів із роботами", "Значення": teachers_with_publications},
             {"Показник": "Середнє навантаження", "Значення": round(average_publications, 2)},
         ]
@@ -282,7 +282,7 @@ def render() -> None:
         ("Показники центральності", centrality_export),
         ("Джерела", source_rows),
         ("Динаміка", yearly_counts),
-        ("Викладачі контуру", scoped_teachers_frame),
+        ("Викладачі у вибірці", scoped_teachers_frame),
         ("Порівняння кафедр", department_comparison),
     ]
     if export_format == "xlsx":
@@ -309,7 +309,7 @@ def render() -> None:
         )
 
     if profile_coverage.get("teachers", 0):
-        render_section_heading("Готовність профілів до автоматичного імпорту")
+        render_section_heading("Готовність профілів до додаткового пошуку даних")
         total_teachers = max(int(profile_coverage["teachers"] or 0), 1)
         readiness_columns = st.columns(4, gap="medium")
         readiness_columns[0].metric("ORCID", f"{profile_coverage['with_orcid']} / {total_teachers}")
@@ -394,14 +394,14 @@ def render() -> None:
         render_section_heading("Порівняння кафедр")
         render_empty_state(
             "Порівняння кафедр поки недоступне",
-            "Коли в контурі буде більше зв'язаних даних, тут з'явиться порівняльний зріз кафедр.",
+            "Коли у вибраному наборі даних буде більше зв'язаних записів, тут з'явиться порівняльний зріз кафедр.",
         )
     else:
         render_fullscreen_dataframe_heading(
             "Порівняння кафедр",
             department_comparison,
             key="analytics_department_comparison_fullscreen",
-            caption="Кафедри в поточному контурі з розрахунком середньої кількості публікацій на викладача.",
+            caption="Кафедри у вибраному наборі даних із розрахунком середньої кількості публікацій на викладача.",
         )
         render_adaptive_dataframe(department_comparison, use_container_width=True, hide_index=True, height=320, compact=True)
 
@@ -443,7 +443,7 @@ def render() -> None:
 
             report_summary = st.columns(3, gap="medium")
             report_summary[0].metric("Викладачі кафедри", teachers_in_scope)
-            report_summary[1].metric("Публікації в контурі", publications_in_scope)
+            report_summary[1].metric("Публікації у вибірці", publications_in_scope)
             report_summary[2].metric("Профілі готові", profiles_ready)
 
             report_columns = st.columns([1.15, 0.85], gap="large")
@@ -452,7 +452,7 @@ def render() -> None:
                     render_section_heading("Звіт кафедри: викладачі")
                     render_empty_state(
                         "Дані кафедри порожні",
-                        "За поточним контуром даних у вибраної кафедри немає записів для звіту.",
+                        "У вибраному наборі даних для цієї кафедри немає записів для звіту.",
                     )
                 else:
                     render_fullscreen_dataframe_heading(
@@ -521,7 +521,7 @@ def render() -> None:
                 int(faculty_summary_row.get("teachers", len(scoped_faculty_teachers)) or 0),
             )
             faculty_summary[2].metric(
-                "Публікації в контурі",
+                "Публікації у вибірці",
                 int(faculty_summary_row.get("publications", 0) or 0),
             )
 
@@ -531,7 +531,7 @@ def render() -> None:
                     render_section_heading("Звіт факультету: викладачі")
                     render_empty_state(
                         "Дані факультету порожні",
-                        "За поточним контуром даних у вибраного факультету немає записів для звіту.",
+                        "У вибраному наборі даних для цього факультету немає записів для звіту.",
                     )
                 else:
                     render_fullscreen_dataframe_heading(
